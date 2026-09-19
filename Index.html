@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Site Management & Supervisory Workforce Dashboard</title>
+
+<!-- Polices -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Librairies externes -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, sans-serif; }
+  body { background: #f8fafc; padding: 20px; color: #0f172a; }
+
+  #error-banner { display: none; background: #fef2f2; color: #991b1b; padding: 12px; margin: 0 auto 16px auto; max-width: 1540px; border: 1px solid #f87171; border-radius: 8px; font-weight: 600; }
+
+  /* Barre supérieure */
+  .top-bar { max-width: 1540px; margin: 0 auto 16px auto; display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 14px 20px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.04); }
+  .top-bar-title h1 { font-size: 18px; font-weight: 800; }
+  .sync-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #64748b; margin-top: 2px; }
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; }
+
+  .actions-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .btn { background: #2563eb; color: white; border: none; padding: 8px 12px; font-size: 12px; font-weight: 600; border-radius: 7px; cursor: pointer; transition: background 0.15s; }
+  .btn:hover { background: #1d4ed8; }
+  .btn-outline { background: white; color: #334155; border: 1px solid #cbd5e1; }
+  .btn-outline:hover { background: #f1f5f9; color: #0f172a; }
+  .btn-success { background: #059669; }
+  .btn-success:hover { background: #047857; }
+  .btn-warning { background: #f59e0b; }
+  .btn-warning:hover { background: #d97706; }
+  .btn-danger { background: white; color: #dc2626; border: 1px solid #fca5a5; }
+  .btn-danger:hover { background: #fef2f2; }
+
+  .dashboard-container { max-width: 1540px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+
+  /* KPI Global */
+  .kpi-board { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px 22px; box-shadow: 0 3px 6px rgba(0,0,0,0.03); }
+  .kpi-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 14px; }
+  .title-editable { font-size: 19px; font-weight: 800; color: #1e3a8a; outline: none; }
+  .total-badge-container { display: flex; align-items: center; gap: 10px; }
+  .total-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+  .total-number { background: #1e3a8a; color: white; font-size: 22px; font-weight: 800; padding: 4px 16px; border-radius: 30px; box-shadow: 0 4px 10px rgba(30,58,138,0.2); }
+
+  .summaries-row { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; }
+  .summary-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; }
+  .summary-title { font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 8px; }
+  
+  .pill-group { display: flex; flex-wrap: wrap; gap: 6px; }
+  .stat-pill { display: flex; align-items: center; gap: 5px; background: white; border: 1px solid #e2e8f0; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .stat-pill .tag-color { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .stat-pill .count { font-weight: 800; color: #0f172a; margin-left: 2px; }
+
+  /* Table Payroll vs TS */
+  .payroll-table { width: 100%; border-collapse: collapse; font-size: 11.5px; font-weight: 600; }
+  .payroll-table th { text-align: left; color: #64748b; padding-bottom: 4px; border-bottom: 1px solid #e2e8f0; }
+  .payroll-table td { padding: 5px 0; border-bottom: 1px solid #f1f5f9; }
+  .payroll-input { width: 48px; font-size: 11px; font-weight: 800; text-align: center; padding: 2px 4px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; color: #0f172a; }
+  .payroll-input:focus { border-color: #2563eb; background: #eff6ff; }
+  .diff-badge { padding: 3px 8px; border-radius: 12px; font-size: 10.5px; font-weight: 800; display: inline-block; min-width: 32px; text-align: center; }
+  .diff-ok { background: #dcfce7; color: #166534; }
+  .diff-warn { background: #fee2e2; color: #991b1b; }
+
+  /* Filtres */
+  .filter-bar { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 8px; }
+  .filter-btn { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; background: #ffffff; color: #64748b; border: 1px solid #cbd5e1; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+  .filter-btn:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
+  .filter-btn.active { background: #1e293b; color: white; border-color: #1e293b; }
+
+  /* Sections & Cartes */
+  .category-section { margin-top: 10px; margin-bottom: 20px; }
+  .category-title { font-size: 14px; font-weight: 800; padding-bottom: 6px; margin-bottom: 12px; text-transform: uppercase; }
+  .cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; min-height: 90px; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 10px; }
+  .card { background: white; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; border-top: 4px solid #94a3b8; transition: transform 0.15s, box-shadow 0.15s; }
+  .card:hover { box-shadow: 0 6px 12px rgba(0,0,0,0.08); }
+  
+  .drag-handle { cursor: grab; }
+  .drag-handle:active { cursor: grabbing; }
+  .sortable-ghost { opacity: 0.3; background: #e2e8f0; border: 2px dashed #94a3b8; transform: scale(0.98); }
+
+  .cat-civil { border-top-color: #ea580c !important; }
+  .cat-trades { border-top-color: #2563eb !important; }
+  .cat-facade { border-top-color: #0891b2 !important; }
+  .cat-logistic { border-top-color: #8b5cf6 !important; }
+  .cat-external { border-top-color: #059669 !important; }
+  .cat-indirect { border-top-color: #475569 !important; }
+  .cat-plant { border-top-color: #dc2626 !important; }
+
+  .card-header { padding: 8px 12px; background: #fafafa; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+  .cat-select { font-size: 10px; font-weight: 700; text-transform: uppercase; border: 1px solid #cbd5e1; border-radius: 5px; padding: 2px 4px; outline: none; cursor: pointer; }
+  .card-total-badge { font-size: 10.5px; font-weight: 800; background: #e0e7ff; color: #3730a3; padding: 2px 7px; border-radius: 10px; }
+
+  .card-title-row { padding: 8px 12px 6px 12px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .sup-name { font-size: 13px; font-weight: 800; outline: none; width: 100%; color: #0f172a; }
+  
+  /* Nouveau champ Timesheet No */
+  .ts-badge { font-size: 10px; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 1px 6px; color: #475569; display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; }
+  .ts-badge span { outline: none; min-width: 25px; display: inline-block; color: #2563eb; }
+  .ts-badge span:empty:before { content: attr(data-placeholder); color: #94a3b8; }
+
+  .btn-remove-card { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: -2px; }
+  .btn-remove-card:hover { color: #dc2626; }
+
+  .card-body { padding: 4px 12px 10px 12px; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; }
+  .task-item { background: #f8fafc; border: 1px solid #edf2f7; border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
+  .task-desc { font-size: 11px; font-weight: 600; color: #1e293b; outline: none; line-height: 1.35; background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 4px; padding: 4px 6px; min-height: 24px; }
+  .task-desc:focus { border-style: solid; border-color: #2563eb; background: #eff6ff; }
+  
+  .scope-imported-box { background: #e2e8f0; border-radius: 4px; padding: 3px 6px; display: flex; justify-content: space-between; align-items: center; gap: 4px; }
+  .scope-imported-text { font-size: 9.5px; font-weight: 600; color: #334155; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .btn-use-scope { background: #cbd5e1; border: none; border-radius: 3px; padding: 1px 5px; font-size: 9px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+  .btn-use-scope:hover { background: #94a3b8; color: white; }
+
+  .task-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 3px; }
+  .source-select { font-size: 10px; font-weight: 700; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 4px; outline: none; cursor: pointer; }
+  .source-select.skybuilding { color: #0284c7; }
+  .source-select.dss { color: #d97706; }
+  .source-select.euroasia { color: #7c3aed; }
+  .source-select.other { color: #64748b; }
+
+  .worker-count-input { width: 44px; font-size: 11px; font-weight: 800; text-align: right; padding: 2px 4px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; }
+  .worker-count-input:focus { border-color: #2563eb; background: #eff6ff; }
+  .btn-add-task { background: transparent; border: 1px dashed #cbd5e1; color: #64748b; font-size: 10px; font-weight: 600; padding: 4px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 2px; }
+  .btn-add-task:hover { background: #f1f5f9; color: #0f172a; }
+
+  .divider { width: 1px; height: 24px; background: #e2e8f0; margin: 0 4px; }
+
+  @media print {
+    body { padding: 0; background: white; }
+    .top-bar, .btn-add-task, .btn-remove-card, .btn-use-scope, #error-banner, .filter-bar { display: none; }
+    .dashboard-container { gap: 8px; max-width: 100%; }
+    .cards-grid { border: none !important; background: transparent !important; padding: 0 !important; min-height: 0 !important; gap: 8px; }
+    .category-section { break-inside: avoid; display: block !important; }
+    .card { break-inside: avoid; box-shadow: none !important; border: 1px solid #cbd5e1; }
+    .worker-count-input, .source-select, .cat-select, .payroll-input { border: none; background: transparent; }
+    .task-desc { border: none; padding: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div id="error-banner"></div>
+
+<div class="top-bar">
+  <div class="top-bar-title">
+    <h1>Site Management & Supervisory Workforce</h1>
+    <div class="sync-status">
+      <span class="sync-dot" id="sync-dot"></span>
+      <span id="sync-text">Démarrage...</span>
+    </div>
+  </div>
+  <div class="actions-group">
+    <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display:none" onchange="importExcelFile(event)">
+    <button class="btn btn-success" onclick="document.getElementById('excel-file-input').click()">📥 Importer Excel</button>
+    <button class="btn btn-outline" onclick="addNewSupervisor()">+ Superviseur</button>
+    
+    <div class="divider"></div>
+
+    <button class="btn btn-warning" onclick="exportBackup()" title="Télécharger une copie de sécurité de cette configuration">💾 Sauvegarder</button>
+    <input type="file" id="backup-file-input" accept=".json" style="display:none" onchange="importBackup(event)">
+    <button class="btn btn-outline" onclick="document.getElementById('backup-file-input').click()" title="Restaurer une ancienne copie de sécurité">📂 Restaurer</button>
+
+    <div class="divider"></div>
+
+    <button class="btn btn-outline" onclick="window.print()">🖨️ PDF</button>
+    <button class="btn btn-danger" onclick="resetCache()" title="Effacer le cache et recharger la page par défaut">🗑️ Vider</button>
+  </div>
+</div>
+
+<div class="dashboard-container">
+  
+  <div class="kpi-board">
+    <div class="kpi-header">
+      <div>
+        <div class="title-editable" contenteditable="true" id="chart-title">SITE MANAGEMENT & SUPERVISORY CHART</div>
+        <div style="font-size: 11px; color: #64748b; font-weight: 600; margin-top: 3px;" contenteditable="true">WEEKS 37 / 38 &bull; REAL-TIME WORKFORCE ALLOCATION</div>
+      </div>
+      <div class="total-badge-container">
+        <span class="total-label">Effectif Total Chantier :</span>
+        <span class="total-number" id="grand-total">0</span>
+      </div>
+    </div>
+
+    <div class="summaries-row">
+      
+      <!-- Pointage vs Payroll -->
+      <div class="summary-box">
+        <div class="summary-title">Effectifs : Pointage (TS) vs Payroll HR</div>
+        <table class="payroll-table">
+          <tr>
+            <th>Entreprise</th>
+            <th style="text-align:center;">TS Pointage</th>
+            <th style="text-align:center; color:#2563eb;">Payroll (Auto/Saisie)</th>
+            <th style="text-align:center;">Écart</th>
+          </tr>
+          <tr>
+            <td><span class="tag-color" style="background:#0284c7;"></span> SKYBUILDING</td>
+            <td style="text-align:center; font-weight:800;" id="total-sky">0</td>
+            <td style="text-align:center;"><input type="number" id="pr-skybuilding" class="payroll-input" value="0" oninput="updatePayroll('SKYBUILDING', this.value)"></td>
+            <td style="text-align:center;"><span id="diff-skybuilding" class="diff-badge diff-ok">0</span></td>
+          </tr>
+          <tr>
+            <td><span class="tag-color" style="background:#d97706;"></span> DSS</td>
+            <td style="text-align:center; font-weight:800;" id="total-dss">0</td>
+            <td style="text-align:center;"><input type="number" id="pr-dss" class="payroll-input" value="0" oninput="updatePayroll('DSS', this.value)"></td>
+            <td style="text-align:center;"><span id="diff-dss" class="diff-badge diff-ok">0</span></td>
+          </tr>
+          <tr>
+            <td><span class="tag-color" style="background:#7c3aed;"></span> EUROASIA</td>
+            <td style="text-align:center; font-weight:800;" id="total-euro">0</td>
+            <td style="text-align:center;"><input type="number" id="pr-euroasia" class="payroll-input" value="0" oninput="updatePayroll('EUROASIA', this.value)"></td>
+            <td style="text-align:center;"><span id="diff-euroasia" class="diff-badge diff-ok">0</span></td>
+          </tr>
+          <tr>
+            <td><span class="tag-color" style="background:#64748b;"></span> AUTRE</td>
+            <td style="text-align:center; font-weight:800;" id="total-other">0</td>
+            <td style="text-align:center;"><input type="number" id="pr-other" class="payroll-input" value="0" oninput="updatePayroll('OTHER', this.value)"></td>
+            <td style="text-align:center;"><span id="diff-other" class="diff-badge diff-ok">0</span></td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="summary-box">
+        <div class="summary-title">Effectifs par Lot de Travaux</div>
+        <div class="pill-group">
+          <div class="stat-pill"><span class="tag-color" style="background:#ea580c;"></span><span>CIVIL:</span><span class="count" id="cat-civil">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#2563eb;"></span><span>TRADES:</span><span class="count" id="cat-trades">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#0891b2;"></span><span>FAÇADE:</span><span class="count" id="cat-facade">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#8b5cf6;"></span><span>LOGISTIC:</span><span class="count" id="cat-logistic">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#059669;"></span><span>EXTERNAL:</span><span class="count" id="cat-external">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#475569;"></span><span>INDIRECT:</span><span class="count" id="cat-indirect">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#dc2626;"></span><span>PLANT & EQ.:</span><span class="count" id="cat-plant">0</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="filter-bar" id="filter-bar"></div>
+  <div id="categories-board"></div>
+
+</div>
+
+<script>
+window.onerror = function(msg, url, line) {
+  const errDiv = document.getElementById("error-banner");
+  errDiv.style.display = "block";
+  errDiv.innerText = `Erreur système (Ligne ${line}): ${msg}. Cliquez sur "Vider le cache".`;
+  return false;
+};
+
+function resetCache() {
+  if (confirm("Vider le cache réinitialisera l'application à son état d'origine. Continuer ?")) {
+    localStorage.removeItem("site_chart_backup");
+    window.location.reload();
+  }
+}
+
+const CATEGORY_INFO = [
+  { id: 'civil', name: 'CIVIL WORKS', color: '#ea580c' },
+  { id: 'trades', name: 'TRADES & FINISHES', color: '#2563eb' },
+  { id: 'facade', name: 'FAÇADE', color: '#0891b2' },
+  { id: 'logistic', name: 'LOGISTICS', color: '#8b5cf6' },
+  { id: 'external', name: 'EXTERNAL WORKS', color: '#059669' },
+  { id: 'indirect', name: 'INDIRECT & SERVICES', color: '#475569' },
+  { id: 'plant', name: 'PLANT & EQUIPMENT', color: '#dc2626' }
+];
+
+// État global
+let cardsData = [];
+let payrollCounts = { SKYBUILDING: 0, DSS: 0, EUROASIA: 0, OTHER: 0 };
+let db = null;
+let docRef = null;
+let isSaving = false;
+let currentFilter = 'all';
+
+const DEFAULT_DATA = [
+  { name: "TAREK", category: "civil", timesheetNo: "LOAN-2", tasks: [{ desc: "Pools and Terraces – Hydrodemolition follow up", source: "SKYBUILDING", workers: 26 }] },
+  { name: "NELSON", category: "trades", timesheetNo: "EUROASIA-12", tasks: [{ desc: "Drywall & Doors/Parquet", source: "EUROASIA", workers: 18 }, { desc: "Dry wall partition", source: "DSS", workers: 14 }] }
+];
+
+try {
+  const localSaved = localStorage.getItem("site_chart_backup");
+  if (localSaved) {
+    let parsed = JSON.parse(localSaved);
+    if (parsed.cardsData && Array.isArray(parsed.cardsData)) { 
+      cardsData = parsed.cardsData; 
+      payrollCounts = parsed.payrollCounts || payrollCounts;
+    } 
+    else if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].tasks) { cardsData = parsed; } 
+    else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
+  } else {
+    cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  }
+} catch(e) { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
+
+// --- 1. INITIALISATION DE L'INTERFACE ---
+function initLayout() {
+  const filterBar = document.getElementById('filter-bar');
+  filterBar.innerHTML = `
+    <button class="filter-btn active" id="filter-all" onclick="setFilter('all')">TOUT AFFICHER</button>
+    ${CATEGORY_INFO.map(cat => `
+      <button class="filter-btn" id="filter-${cat.id}" onclick="setFilter('${cat.id}')" style="border-left: 4px solid ${cat.color};">${cat.name}</button>
+    `).join('')}
+  `;
+
+  const board = document.getElementById('categories-board');
+  board.innerHTML = CATEGORY_INFO.map(cat => `
+    <div class="category-section" id="section-${cat.id}">
+      <h2 class="category-title" style="color: ${cat.color}; border-bottom: 2px solid ${cat.color};">
+        ${cat.name}
+      </h2>
+      <div class="cards-grid" id="grid-${cat.id}" data-category="${cat.id}"></div>
+    </div>
+  `).join('');
+
+  CATEGORY_INFO.forEach(cat => {
+    new Sortable(document.getElementById(`grid-${cat.id}`), {
+      group: 'supervisors',
+      handle: '.drag-handle',
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      onEnd: function (evt) { reorderCardsBasedOnDOM(); }
+    });
+  });
+}
+
+function setFilter(catId) {
+  currentFilter = catId;
+  document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+  document.getElementById(`filter-${catId}`).classList.add('active');
+
+  CATEGORY_INFO.forEach(cat => {
+    const section = document.getElementById(`section-${cat.id}`);
+    if (section) section.style.display = (catId === 'all' || catId === cat.id) ? 'block' : 'none';
+  });
+}
+
+initLayout();
+renderCards();
+
+// --- 2. CONNEXION FIREBASE ---
+setTimeout(() => {
+  try {
+    const firebaseConfig = {
+      apiKey: "AIzaSyBn_xbuD6Xct-Yd_e-9z5XvV6IyVb8oa7g",
+      authDomain: "site-management-chart.firebaseapp.com",
+      projectId: "site-management-chart",
+      storageBucket: "site-management-chart.firebasestorage.app",
+      messagingSenderId: "180113020881",
+      appId: "1:180113020881:web:2dc1e88de4cbd352beb2f0"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    db.settings({ experimentalAutoDetectLongPolling: true });
+    docRef = db.collection("site_charts").doc("current_week");
+
+    docRef.onSnapshot((doc) => {
+      if (isSaving) return;
+      if (doc && doc.exists) {
+        const data = doc.data();
+        if (data.cardsData) cardsData = data.cardsData;
+        if (data.payrollCounts) payrollCounts = data.payrollCounts;
+        renderCards();
+      } else { syncToFirebase(); }
+      document.getElementById("sync-dot").style.background = "#16a34a";
+      document.getElementById("sync-text").innerText = "Connecté à Firebase";
+    }, (err) => {
+      document.getElementById("sync-dot").style.background = "#eab308";
+      document.getElementById("sync-text").innerText = "Mode local / Hors-ligne";
+    });
+  } catch (err) {
+    document.getElementById("sync-dot").style.background = "#eab308";
+    document.getElementById("sync-text").innerText = "Mode local actif";
+  }
+}, 500);
+
+// --- 3. FONCTIONS CLÉS & SYNCHRONISATION ---
+function syncToFirebase() {
+  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts})); } catch(e){}
+  if (!docRef) return;
+  isSaving = true;
+  document.getElementById("sync-text").innerText = "Enregistrement...";
+
+  docRef.set({
+    cardsData: cardsData,
+    payrollCounts: payrollCounts,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true }).then(() => {
+    document.getElementById("sync-dot").style.background = "#16a34a";
+    document.getElementById("sync-text").innerText = "Connecté à Firebase";
+    setTimeout(() => { isSaving = false; }, 300);
+  }).catch(() => {
+    document.getElementById("sync-dot").style.background = "#eab308";
+    document.getElementById("sync-text").innerText = "Sauvegardé en local";
+    isSaving = false;
+  });
+}
+
+function renderCards() {
+  try {
+    CATEGORY_INFO.forEach(cat => {
+      const grid = document.getElementById(`grid-${cat.id}`);
+      if(grid) grid.innerHTML = "";
+    });
+
+    cardsData.forEach((card, cIdx) => {
+      if(!card.tasks) card.tasks = [];
+      const catId = card.category || 'trades';
+      const grid = document.getElementById(`grid-${catId}`) || document.getElementById('grid-trades');
+      
+      const cardEl = document.createElement("div");
+      cardEl.className = `card cat-${catId}`;
+      cardEl.dataset.cidx = cIdx; 
+      
+      let tasksHtml = card.tasks.map((t, tIdx) => `
+        <div class="task-item">
+          <div class="task-desc" contenteditable="true" onblur="updateTaskDesc(${cIdx}, ${tIdx}, this.innerText)">${t.desc || ''}</div>
+          ${t.importedScope ? `
+            <div class="scope-imported-box">
+              <span class="scope-imported-text" title="${t.importedScope}">Excel: ${t.importedScope}</span>
+              <button class="btn-use-scope" onclick="applyImportedScope(${cIdx},${tIdx})">Utiliser</button>
+            </div>
+          ` : ''}
+          <div class="task-controls">
+            <select class="source-select ${String(t.source||'').toLowerCase()}" onchange="updateTaskSource(${cIdx}, ${tIdx}, this.value, this)">
+              <option value="SKYBUILDING" ${t.source==='SKYBUILDING'?'selected':''}>SKYBUILDING</option>
+              <option value="DSS" ${t.source==='DSS'?'selected':''}>DSS</option>
+              <option value="EUROASIA" ${t.source==='EUROASIA'?'selected':''}>EUROASIA</option>
+              <option value="OTHER" ${t.source==='OTHER'?'selected':''}>AUTRE</option>
+            </select>
+            <div style="display:flex; align-items:center; gap:3px;">
+              <input type="number" min="0" class="worker-count-input" value="${t.workers || 0}" oninput="updateWorkerCount(${cIdx}, ${tIdx}, this.value)" />
+              <span style="font-size:10px; font-weight:700;">p.</span>
+              <span style="cursor:pointer; color:#dc2626; font-size:14px; font-weight:bold; margin-left:3px;" onclick="removeTask(${cIdx}, ${tIdx})">&times;</span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      cardEl.innerHTML = `
+        <div class="card-header drag-handle" title="Glisser pour déplacer">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="color:#94a3b8; font-size:16px; margin-top:-2px;">⠿</span>
+            <select class="cat-select" onchange="changeCategory(${cIdx}, this.value)" style="cursor:pointer;">
+              <option value="civil" ${catId==='civil'?'selected':''}>Civil</option>
+              <option value="trades" ${catId==='trades'?'selected':''}>Trades</option>
+              <option value="facade" ${catId==='facade'?'selected':''}>Façade</option>
+              <option value="logistic" ${catId==='logistic'?'selected':''}>Logistic</option>
+              <option value="external" ${catId==='external'?'selected':''}>External</option>
+              <option value="indirect" ${catId==='indirect'?'selected':''}>Indirect</option>
+              <option value="plant" ${catId==='plant'?'selected':''}>Plant & Eq</option>
+            </select>
+          </div>
+          <span class="card-total-badge" id="card-total-${cIdx}">0 Wkrs</span>
+        </div>
+        <div class="card-title-row">
+          <div style="display:flex; flex-direction:column; gap:2px; width:100%;">
+            <div class="sup-name" contenteditable="true" onblur="updateSupName(${cIdx}, this.innerText)">${card.name || 'Inconnu'}</div>
+            <div class="ts-badge" title="Numéro de la Timesheet">TS N° <span contenteditable="true" data-placeholder="---" onblur="updateTimesheetNo(${cIdx}, this.innerText)">${card.timesheetNo || ''}</span></div>
+          </div>
+          <button class="btn-remove-card" onclick="removeSupervisor(${cIdx})">&times;</button>
+        </div>
+        <div class="card-body">
+          ${tasksHtml}
+          <button class="btn-add-task" onclick="addTask(${cIdx})">+ Ajouter Ligne</button>
+        </div>
+      `;
+      grid.appendChild(cardEl);
+    });
+
+    recalculateTotals();
+  } catch (err) { console.error("Render error:", err); }
+}
+
+function reorderCardsBasedOnDOM() {
+  const newCardsData = [];
+  CATEGORY_INFO.forEach(cat => {
+    const grid = document.getElementById(`grid-${cat.id}`);
+    if (!grid) return;
+    grid.querySelectorAll('.card').forEach(cardEl => {
+      const oldIdx = cardEl.dataset.cidx;
+      if (cardsData[oldIdx]) {
+        cardsData[oldIdx].category = cat.id; 
+        newCardsData.push(cardsData[oldIdx]);
+      }
+    });
+  });
+  cardsData = newCardsData;
+  renderCards();
+  syncToFirebase();
+}
+
+function updateSupName(cIdx, val) { cardsData[cIdx].name = val.trim(); syncToFirebase(); }
+function updateTimesheetNo(cIdx, val) { cardsData[cIdx].timesheetNo = val.trim(); syncToFirebase(); }
+function updateTaskDesc(cIdx, tIdx, val) { cardsData[cIdx].tasks[tIdx].desc = val.trim(); syncToFirebase(); }
+function applyImportedScope(cIdx, tIdx) { cardsData[cIdx].tasks[tIdx].desc = cardsData[cIdx].tasks[tIdx].importedScope; renderCards(); syncToFirebase(); }
+function updateTaskSource(cIdx, tIdx, val, el) { cardsData[cIdx].tasks[tIdx].source = val; el.className = `source-select ${val.toLowerCase()}`; recalculateTotals(); syncToFirebase(); }
+function updateWorkerCount(cIdx, tIdx, val) { cardsData[cIdx].tasks[tIdx].workers = parseInt(val) || 0; recalculateTotals(); syncToFirebase(); }
+function changeCategory(cIdx, val) { cardsData[cIdx].category = val; renderCards(); syncToFirebase(); }
+function addTask(cIdx) { cardsData[cIdx].tasks.push({ desc: "", importedScope: "", source: "SKYBUILDING", workers: 1 }); renderCards(); syncToFirebase(); }
+function removeTask(cIdx, tIdx) { cardsData[cIdx].tasks.splice(tIdx, 1); renderCards(); syncToFirebase(); }
+function addNewSupervisor() { cardsData.unshift({ name: "NOUVEAU SUPERVISEUR", category: "trades", timesheetNo: "", tasks: [{ desc: "", importedScope: "", source: "SKYBUILDING", workers: 1 }] }); renderCards(); syncToFirebase(); }
+function removeSupervisor(cIdx) { if (confirm(`Supprimer ${cardsData[cIdx].name} ?`)) { cardsData.splice(cIdx, 1); renderCards(); syncToFirebase(); } }
+
+function updatePayroll(company, val) {
+  payrollCounts[company] = parseInt(val) || 0;
+  recalculateTotals();
+  syncToFirebase();
+}
+
+function recalculateTotals() {
+  let grandTotal = 0, sky = 0, dss = 0, euro = 0, other = 0;
+  let cats = { civil: 0, trades: 0, facade: 0, logistic: 0, external: 0, indirect: 0, plant: 0 };
+
+  cardsData.forEach((card, cIdx) => {
+    let cardSum = 0;
+    if(card.tasks) {
+      card.tasks.forEach(t => {
+        let w = parseInt(t.workers) || 0;
+        cardSum += w; grandTotal += w;
+        if (t.source === "SKYBUILDING") sky += w;
+        else if (t.source === "DSS") dss += w;
+        else if (t.source === "EUROASIA") euro += w;
+        else other += w;
+      });
+    }
+    const b = document.getElementById(`card-total-${cIdx}`);
+    if (b) b.innerText = `${cardSum} Wkrs`;
+    if (cats.hasOwnProperty(card.category)) cats[card.category] += cardSum;
+  });
+
+  document.getElementById("grand-total").innerText = grandTotal;
+  document.getElementById("total-sky").innerText = sky;
+  document.getElementById("total-dss").innerText = dss;
+  document.getElementById("total-euro").innerText = euro;
+  document.getElementById("total-other").innerText = other;
+  
+  document.getElementById("cat-civil").innerText = cats.civil;
+  document.getElementById("cat-trades").innerText = cats.trades;
+  document.getElementById("cat-facade").innerText = cats.facade;
+  document.getElementById("cat-logistic").innerText = cats.logistic;
+  document.getElementById("cat-external").innerText = cats.external;
+  document.getElementById("cat-indirect").innerText = cats.indirect;
+  document.getElementById("cat-plant").innerText = cats.plant;
+
+  // Calcul et affichage des écarts (Variance)
+  const updateDiff = (company, tsTotal) => {
+    const prTotal = payrollCounts[company] || 0;
+    const diff = tsTotal - prTotal;
+    const el = document.getElementById(`diff-${company.toLowerCase()}`);
+    const inputEl = document.getElementById(`pr-${company.toLowerCase()}`);
+    if (inputEl && document.activeElement !== inputEl) inputEl.value = prTotal;
+    
+    if (el) {
+      el.innerText = diff > 0 ? `+${diff}` : diff;
+      el.className = `diff-badge ${diff === 0 ? 'diff-ok' : 'diff-warn'}`;
+      el.title = diff > 0 ? `${diff} p. en trop sur les Timesheets` : (diff < 0 ? `${Math.abs(diff)} p. manquantes sur les Timesheets` : "Parfaitement aligné");
+    }
+  };
+
+  updateDiff("SKYBUILDING", sky);
+  updateDiff("DSS", dss);
+  updateDiff("EUROASIA", euro);
+  updateDiff("OTHER", other);
+}
+
+// --- 4. SAUVEGARDE ET RESTAURATION MANUELLE ---
+function exportBackup() {
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({cardsData, payrollCounts}, null, 2));
+  const dlAnchorElem = document.createElement('a');
+  dlAnchorElem.setAttribute("href", dataStr);
+  dlAnchorElem.setAttribute("download", `site_backup_${new Date().toISOString().split('T')[0]}.json`);
+  document.body.appendChild(dlAnchorElem);
+  dlAnchorElem.click();
+  dlAnchorElem.remove();
+}
+
+function importBackup(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (parsed.cardsData) {
+        cardsData = parsed.cardsData;
+        payrollCounts = parsed.payrollCounts || payrollCounts;
+        renderCards();
+        syncToFirebase();
+        alert("Sauvegarde restaurée avec succès !");
+      } else { alert("Fichier invalide."); }
+    } catch (err) { alert("Erreur : " + err.message); }
+    event.target.value = "";
+  };
+  reader.readAsText(file);
+}
+
+// --- 5. IMPORTATEUR EXCEL ---
+function importExcelFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const importedSupervisors = {};
+      let totalImportedWorkers = 0;
+
+      workbook.SheetNames.forEach(sheetName => {
+        if (!sheetName) return;
+        const upperSheet = String(sheetName).trim().toUpperCase();
+        let companySource = "OTHER";
+        if (upperSheet.includes("LOAN") || upperSheet.includes("SKY")) companySource = "SKYBUILDING";
+        else if (upperSheet.includes("DSS")) companySource = "DSS";
+        else if (upperSheet.includes("EURO")) companySource = "EUROASIA";
+
+        const worksheet = workbook.Sheets[sheetName];
+        if (!worksheet) return;
+
+        const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+        if (!rawRows || rawRows.length === 0) return;
+
+        let headerRowIdx = -1;
+        for (let r = 0; r < rawRows.length; r++) {
+          const rowArray = rawRows[r];
+          if (!Array.isArray(rowArray)) continue;
+          const lineStr = rowArray.map(cell => String(cell || "").toUpperCase()).join(" ");
+          if (lineStr.includes("SUPERVISOR")) { headerRowIdx = r; break; }
+        }
+        if (headerRowIdx === -1) return;
+
+        const headerRow = rawRows[headerRowIdx] || [];
+        let supCol = -1, scopeCol = -1, tsCol = -1, workerCols = [];
+        for (let c = 0; c < headerRow.length; c++) {
+          const colName = String(headerRow[c] || "").trim().toUpperCase();
+          if (colName.includes("SUPERVISOR") && supCol === -1) supCol = c;
+          if (colName.includes("SCOPE") && scopeCol === -1) scopeCol = c;
+          if (colName.includes("TIMESHEET") && tsCol === -1) tsCol = c;
+          if (colName.includes("NAME") || colName.includes("SURNAME")) workerCols.push(c);
+        }
+        if (supCol === -1) return;
+
+        for (let r = headerRowIdx + 1; r < rawRows.length; r++) {
+          const row = rawRows[r];
+          if (!Array.isArray(row) || row.length === 0) continue;
+
+          let currentSupervisor = String(row[supCol] || "").trim().toUpperCase();
+          let currentScope = scopeCol !== -1 ? String(row[scopeCol] || "").trim().toUpperCase() : "GENERAL WORKS";
+          let currentTimesheet = tsCol !== -1 ? String(row[tsCol] || "").trim() : "";
+          if (!currentScope) currentScope = "GENERAL WORKS";
+
+          let hasWorker = false;
+          if (workerCols.length > 0) {
+            for (let wc of workerCols) { if (String(row[wc] || "").trim() !== "") { hasWorker = true; break; } }
+          } else { hasWorker = true; }
+
+          if (!currentSupervisor || !hasWorker) continue;
+          
+          if (!importedSupervisors[currentSupervisor]) {
+            importedSupervisors[currentSupervisor] = { timesheetNo: currentTimesheet, tasks: {} };
+          } else if (currentTimesheet && !importedSupervisors[currentSupervisor].timesheetNo) {
+            importedSupervisors[currentSupervisor].timesheetNo = currentTimesheet;
+          }
+
+          const taskKey = `${companySource}___${currentScope}`;
+          if (!importedSupervisors[currentSupervisor].tasks[taskKey]) {
+            importedSupervisors[currentSupervisor].tasks[taskKey] = { source: companySource, importedScope: currentScope, workers: 0 };
+          }
+          importedSupervisors[currentSupervisor].tasks[taskKey].workers += 1;
+          totalImportedWorkers += 1;
+        }
+      });
+
+      if (totalImportedWorkers === 0) { alert("Aucun ouvrier détecté."); event.target.value = ""; return; }
+
+      cardsData.forEach(c => c.tasks.forEach(t => t.workers = 0));
+
+      Object.keys(importedSupervisors).forEach(supName => {
+        const supData = importedSupervisors[supName];
+        let existingCard = cardsData.find(c => {
+          const cleanExist = String(c.name || "").toUpperCase().replace(/[^A-Z]/g, '');
+          const cleanImport = String(supName || "").toUpperCase().replace(/[^A-Z]/g, '');
+          if (!cleanExist || !cleanImport) return false;
+          return cleanExist.includes(cleanImport) || cleanImport.includes(cleanExist) || (cleanExist.substring(0,5) === cleanImport.substring(0,5));
+        });
+
+        const newTaskList = Object.values(supData.tasks);
+
+        if (existingCard) {
+          existingCard.timesheetNo = supData.timesheetNo || existingCard.timesheetNo;
+          newTaskList.forEach(newT => {
+            let matchTask = existingCard.tasks.find(t => t.source === newT.source && t.importedScope === newT.importedScope);
+            if (!matchTask) matchTask = existingCard.tasks.find(t => t.source === newT.source && !t.importedScope);
+            if (matchTask) { matchTask.importedScope = newT.importedScope; matchTask.workers = newT.workers; } 
+            else { existingCard.tasks.push({ desc: "", importedScope: newT.importedScope, source: newT.source, workers: newT.workers }); }
+          });
+        } else {
+          let cat = "trades";
+          let sUp = supName.toUpperCase();
+          if (sUp.includes("TAREK") || sUp.includes("TSIRKAS") || sUp.includes("CHRISTOS") || sUp.includes("BAGU")) cat = "civil";
+          else if (sUp.includes("PRAKASH") || sUp.includes("TAMMET") || sUp.includes("PROTECTION")) cat = "logistic";
+          else if (sUp.includes("RAZVAN") || sUp.includes("LOUKAS") || sUp.includes("BAKHIT")) cat = "external";
+          else if (sUp.includes("KUMAR") || sUp.includes("PLANT")) cat = "plant";
+          else if (sUp.includes("AHMED") || sUp.includes("FRED")) cat = "indirect";
+          else if (sUp.includes("TASSOS")) cat = "facade";
+
+          cardsData.push({ name: supName, category: cat, timesheetNo: supData.timesheetNo, tasks: newTaskList.map(nt => ({ desc: "", importedScope: nt.importedScope, source: nt.source, workers: nt.workers })) });
+        }
+      });
+
+      cardsData.forEach(c => { c.tasks = c.tasks.filter(t => t.workers > 0 || (t.desc && t.desc.trim() !== "")); });
+      renderCards(); syncToFirebase();
+      alert(`Import réussi : ${totalImportedWorkers} ouvriers détectés et numéros de Timesheet récupérés !`);
+
+    } catch (err) { alert("Erreur technique : " + err.message); }
+    event.target.value = "";
+  };
+  reader.readAsArrayBuffer(file);
+}
+</script>
+</body>
+</html>
