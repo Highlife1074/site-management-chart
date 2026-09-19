@@ -106,7 +106,7 @@
 
   .card-header { padding: 8px 12px; background: #fafafa; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
   .cat-select { font-size: 10px; font-weight: 700; text-transform: uppercase; border: 1px solid #cbd5e1; border-radius: 5px; padding: 2px 4px; outline: none; cursor: pointer; }
-  .card-total-badge { font-size: 10.5px; font-weight: 800; background: #e0e7ff; color: #3730a3; padding: 2px 7px; border-radius: 10px; }
+  .card-total-badge { font-size: 10.5px; font-weight: 800; background: #e0e7ff; color: #3730a3; padding: 2px 7px; border-radius: 10px; display:inline-flex; align-items:center; }
 
   .card-title-row { padding: 8px 12px 6px 12px; display: flex; justify-content: space-between; align-items: flex-start; }
   .sup-name { font-size: 13px; font-weight: 800; outline: none; width: 100%; color: #0f172a; margin-top: 2px; }
@@ -143,9 +143,13 @@
   .source-select.euroasia { color: #7c3aed; }
   .source-select.other { color: #64748b; }
 
-  .worker-count-input { width: 44px; font-size: 11px; font-weight: 800; text-align: right; padding: 2px 4px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; }
-  .worker-count-input:focus { border-color: #2563eb; background: #eff6ff; }
-  .worker-count-input:disabled { background: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; cursor: not-allowed; }
+  /* Comparateur Effectifs */
+  .count-comparator { display: flex; align-items: center; border: 1px solid; border-radius: 4px; padding: 2px 4px; background: white; font-weight: 800; font-size: 11px; }
+  .count-comparator.diff-warn { border-color: #fca5a5; background: #fef2f2; color: #dc2626; }
+  .count-comparator.diff-ok { border-color: #cbd5e1; background: #ffffff; color: #475569; }
+  .count-comparator input { width: 32px; border: none; background: transparent; font-size: 11px; font-weight: 800; text-align: center; color: inherit; padding: 0; outline: none; }
+  .count-comparator input:focus { border-bottom: 1px dashed currentColor; }
+  .count-comparator input:disabled { cursor: not-allowed; opacity: 0.8; }
 
   .btn-add-task { background: transparent; border: 1px dashed #cbd5e1; color: #64748b; font-size: 10px; font-weight: 600; padding: 4px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 2px; }
   .btn-add-task:hover { background: #f1f5f9; color: #0f172a; }
@@ -175,8 +179,9 @@
   .modal-box { background: white; padding: 20px; border-radius: 12px; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 12px; }
   .modal-title { font-size: 15px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
   .modal-select { padding: 8px; font-size: 13px; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; width: 100%; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 
-  /* VUE ORGANIGRAMME */
+  /* VUE ORGANIGRAMME - AMÉLIORÉE */
   #orgchart-view { display: none; padding: 20px 0; overflow-x: auto; min-height: 60vh; }
   .org-level-top { text-align: center; margin-bottom: 40px; }
   .org-level-top span { background: #1e293b; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 800; font-size: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
@@ -188,8 +193,14 @@
   .org-sup-card { background: #ffffff; border: 1px solid #cbd5e1; border-left-width: 5px; border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
   .org-sup-name { font-size: 13px; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
   .org-sup-meta { font-size: 10px; color: #64748b; display: flex; justify-content: space-between; font-weight: 600; }
-  .org-foremen-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; border-top: 1px dotted #cbd5e1; padding-top: 8px; }
-  .org-foreman-card { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 8px; }
+  
+  /* Lignes de hiérarchie visuelle pour les foremen */
+  .org-foremen-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; border-top: 1px dotted #cbd5e1; padding-top: 12px; padding-left: 12px; position: relative; }
+  .org-foremen-list::before { content: ""; position: absolute; left: 4px; top: 10px; bottom: 10px; width: 2px; background: #e2e8f0; }
+  
+  .org-foreman-card { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 8px; position: relative; margin-left: 8px; }
+  .org-foreman-card::before { content: ""; position: absolute; left: -16px; top: 50%; width: 16px; height: 2px; background: #e2e8f0; }
+  
   .org-foreman-name { font-size: 11px; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 4px; }
   .org-foreman-meta { font-size: 10px; font-weight: 800; color: #059669; background: #d1fae5; padding: 1px 6px; border-radius: 10px; }
 
@@ -215,7 +226,7 @@
     body:not(.print-mode-ts) .cards-grid { border: none !important; background: transparent !important; padding: 0 !important; gap: 8px; }
     body:not(.print-mode-ts) .category-section { break-inside: avoid; display: block !important; }
     body:not(.print-mode-ts) .card { break-inside: avoid; box-shadow: none !important; border: 1px solid #cbd5e1; }
-    body:not(.print-mode-ts) .worker-count-input, 
+    body:not(.print-mode-ts) .count-comparator, 
     body:not(.print-mode-ts) .source-select, 
     body:not(.print-mode-ts) .cat-select, 
     body:not(.print-mode-ts) .payroll-input,
@@ -671,7 +682,14 @@ function renderCards() {
       cardEl.className = `card cat-${catId}`;
       cardEl.dataset.cidx = cIdx; 
       
-      let tasksHtml = card.tasks.map((t, tIdx) => `
+      let tasksHtml = card.tasks.map((t, tIdx) => {
+        const linkedCount = t.workerList ? t.workerList.length : 0;
+        const manualCount = parseInt(t.workers) || 0;
+        const isDiff = linkedCount !== manualCount;
+        const compClass = isDiff ? 'diff-warn' : 'diff-ok';
+        const compTitle = isDiff ? `Alerte: ${linkedCount} noms assignés pour ${manualCount} ouvriers prévus` : `Effectifs équilibrés`;
+
+        return `
         <div class="task-item">
           <div class="task-foreman">
             👷‍♂️ Foreman: <span contenteditable="true" data-placeholder="Nom..." onblur="updateTaskForeman(${cIdx}, ${tIdx}, this.innerText)">${t.foreman || ''}</span>
@@ -684,14 +702,16 @@ function renderCards() {
               <option value="EUROASIA" ${t.source==='EUROASIA'?'selected':''}>EUROASIA</option>
               <option value="OTHER" ${t.source==='OTHER'?'selected':''}>AUTRE</option>
             </select>
-            <div style="display:flex; align-items:center; gap:3px;">
-              <input type="number" min="0" class="worker-count-input" value="${t.workers || 0}" oninput="updateWorkerCount(${cIdx}, ${tIdx}, this.value)" />
-              <span style="font-size:10px; font-weight:700;">p.</span>
+            <div style="display:flex; align-items:center; gap:4px;">
+              <div class="count-comparator ${compClass}" title="${compTitle}">
+                <span style="margin-right:2px;">👥 ${linkedCount}</span> / 
+                <input type="number" min="0" class="worker-count-input" value="${manualCount}" oninput="updateWorkerCount(${cIdx}, ${tIdx}, this.value)" />
+              </div>
               <span class="btn-delete-task" title="Supprimer cette ligne" onclick="removeTask(${cIdx}, ${tIdx})">&times;</span>
             </div>
           </div>
         </div>
-      `).join('');
+      `}).join('');
 
       let workersHtml = card.tasks.flatMap((t, tIdx) => (t.workerList || []).map(w => `
         <div class="worker-pill ${w.company.toLowerCase()}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="${cIdx}" data-tidx="${tIdx}" onclick="openWorkerModal(this)">
@@ -702,6 +722,14 @@ function renderCards() {
       const sType = card.shiftType || 'Shift 1';
       const sHours = card.shiftHours || '07:00 - 15:00';
       const isChecked = selectedForPrint.has(cIdx) ? 'checked' : '';
+
+      let cardManualSum = 0;
+      let cardLinkedSum = 0;
+      card.tasks.forEach(t => {
+         cardManualSum += parseInt(t.workers) || 0;
+         cardLinkedSum += (t.workerList ? t.workerList.length : 0);
+      });
+      const mismatchIcon = cardManualSum !== cardLinkedSum ? `<span title="Alerte: ${cardLinkedSum} nommés vs ${cardManualSum} saisis" style="color:#dc2626; margin-right:4px;">⚠️</span>` : '';
 
       cardEl.innerHTML = `
         <div class="card-header drag-handle" title="Glisser pour déplacer">
@@ -717,7 +745,7 @@ function renderCards() {
               <option value="plant" ${catId==='plant'?'selected':''}>Plant & Eq</option>
             </select>
           </div>
-          <span class="card-total-badge" id="card-total-${cIdx}">0 Wkrs</span>
+          <span class="card-total-badge" id="card-total-${cIdx}" style="${cardManualSum !== cardLinkedSum ? 'background:#fef2f2; color:#991b1b; border:1px solid #fca5a5;' : ''}">${mismatchIcon}${cardManualSum} Wkrs</span>
         </div>
         <div class="card-title-row">
           <div style="display:flex; flex-direction:column; gap:2px; width:100%;">
@@ -779,8 +807,12 @@ function renderOrgChart() {
         let directWkrs = 0;
 
         sup.tasks.forEach(t => { 
-          let w = parseInt(t.workers)||0; 
-          supWorkers += w; mgrTotalWorkers += w;
+          let manual = parseInt(t.workers)||0;
+          let linked = t.workerList ? t.workerList.length : 0;
+          let w = Math.max(manual, linked); 
+          supWorkers += w; 
+          mgrTotalWorkers += w;
+          
           let fName = (t.foreman || '').trim().toUpperCase();
           if (fName) {
              if(!foremenGroups[fName]) foremenGroups[fName] = 0;
@@ -845,7 +877,6 @@ function handleWorkerDrop(evt) {
     if (cardsData[fromCIdx] && cardsData[fromCIdx].tasks[oldTIdx]) {
       let t = cardsData[fromCIdx].tasks[oldTIdx];
       t.workerList = t.workerList.filter(w => w.id !== wId);
-      t.workers = Math.max(0, t.workers - 1);
     }
   }
 
@@ -855,13 +886,12 @@ function handleWorkerDrop(evt) {
     const toCIdx = parseInt(evt.to.dataset.cidx);
     let targetTaskIdx = cardsData[toCIdx].tasks.findIndex(t => t.source === wComp);
     if (targetTaskIdx === -1) {
-      cardsData[toCIdx].tasks.push({ desc: 'Affectation manuelle', source: wComp, workers: 0, workerList: [] });
+      cardsData[toCIdx].tasks.push({ desc: 'Affectation manuelle', source: wComp, workers: 1, workerList: [] });
       targetTaskIdx = cardsData[toCIdx].tasks.length - 1;
     }
     let t = cardsData[toCIdx].tasks[targetTaskIdx];
     if (!t.workerList) t.workerList = [];
     t.workerList.push(workerObj);
-    t.workers += 1;
   }
   renderCards(); renderDrawer(); syncToFirebase();
 }
@@ -903,7 +933,6 @@ function confirmWorkerMove() {
      if (cardsData[cIdx] && cardsData[cIdx].tasks[tIdx]) {
         let t = cardsData[cIdx].tasks[tIdx];
         t.workerList = t.workerList.filter(w => w.id !== wId);
-        t.workers = Math.max(0, t.workers - 1);
      }
   }
   
@@ -911,13 +940,12 @@ function confirmWorkerMove() {
   else {
      let targetTaskIdx = cardsData[targetCIdx].tasks.findIndex(t => t.source === wComp);
      if (targetTaskIdx === -1) {
-        cardsData[targetCIdx].tasks.push({ desc: 'Affectation rapide', source: wComp, workers: 0, workerList: [] });
+        cardsData[targetCIdx].tasks.push({ desc: 'Affectation rapide', source: wComp, workers: 1, workerList: [] });
         targetTaskIdx = cardsData[targetCIdx].tasks.length - 1;
      }
      let t = cardsData[targetCIdx].tasks[targetTaskIdx];
      if (!t.workerList) t.workerList = [];
      t.workerList.push(workerObj);
-     t.workers += 1;
   }
   closeWorkerModal(); renderCards(); renderDrawer(); syncToFirebase();
 }
@@ -962,6 +990,7 @@ function reorderCardsBasedOnDOM() {
   renderCards(); syncToFirebase();
 }
 
+// TOUTES LES FONCTIONS DE MISE À JOUR DONT FOREMAN
 function updateManager(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].manager = val.trim(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); }
 function updateSupName(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].name = val.trim(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); }
 function updateTimesheetNo(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].timesheetNo = val.trim(); syncToFirebase(); }
@@ -972,9 +1001,9 @@ function updateTaskDesc(cIdx, tIdx, val) { if (currentRole === 'viewer' || curre
 function updateTaskSource(cIdx, tIdx, val, el) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].source = val; el.className = `source-select ${val.toLowerCase()}`; recalculateTotals(); syncToFirebase(); }
 function updateWorkerCount(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].workers = parseInt(val) || 0; recalculateTotals(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); }
 function changeCategory(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].category = val; renderCards(); syncToFirebase(); }
-function addTask(cIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks.push({ desc: "", foreman: "", source: "SKYBUILDING", workers: 1, workerList: [] }); renderCards(); syncToFirebase(); }
+function addTask(cIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks.push({ desc: "", foreman: "", source: "SKYBUILDING", workers: 0, workerList: [] }); renderCards(); syncToFirebase(); }
 function removeTask(cIdx, tIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks.splice(tIdx, 1); renderCards(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); }
-function addNewSupervisor() { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData.unshift({ name: "NOUVEAU SUPERVISEUR", manager: "", category: "trades", timesheetNo: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "", foreman: "", source: "SKYBUILDING", workers: 1, workerList: [] }] }); renderCards(); syncToFirebase(); }
+function addNewSupervisor() { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData.unshift({ name: "NOUVEAU SUPERVISEUR", manager: "", category: "trades", timesheetNo: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "", foreman: "", source: "SKYBUILDING", workers: 0, workerList: [] }] }); renderCards(); syncToFirebase(); }
 function removeSupervisor(cIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; if (confirm(`Supprimer ${cardsData[cIdx].name} ?`)) { cardsData.splice(cIdx, 1); renderCards(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); } }
 
 function updatePayroll(company, val) {
@@ -1000,7 +1029,20 @@ function recalculateTotals() {
       });
     }
     const b = document.getElementById(`card-total-${cIdx}`);
-    if (b) b.innerText = `${cardSum} Wkrs`;
+    if (b) {
+      const cardLinkedSum = card.tasks.reduce((acc, t) => acc + (t.workerList ? t.workerList.length : 0), 0);
+      const mismatchIcon = cardSum !== cardLinkedSum ? `<span title="Alerte: ${cardLinkedSum} nommés vs ${cardSum} saisis" style="color:#dc2626; margin-right:4px;">⚠️</span>` : '';
+      b.innerHTML = `${mismatchIcon}${cardSum} Wkrs`;
+      if(cardSum !== cardLinkedSum){
+        b.style.backgroundColor = '#fef2f2';
+        b.style.color = '#991b1b';
+        b.style.border = '1px solid #fca5a5';
+      } else {
+        b.style.backgroundColor = '#e0e7ff';
+        b.style.color = '#3730a3';
+        b.style.border = 'none';
+      }
+    }
     if (cats.hasOwnProperty(card.category)) cats[card.category] += cardSum;
   });
 
@@ -1044,7 +1086,6 @@ function openTsTasksModal(cIdx) {
   currentTsCardIdx = cIdx;
   const card = cardsData[cIdx];
   
-  // Par défaut : prend les tâches de l'interface si l'utilisateur n'a encore rien défini
   let pts = card.printTasks;
   if (!pts || pts.length === 0) {
      pts = card.tasks.map(t => {
@@ -1122,22 +1163,23 @@ function executePrint() {
     const card = cardsData[cIdx];
     if (!card) return;
 
-    // Colonnes (Tâches customisées)
     let taskHeaders = card.printTasks !== undefined ? [...card.printTasks] : card.tasks.map(t => (t.foreman ? `[${t.foreman}] ` : '') + t.desc).filter(d => d.trim() !== "");
-    // Toujours ajouter 2 colonnes vides au stylo
-    taskHeaders.push('', '');
+    taskHeaders.push('', ''); // Les 2 colonnes vierges garanties
 
     let taskThs = taskHeaders.map(th => `<th class="ts-task-col">${th || '&nbsp;'}</th>`).join('');
 
-    // Agréger tous les ouvriers de la carte
     const workersMap = new Map();
     let unnamedCount = 0;
 
     card.tasks.forEach(t => {
-      if (t.workerList && t.workerList.length > 0) {
+      const manual = parseInt(t.workers) || 0;
+      const linked = t.workerList ? t.workerList.length : 0;
+      
+      if (t.workerList && linked > 0) {
         t.workerList.forEach(w => workersMap.set(w.id, w));
-      } else {
-        unnamedCount += (parseInt(t.workers) || 0);
+      }
+      if (manual > linked) {
+        unnamedCount += (manual - linked);
       }
     });
 
@@ -1157,7 +1199,6 @@ function executePrint() {
        rowsHtml = `<tr><td colspan="${3 + taskHeaders.length}" style="text-align:center;">Aucun ouvrier pour cette équipe</td></tr>`;
     }
 
-    // Générer les 6 pages (du jour choisi + 5 jours suivants)
     for (let d = 0; d < 6; d++) {
       let currentDate = new Date(baseDate);
       currentDate.setDate(currentDate.getDate() + d);
@@ -1213,35 +1254,6 @@ function executePrint() {
   document.body.classList.add('print-mode-ts');
   window.print();
   setTimeout(() => { document.body.classList.remove('print-mode-ts'); }, 500);
-}
-
-function exportBackup() {
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({cardsData, payrollCounts, unassignedWorkers}, null, 2));
-  const dlAnchorElem = document.createElement('a');
-  dlAnchorElem.setAttribute("href", dataStr);
-  dlAnchorElem.setAttribute("download", `site_backup_${new Date().toISOString().split('T')[0]}.json`);
-  document.body.appendChild(dlAnchorElem); dlAnchorElem.click(); dlAnchorElem.remove();
-}
-
-function importBackup(event) {
-  if (currentRole === 'viewer') return;
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const parsed = JSON.parse(e.target.result);
-      if (parsed.cardsData) {
-        cardsData = parsed.cardsData;
-        payrollCounts = parsed.payrollCounts || payrollCounts;
-        unassignedWorkers = parsed.unassignedWorkers || [];
-        renderCards(); renderDrawer(); syncToFirebase();
-        alert("Sauvegarde restaurée avec succès !");
-      } else { alert("Fichier invalide."); }
-    } catch (err) { alert("Erreur : " + err.message); }
-    event.target.value = "";
-  };
-  reader.readAsText(file);
 }
 
 // --- IMPORTATION EXCEL GLOBALE (POINTAGE) ---
@@ -1391,7 +1403,7 @@ function importExcelFile(event) {
 
       cardsData.forEach(c => { c.tasks = c.tasks.filter(t => t.workers > 0 || (t.desc && t.desc.trim() !== "")); });
       renderCards(); syncToFirebase();
-      alert(`Import réussi : ${totalImportedWorkers} ouvriers détectés et liés !`);
+      alert(`Import réussi : ${totalImportedWorkers} ouvriers liés !`);
 
     } catch (err) { alert("Erreur technique : " + err.message); }
     event.target.value = "";
