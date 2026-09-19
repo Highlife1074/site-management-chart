@@ -45,6 +45,8 @@
   .btn-warning:hover { background: #d97706; }
   .btn-purple { background: #7c3aed; color: white; }
   .btn-purple:hover { background: #6d28d9; }
+  .btn-black { background: #0f172a; color: white; }
+  .btn-black:hover { background: #334155; }
 
   .dashboard-container { max-width: 1540px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
 
@@ -82,9 +84,11 @@
   .category-section { margin-top: 10px; margin-bottom: 20px; }
   .category-title { font-size: 14px; font-weight: 800; padding-bottom: 6px; margin-bottom: 12px; text-transform: uppercase; }
   .cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; min-height: 90px; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 10px; }
-  .card { background: white; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; border-top: 4px solid #94a3b8; transition: transform 0.15s, box-shadow 0.15s; }
+  .card { background: white; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; border-top: 4px solid #94a3b8; transition: transform 0.15s, box-shadow 0.15s; position: relative; }
   .card:hover { box-shadow: 0 6px 12px rgba(0,0,0,0.08); }
   
+  .ts-checkbox { width: 16px; height: 16px; cursor: pointer; accent-color: #2563eb; }
+
   .drag-handle { cursor: grab; }
   .drag-handle:active { cursor: grabbing; }
   .sortable-ghost { opacity: 0.3; background: #e2e8f0; border: 2px dashed #94a3b8; transform: scale(0.98); }
@@ -104,9 +108,11 @@
   .card-title-row { padding: 8px 12px 6px 12px; display: flex; justify-content: space-between; align-items: flex-start; }
   .sup-name { font-size: 13px; font-weight: 800; outline: none; width: 100%; color: #0f172a; }
   
-  .ts-badge { font-size: 10px; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 1px 6px; color: #475569; display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; }
-  .ts-badge span { outline: none; min-width: 25px; display: inline-block; color: #2563eb; }
+  .ts-badge-container { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+  .ts-badge { font-size: 10px; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 1px 4px; color: #475569; display: inline-flex; align-items: center; gap: 3px; }
+  .ts-badge span { outline: none; min-width: 20px; display: inline-block; color: #2563eb; }
   .ts-badge span:empty:before { content: attr(data-placeholder); color: #94a3b8; }
+  .ts-select { border: none; background: transparent; font-size: 10px; font-weight: 700; color: #475569; outline: none; cursor: pointer; }
 
   .btn-remove-card { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: -2px; }
   .btn-remove-card:hover { color: #dc2626; }
@@ -142,7 +148,6 @@
   .btn-close-drawer { background: none; border: none; font-size: 26px; cursor: pointer; color: #64748b; line-height: 1; }
   .btn-close-drawer:hover { color: #0f172a; }
 
-  /* WORKER PILLS */
   .worker-pill { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #334155; margin: 2px; transition: transform 0.1s, box-shadow 0.1s; }
   .worker-pill:hover { transform: scale(1.05); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
   .worker-pill.skybuilding { border-color: #7dd3fc; background: #e0f2fe; color: #0284c7; }
@@ -151,25 +156,56 @@
   .worker-pill.other { border-color: #cbd5e1; background: #f1f5f9; color: #475569; }
 
   .card-worker-dropzone { min-height: 36px; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 4px; background: #f8fafc; margin-top: 6px; display: flex; flex-wrap: wrap; align-content: flex-start; transition: background 0.2s; }
-  .card-worker-dropzone:empty::before { content: "Glissez ou cliquez pour assigner"; font-size: 10px; color: #94a3b8; width: 100%; text-align: center; margin-top: 6px; }
 
   /* MODAL */
   .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.6); display: none; align-items: center; justify-content: center; z-index: 2000; }
   .modal-box { background: white; padding: 20px; border-radius: 12px; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 12px; }
   .modal-title { font-size: 15px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
   .modal-select { padding: 8px; font-size: 13px; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; width: 100%; }
-  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 
+  /* STYLE D'IMPRESSION (Timesheets vs Dashboard) */
+  #timesheet-print-zone { display: none; }
+  
   @media print {
-    body { padding: 0; background: white; }
-    .top-bar, .btn-add-task, .btn-remove-card, #error-banner, .filter-bar, .btn-delete-task, .drawer, .modal-overlay { display: none !important; }
-    .dashboard-container { gap: 8px; max-width: 100%; }
-    .cards-grid { border: none !important; background: transparent !important; padding: 0 !important; min-height: 0 !important; gap: 8px; }
-    .category-section { break-inside: avoid; display: block !important; }
-    .card { break-inside: avoid; box-shadow: none !important; border: 1px solid #cbd5e1; }
-    .worker-count-input, .source-select, .cat-select, .payroll-input { border: none; background: transparent; color: #0f172a !important; -webkit-text-fill-color: #0f172a; }
-    .task-desc { border: none; padding: 0; }
-    .worker-pill { border: 1px solid #000; background: transparent; color: #000; }
+    body { padding: 0; background: white; margin: 0; }
+    
+    /* Mode Print Normal (Dashboard) */
+    body:not(.print-mode-ts) .top-bar, 
+    body:not(.print-mode-ts) .btn-add-task, 
+    body:not(.print-mode-ts) .btn-remove-card, 
+    body:not(.print-mode-ts) #error-banner, 
+    body:not(.print-mode-ts) .filter-bar, 
+    body:not(.print-mode-ts) .btn-delete-task, 
+    body:not(.print-mode-ts) .drawer, 
+    body:not(.print-mode-ts) .modal-overlay,
+    body:not(.print-mode-ts) .ts-checkbox { display: none !important; }
+    
+    body:not(.print-mode-ts) .cards-grid { border: none !important; background: transparent !important; padding: 0 !important; gap: 8px; }
+    body:not(.print-mode-ts) .category-section { break-inside: avoid; display: block !important; }
+    body:not(.print-mode-ts) .card { break-inside: avoid; box-shadow: none !important; border: 1px solid #cbd5e1; }
+    body:not(.print-mode-ts) .worker-count-input, 
+    body:not(.print-mode-ts) .source-select, 
+    body:not(.print-mode-ts) .cat-select, 
+    body:not(.print-mode-ts) .payroll-input,
+    body:not(.print-mode-ts) .ts-select { border: none; background: transparent; color: #0f172a !important; -webkit-appearance: none; }
+    body:not(.print-mode-ts) .task-desc { border: none; padding: 0; }
+    
+    /* Mode Print Timesheets (Templates officiels) */
+    body.print-mode-ts .top-bar,
+    body.print-mode-ts .dashboard-container,
+    body.print-mode-ts #workers-drawer,
+    body.print-mode-ts .modal-overlay { display: none !important; }
+
+    body.print-mode-ts #timesheet-print-zone { display: block !important; }
+
+    .ts-page { page-break-after: always; padding: 10mm; font-family: Arial, sans-serif; color: #000; }
+    .ts-header { text-align: center; font-size: 22px; font-weight: bold; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+    .ts-info-box { display: flex; justify-content: space-between; border: 2px solid #000; padding: 15px; margin-bottom: 20px; border-radius: 8px; font-size: 14px; font-weight: bold; line-height: 1.5; }
+    .ts-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 12px; }
+    .ts-table th, .ts-table td { border: 1px solid #000; padding: 8px; text-align: left; }
+    .ts-table th { background-color: #f1f5f9; font-weight: bold; }
+    .ts-signatures { display: flex; justify-content: space-between; margin-top: 50px; font-size: 14px; font-weight: bold; }
+    .ts-sign-box { border-top: 1px solid #000; width: 30%; text-align: center; padding-top: 10px; }
   }
 </style>
 </head>
@@ -181,11 +217,10 @@
 <div id="worker-modal" class="modal-overlay">
   <div class="modal-box">
     <div class="modal-title">Déplacer : <span id="modal-worker-name" style="color:#2563eb;"></span></div>
-    <p style="font-size:11px; color:#64748b; margin-top:-6px;">Sélectionnez le superviseur / Timesheet de destination :</p>
     <select id="modal-sup-select" class="modal-select"></select>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeWorkerModal()">Annuler</button>
-      <button class="btn btn-success" onclick="confirmWorkerMove()">✅ Confirmer le transfert</button>
+      <button class="btn btn-success" onclick="confirmWorkerMove()">✅ Confirmer</button>
     </div>
   </div>
 </div>
@@ -193,10 +228,9 @@
 <!-- DRAWER: Base Ouvriers -->
 <div id="workers-drawer" class="drawer">
   <div class="drawer-header">
-    <h3 style="font-size:16px; font-weight:800; color:#0f172a;">👷 Base Ouvriers</h3>
+    <h3 style="font-size:16px; font-weight:800;">👷 Base Ouvriers</h3>
     <button class="btn-close-drawer" onclick="toggleDrawer()">&times;</button>
   </div>
-  <p style="font-size:11px; color:#64748b; margin-top:-6px;">1. Importez la liste globale.<br>2. Cliquez ou glissez pour assigner.</p>
   
   <div style="display: flex; gap: 8px; margin-top: 4px;">
     <input type="file" id="db-file-input" accept=".xlsx, .xls" style="display:none" onchange="importWorkersDB(event)">
@@ -215,10 +249,8 @@
     <button class="btn btn-outline" style="font-size:11px; padding:4px;" onclick="addManualWorker()">+ Ajout Manuel</button>
   </div>
 
-  <h4 style="font-size:12px; margin-top:10px; color:#1e293b;">Ouvriers Non Assignés (Attente) :</h4>
-  <div id="unassigned-dropzone" style="flex-grow:1; border:2px dashed #cbd5e1; border-radius:8px; padding:8px; display:flex; flex-wrap:wrap; align-content:flex-start; background:#f8fafc; overflow-y:auto;">
-    <!-- Ouvriers importés apparaitront ici -->
-  </div>
+  <h4 style="font-size:12px; margin-top:10px;">Ouvriers Non Assignés :</h4>
+  <div id="unassigned-dropzone" style="flex-grow:1; border:2px dashed #cbd5e1; border-radius:8px; padding:8px; display:flex; flex-wrap:wrap; align-content:flex-start; background:#f8fafc; overflow-y:auto;"></div>
 </div>
 
 <div class="top-bar">
@@ -241,18 +273,22 @@
       </select>
     </div>
 
+    <!-- Import TS -->
     <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display:none" onchange="importExcelFile(event)">
-    <button class="btn btn-success" id="btn-import" onclick="document.getElementById('excel-file-input').click()" title="Import des effectifs depuis la Timesheet">📥 Importer Pointage</button>
+    <button class="btn btn-success" id="btn-import" onclick="document.getElementById('excel-file-input').click()">📥 Importer Pointage</button>
     <button class="btn btn-outline" id="btn-add-sup" onclick="addNewSupervisor()">+ Sup.</button>
     
     <div class="divider"></div>
     <button class="btn btn-purple" id="btn-db-toggle" onclick="toggleDrawer()">👷 Base Ouvriers</button>
+    
     <div class="divider"></div>
-    <button class="btn btn-warning" onclick="exportBackup()" title="Télécharger copie de sécurité">💾 Sauv.</button>
+    <button class="btn btn-black" id="btn-print-ts" onclick="printSelectedTimesheets()" title="Génère un PDF officiel pour les superviseurs cochés">📄 Imprimer TS (Cochées)</button>
+    <button class="btn btn-outline" onclick="window.print()" title="Imprime la vue tableau de bord">🖨️ PDF Global</button>
+
+    <div class="divider"></div>
+    <button class="btn btn-warning" onclick="exportBackup()">💾 Sauv.</button>
     <input type="file" id="backup-file-input" accept=".json" style="display:none" onchange="importBackup(event)">
-    <button class="btn btn-outline" onclick="document.getElementById('backup-file-input').click()" title="Restaurer copie">📂 Rest.</button>
-    <div class="divider"></div>
-    <button class="btn btn-outline" onclick="window.print()">🖨️ PDF</button>
+    <button class="btn btn-outline" onclick="document.getElementById('backup-file-input').click()">📂 Rest.</button>
   </div>
 </div>
 
@@ -327,6 +363,9 @@
 
 </div>
 
+<!-- ZONE D'IMPRESSION CACHÉE POUR LES TIMESHEETS -->
+<div id="timesheet-print-zone"></div>
+
 <script>
 window.onerror = function(msg, url, line) {
   const errDiv = document.getElementById("error-banner");
@@ -341,6 +380,7 @@ let currentRole = localStorage.getItem('app_role') || 'viewer';
 let sortableInstances = [];
 let workerSortables = [];
 let currentMovingWorker = null;
+let selectedForPrint = new Set(); // Mémorise les cases cochées
 
 function changeRole(newRole) {
   if (newRole !== 'viewer') {
@@ -364,29 +404,26 @@ function applyRolePermissions() {
   const isTK = currentRole === 'timekeeper';
   const isAdmin = currentRole === 'admin';
 
-  // Boutons généraux
   document.getElementById('btn-import').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
   document.getElementById('btn-import-db').style.display = isViewer || isCFO ? 'none' : 'inline-block';
   document.getElementById('btn-add-sup').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
   document.getElementById('btn-db-toggle').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
 
-  // Champs Payroll
   document.querySelectorAll('.payroll-input').forEach(el => { el.disabled = isViewer || isTK; });
   
-  // Textes éditables
   document.querySelectorAll('.sup-name, .task-desc, .ts-badge span, .title-editable').forEach(el => { 
     el.setAttribute('contenteditable', isViewer || isCFO ? 'false' : 'true'); 
   });
 
-  // Inputs numériques et selects
-  document.querySelectorAll('.worker-count-input, .source-select, .cat-select').forEach(el => { 
+  document.querySelectorAll('.worker-count-input, .source-select, .cat-select, .ts-select').forEach(el => { 
     el.disabled = isViewer || isCFO; 
   });
 
-  // Boutons suppression / ajout
   document.querySelectorAll('.btn-remove-card, .btn-add-task, .btn-delete-task').forEach(el => { 
     el.style.display = isViewer || isCFO ? 'none' : 'inline-block'; 
   });
+  
+  document.querySelectorAll('.ts-checkbox').forEach(el => { el.disabled = isViewer || isCFO; });
 
   sortableInstances.forEach(s => s.option("disabled", isViewer || isCFO));
   workerSortables.forEach(s => s.option("disabled", isViewer || isCFO));
@@ -410,7 +447,7 @@ let payrollCounts = { SKYBUILDING: 0, DSS: 0, EUROASIA: 0, OTHER: 0 };
 let db = null, docRef = null, isSaving = false, currentFilter = 'all';
 
 const DEFAULT_DATA = [
-  { name: "NOUVEAU SUPERVISEUR", category: "civil", timesheetNo: "TS-1", tasks: [{ desc: "Activité à définir", source: "SKYBUILDING", workers: 0, workerList: [] }] }
+  { name: "NOUVEAU SUPERVISEUR", category: "civil", timesheetNo: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", tasks: [{ desc: "Activité à définir", source: "SKYBUILDING", workers: 0, workerList: [] }] }
 ];
 
 try {
@@ -508,7 +545,7 @@ setTimeout(() => {
 
 // --- 3. FONCTIONS CLÉS & SYNCHRONISATION ---
 function syncToFirebase() {
-  if (currentRole === 'viewer') return; // Bloqué en lecture seule
+  if (currentRole === 'viewer') return; 
   try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers})); } catch(e){}
   if (!docRef) return;
   isSaving = true;
@@ -526,6 +563,11 @@ function syncToFirebase() {
     document.getElementById("sync-text").innerText = "Sauvegardé en local";
     isSaving = false;
   });
+}
+
+function handleCheck(cIdx, isChecked) {
+  if (isChecked) selectedForPrint.add(cIdx);
+  else selectedForPrint.delete(cIdx);
 }
 
 function renderCards() {
@@ -569,10 +611,14 @@ function renderCards() {
         </div>
       `)).join('');
 
+      const sType = card.shiftType || 'Shift 1';
+      const sHours = card.shiftHours || '07:00 - 15:00';
+      const isChecked = selectedForPrint.has(cIdx) ? 'checked' : '';
+
       cardEl.innerHTML = `
         <div class="card-header drag-handle" title="Glisser pour déplacer">
           <div style="display:flex; align-items:center; gap:8px;">
-            <span style="color:#94a3b8; font-size:16px; margin-top:-2px;">⠿</span>
+            <input type="checkbox" class="ts-checkbox" title="Sélectionner pour impression TS" onchange="handleCheck(${cIdx}, this.checked)" ${isChecked}>
             <select class="cat-select" onchange="changeCategory(${cIdx}, this.value)">
               <option value="civil" ${catId==='civil'?'selected':''}>Civil</option>
               <option value="trades" ${catId==='trades'?'selected':''}>Trades</option>
@@ -588,7 +634,17 @@ function renderCards() {
         <div class="card-title-row">
           <div style="display:flex; flex-direction:column; gap:2px; width:100%;">
             <div class="sup-name" contenteditable="true" onblur="updateSupName(${cIdx}, this.innerText)">${card.name || 'Inconnu'}</div>
-            <div class="ts-badge" title="Numéro de la Timesheet">TS N° <span contenteditable="true" data-placeholder="---" onblur="updateTimesheetNo(${cIdx}, this.innerText)">${card.timesheetNo || ''}</span></div>
+            <div class="ts-badge-container">
+              <div class="ts-badge" title="Numéro Timesheet">TS N° <span contenteditable="true" data-placeholder="---" onblur="updateTimesheetNo(${cIdx}, this.innerText)">${card.timesheetNo || ''}</span></div>
+              <div class="ts-badge">
+                <select class="ts-select" onchange="updateShiftType(${cIdx}, this.value)">
+                  <option value="Shift 1" ${sType==='Shift 1'?'selected':''}>Shift 1</option>
+                  <option value="Shift 2" ${sType==='Shift 2'?'selected':''}>Shift 2</option>
+                  <option value="Night" ${sType==='Night'?'selected':''}>Night</option>
+                </select>
+                <span contenteditable="true" data-placeholder="07:00-15:00" onblur="updateShiftHours(${cIdx}, this.innerText)">${sHours}</span>
+              </div>
+            </div>
           </div>
           <button class="btn-remove-card" onclick="removeSupervisor(${cIdx})">&times;</button>
         </div>
@@ -658,18 +714,14 @@ function handleWorkerDrop(evt) {
   renderCards(); renderDrawer(); syncToFirebase();
 }
 
-// CLIC & ENVOI RAPIDE (MODAL)
+// CLIC & ENVOI RAPIDE
 function openWorkerModal(el) {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  
-  const wId = el.dataset.wid;
-  const wName = el.dataset.wname;
-  const wComp = el.dataset.wcomp;
+  const wId = el.dataset.wid, wName = el.dataset.wname, wComp = el.dataset.wcomp;
   const cIdx = el.dataset.cidx === "unassigned" ? -1 : parseInt(el.dataset.cidx);
   const tIdx = el.dataset.tidx === "unassigned" ? -1 : parseInt(el.dataset.tidx);
   
   currentMovingWorker = { wId, wName, wComp, cIdx, tIdx };
-  
   document.getElementById('modal-worker-name').innerText = `${wName} (${wComp})`;
   
   let html = `<option value="-1">👷 Renvoyer à la Base (Non assigné)</option>`;
@@ -693,14 +745,12 @@ function confirmWorkerMove() {
   if (!currentMovingWorker) return;
   const targetCIdx = parseInt(document.getElementById('modal-sup-select').value);
   const { wId, wName, wComp, cIdx, tIdx } = currentMovingWorker;
-  
   if (targetCIdx === cIdx) { closeWorkerModal(); return; }
   
   const workerObj = { id: wId, name: wName, company: wComp };
   
-  if (cIdx === -1) {
-     unassignedWorkers = unassignedWorkers.filter(w => w.id !== wId);
-  } else {
+  if (cIdx === -1) { unassignedWorkers = unassignedWorkers.filter(w => w.id !== wId); } 
+  else {
      if (cardsData[cIdx] && cardsData[cIdx].tasks[tIdx]) {
         let t = cardsData[cIdx].tasks[tIdx];
         t.workerList = t.workerList.filter(w => w.id !== wId);
@@ -708,9 +758,8 @@ function confirmWorkerMove() {
      }
   }
   
-  if (targetCIdx === -1) {
-     unassignedWorkers.push(workerObj);
-  } else {
+  if (targetCIdx === -1) { unassignedWorkers.push(workerObj); } 
+  else {
      let targetTaskIdx = cardsData[targetCIdx].tasks.findIndex(t => t.source === wComp);
      if (targetTaskIdx === -1) {
         cardsData[targetCIdx].tasks.push({ desc: 'Affectation rapide', source: wComp, workers: 0, workerList: [] });
@@ -721,11 +770,7 @@ function confirmWorkerMove() {
      t.workerList.push(workerObj);
      t.workers += 1;
   }
-  
-  closeWorkerModal();
-  renderCards();
-  renderDrawer();
-  syncToFirebase();
+  closeWorkerModal(); renderCards(); renderDrawer(); syncToFirebase();
 }
 
 function renderDrawer() {
@@ -770,13 +815,15 @@ function reorderCardsBasedOnDOM() {
 
 function updateSupName(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].name = val.trim(); syncToFirebase(); }
 function updateTimesheetNo(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].timesheetNo = val.trim(); syncToFirebase(); }
+function updateShiftType(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].shiftType = val; syncToFirebase(); }
+function updateShiftHours(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].shiftHours = val.trim(); syncToFirebase(); }
 function updateTaskDesc(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].desc = val.trim(); syncToFirebase(); }
 function updateTaskSource(cIdx, tIdx, val, el) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].source = val; el.className = `source-select ${val.toLowerCase()}`; recalculateTotals(); syncToFirebase(); }
 function updateWorkerCount(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].workers = parseInt(val) || 0; recalculateTotals(); syncToFirebase(); }
 function changeCategory(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].category = val; renderCards(); syncToFirebase(); }
 function addTask(cIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks.push({ desc: "", source: "SKYBUILDING", workers: 1, workerList: [] }); renderCards(); syncToFirebase(); }
 function removeTask(cIdx, tIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks.splice(tIdx, 1); renderCards(); syncToFirebase(); }
-function addNewSupervisor() { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData.unshift({ name: "NOUVEAU SUPERVISEUR", category: "trades", timesheetNo: "", tasks: [{ desc: "", source: "SKYBUILDING", workers: 1, workerList: [] }] }); renderCards(); syncToFirebase(); }
+function addNewSupervisor() { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData.unshift({ name: "NOUVEAU SUPERVISEUR", category: "trades", timesheetNo: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", tasks: [{ desc: "", source: "SKYBUILDING", workers: 1, workerList: [] }] }); renderCards(); syncToFirebase(); }
 function removeSupervisor(cIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; if (confirm(`Supprimer ${cardsData[cIdx].name} ?`)) { cardsData.splice(cIdx, 1); renderCards(); syncToFirebase(); } }
 
 function updatePayroll(company, val) {
@@ -869,6 +916,105 @@ function importBackup(event) {
   reader.readAsText(file);
 }
 
+// --- IMPRESSION DES TIMESHEETS ---
+function printSelectedTimesheets() {
+  if (selectedForPrint.size === 0) {
+    alert("Veuillez cocher au moins un superviseur (case en haut à gauche de la carte) pour imprimer sa Timesheet.");
+    return;
+  }
+
+  const printZone = document.getElementById('timesheet-print-zone');
+  let htmlContent = '';
+  const dateStr = new Date().toLocaleDateString('fr-FR');
+
+  selectedForPrint.forEach(cIdx => {
+    const card = cardsData[cIdx];
+    if (!card) return;
+
+    let totalWorkers = 0;
+    let rowsHtml = '';
+    
+    // Générer les lignes du tableau
+    card.tasks.forEach(t => {
+      totalWorkers += parseInt(t.workers) || 0;
+      if (t.workerList && t.workerList.length > 0) {
+        t.workerList.forEach((w, i) => {
+          rowsHtml += `
+            <tr>
+              <td>${w.id}</td>
+              <td>${w.name}</td>
+              <td>${w.company}</td>
+              <td>${i === 0 ? t.desc : '"'}</td>
+            </tr>
+          `;
+        });
+      } else {
+        // Tâche sans liste nominative, juste un nombre
+        if (t.workers > 0) {
+          rowsHtml += `
+            <tr>
+              <td>-</td>
+              <td><em>${t.workers} Ouvrier(s) non identifié(s)</em></td>
+              <td>${t.source}</td>
+              <td>${t.desc}</td>
+            </tr>
+          `;
+        }
+      }
+    });
+
+    htmlContent += `
+      <div class="ts-page">
+        <div class="ts-header">DAILY TIMESHEET</div>
+        <div class="ts-info-box">
+          <div>
+            <div style="margin-bottom:6px;">PROJECT: <span style="font-weight:normal;">Riviera Tower</span></div>
+            <div style="margin-bottom:6px;">SUPERVISOR: <span style="font-weight:normal;">${card.name}</span></div>
+            <div>CATEGORY: <span style="font-weight:normal;">${card.category.toUpperCase()}</span></div>
+          </div>
+          <div style="text-align:right;">
+            <div style="margin-bottom:6px;">DATE: <span style="font-weight:normal;">${dateStr}</span></div>
+            <div style="margin-bottom:6px;">TIMESHEET N°: <span style="font-weight:normal;">${card.timesheetNo || '_____'}</span></div>
+            <div>SHIFT: <span style="font-weight:normal;">${card.shiftType || 'Shift 1'} (${card.shiftHours || '07:00 - 15:00'})</span></div>
+          </div>
+        </div>
+
+        <table class="ts-table">
+          <thead>
+            <tr>
+              <th style="width:15%">Worker ID</th>
+              <th style="width:30%">Name</th>
+              <th style="width:15%">Company</th>
+              <th style="width:40%">Task / Scope</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml || `<tr><td colspan="4" style="text-align:center;">Aucune donnée</td></tr>`}
+            <tr style="background-color:#f8fafc; font-weight:bold;">
+              <td colspan="3" style="text-align:right;">TOTAL WORKERS :</td>
+              <td>${totalWorkers}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="ts-signatures">
+          <div class="ts-sign-box">Supervisor Signature</div>
+          <div class="ts-sign-box">Timekeeper Signature</div>
+          <div class="ts-sign-box">Site Manager Signature</div>
+        </div>
+      </div>
+    `;
+  });
+
+  printZone.innerHTML = htmlContent;
+  
+  // Activer le mode impression TS (masque le reste)
+  document.body.classList.add('print-mode-ts');
+  window.print();
+  // Retirer le mode après impression
+  setTimeout(() => { document.body.classList.remove('print-mode-ts'); }, 500);
+}
+
 // --- IMPORTATION EXCEL GLOBALE (POINTAGE) ---
 function importExcelFile(event) {
   if (currentRole === 'viewer' || currentRole === 'cfo') return; 
@@ -892,7 +1038,6 @@ function importExcelFile(event) {
 
         const worksheet = workbook.Sheets[sheetName];
         if (!worksheet) return;
-
         const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
         if (!rawRows || rawRows.length === 0) return;
 
@@ -924,7 +1069,6 @@ function importExcelFile(event) {
           let currentSupervisor = String(row[supCol] || "").trim().toUpperCase();
           let currentScope = scopeCol !== -1 ? String(row[scopeCol] || "").trim().toUpperCase() : "";
           let currentTimesheet = tsCol !== -1 ? String(row[tsCol] || "").trim() : "";
-
           let workerId = idCol !== -1 ? String(row[idCol] || "").trim() : "W-" + Math.floor(Math.random()*10000);
           let workerName = "";
           workerCols.forEach(wc => { let val = String(row[wc] || "").trim(); if(val) workerName += val + " "; });
@@ -971,12 +1115,7 @@ function importExcelFile(event) {
 
       let keepMissing = true;
       if (missingNamesArr.length > 0) {
-        const msg = "⚠️ ATTENTION : Les équipes suivantes sont ABSENTES du fichier Excel importé :\n\n" + 
-                    missingNamesArr.join("\n") + 
-                    "\n\nSouhaitez-vous les CONSERVER dans l'application ?\n" + 
-                    "• [OK] : Les conserver telles quelles avec leurs effectifs.\n" + 
-                    "• [Annuler] : Les supprimer définitivement du tableau de bord.";
-        keepMissing = confirm(msg);
+        keepMissing = confirm("⚠️ ATTENTION : Les équipes suivantes sont ABSENTES du fichier Excel :\n\n" + missingNamesArr.join("\n") + "\n\nSouhaitez-vous les CONSERVER dans l'application ?\n• [OK] : Les conserver\n• [Annuler] : Les supprimer");
       }
 
       let nextCardsData = [];
@@ -985,7 +1124,7 @@ function importExcelFile(event) {
           c.tasks.forEach(t => { t.workers = 0; t.workerList = []; });
           nextCardsData.push(c);
         } else {
-          if (keepMissing) { nextCardsData.push(c); }
+          if (keepMissing) nextCardsData.push(c);
         }
       });
       cardsData = nextCardsData;
@@ -1005,11 +1144,8 @@ function importExcelFile(event) {
           existingCard.timesheetNo = supData.timesheetNo || existingCard.timesheetNo;
           newTaskList.forEach(newT => {
             let matchTask = existingCard.tasks.find(t => t.source === newT.source && t.desc === newT.desc);
-            if (matchTask) { 
-              matchTask.workers = newT.workers; matchTask.workerList = newT.workerList; 
-            } else { 
-              existingCard.tasks.push(newT); 
-            }
+            if (matchTask) { matchTask.workers = newT.workers; matchTask.workerList = newT.workerList; } 
+            else { existingCard.tasks.push(newT); }
           });
         } else {
           let cat = "trades"; let sUp = supName.toUpperCase();
@@ -1020,7 +1156,7 @@ function importExcelFile(event) {
           else if (sUp.includes("AHMED") || sUp.includes("FRED")) cat = "indirect";
           else if (sUp.includes("TASSOS")) cat = "facade";
 
-          cardsData.push({ name: supName, category: cat, timesheetNo: supData.timesheetNo, tasks: newTaskList });
+          cardsData.push({ name: supName, category: cat, timesheetNo: supData.timesheetNo, shiftType: "Shift 1", shiftHours: "07:00 - 15:00", tasks: newTaskList });
         }
       });
 
