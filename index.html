@@ -145,7 +145,6 @@
   /* WORKER PILLS */
   .worker-pill { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #334155; margin: 2px; transition: transform 0.1s, box-shadow 0.1s; }
   .worker-pill:hover { transform: scale(1.05); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-  .worker-pill:active { cursor: grabbing; }
   .worker-pill.skybuilding { border-color: #7dd3fc; background: #e0f2fe; color: #0284c7; }
   .worker-pill.dss { border-color: #fde68a; background: #fef3c7; color: #d97706; }
   .worker-pill.euroasia { border-color: #ddd6fe; background: #ede9fe; color: #7c3aed; }
@@ -235,13 +234,13 @@
     <div class="role-container">
       <span class="role-label">PROFIL :</span>
       <select id="role-selector" class="role-select" onchange="changeRole(this.value)">
+        <option value="viewer">👁️ Viewer (Lecture)</option>
         <option value="timekeeper">⏱️ Timekeeper</option>
         <option value="cfo">💰 CFO</option>
         <option value="admin">⚙️ Admin</option>
       </select>
     </div>
 
-    <!-- Import TS (Pointage) avec conservation -->
     <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display:none" onchange="importExcelFile(event)">
     <button class="btn btn-success" id="btn-import" onclick="document.getElementById('excel-file-input').click()" title="Import des effectifs depuis la Timesheet">📥 Importer Pointage</button>
     <button class="btn btn-outline" id="btn-add-sup" onclick="addNewSupervisor()">+ Sup.</button>
@@ -262,8 +261,8 @@
   <div class="kpi-board">
     <div class="kpi-header">
       <div>
-        <div class="title-editable" contenteditable="true" id="chart-title">SITE MANAGEMENT & SUPERVISORY CHART</div>
-        <div class="title-editable" style="font-size: 11px; color: #64748b; font-weight: 600; margin-top: 3px;" contenteditable="true">WEEKS 37 / 38 &bull; REAL-TIME WORKFORCE ALLOCATION</div>
+        <div class="title-editable" contenteditable="false" id="chart-title">SITE MANAGEMENT & SUPERVISORY CHART</div>
+        <div class="title-editable" style="font-size: 11px; color: #64748b; font-weight: 600; margin-top: 3px;" contenteditable="false">WEEKS 37 / 38 &bull; REAL-TIME WORKFORCE ALLOCATION</div>
       </div>
       <div class="total-badge-container">
         <span class="total-label">Effectif Total Chantier :</span>
@@ -284,25 +283,25 @@
           <tr>
             <td><span class="tag-color" style="background:#0284c7;"></span> SKYBUILDING</td>
             <td style="text-align:center; font-weight:800;" id="total-sky">0</td>
-            <td style="text-align:center;"><input type="number" id="pr-skybuilding" class="payroll-input" value="0" oninput="updatePayroll('SKYBUILDING', this.value)"></td>
+            <td style="text-align:center;"><input type="number" id="pr-skybuilding" class="payroll-input" value="0" disabled oninput="updatePayroll('SKYBUILDING', this.value)"></td>
             <td style="text-align:center;"><span id="diff-skybuilding" class="diff-badge diff-ok">0</span></td>
           </tr>
           <tr>
             <td><span class="tag-color" style="background:#d97706;"></span> DSS</td>
             <td style="text-align:center; font-weight:800;" id="total-dss">0</td>
-            <td style="text-align:center;"><input type="number" id="pr-dss" class="payroll-input" value="0" oninput="updatePayroll('DSS', this.value)"></td>
+            <td style="text-align:center;"><input type="number" id="pr-dss" class="payroll-input" value="0" disabled oninput="updatePayroll('DSS', this.value)"></td>
             <td style="text-align:center;"><span id="diff-dss" class="diff-badge diff-ok">0</span></td>
           </tr>
           <tr>
             <td><span class="tag-color" style="background:#7c3aed;"></span> EUROASIA</td>
             <td style="text-align:center; font-weight:800;" id="total-euro">0</td>
-            <td style="text-align:center;"><input type="number" id="pr-euroasia" class="payroll-input" value="0" oninput="updatePayroll('EUROASIA', this.value)"></td>
+            <td style="text-align:center;"><input type="number" id="pr-euroasia" class="payroll-input" value="0" disabled oninput="updatePayroll('EUROASIA', this.value)"></td>
             <td style="text-align:center;"><span id="diff-euroasia" class="diff-badge diff-ok">0</span></td>
           </tr>
           <tr>
             <td><span class="tag-color" style="background:#64748b;"></span> AUTRE</td>
             <td style="text-align:center; font-weight:800;" id="total-other">0</td>
-            <td style="text-align:center;"><input type="number" id="pr-other" class="payroll-input" value="0" oninput="updatePayroll('OTHER', this.value)"></td>
+            <td style="text-align:center;"><input type="number" id="pr-other" class="payroll-input" value="0" disabled oninput="updatePayroll('OTHER', this.value)"></td>
             <td style="text-align:center;"><span id="diff-other" class="diff-badge diff-ok">0</span></td>
           </tr>
         </table>
@@ -337,18 +336,20 @@ window.onerror = function(msg, url, line) {
 };
 
 // --- GESTION DES RÔLES / PROFILS ---
-const PASSWORDS = { admin: 'admin', cfo: 'cfo', timekeeper: 'timekeeper' };
-let currentRole = localStorage.getItem('app_role') || 'timekeeper';
+const PASSWORDS = { viewer: '', timekeeper: 'timekeeper', cfo: 'cfo', admin: 'admin' };
+let currentRole = localStorage.getItem('app_role') || 'viewer';
 let sortableInstances = [];
 let workerSortables = [];
 let currentMovingWorker = null;
 
 function changeRole(newRole) {
-  const pwd = prompt(`Mot de passe pour le profil ${newRole.toUpperCase()} :`);
-  if (pwd !== PASSWORDS[newRole]) {
-    alert("Mot de passe incorrect.");
-    document.getElementById('role-selector').value = currentRole;
-    return;
+  if (newRole !== 'viewer') {
+    const pwd = prompt(`Mot de passe pour le profil ${newRole.toUpperCase()} :`);
+    if (pwd !== PASSWORDS[newRole]) {
+      alert("Mot de passe incorrect.");
+      document.getElementById('role-selector').value = currentRole;
+      return;
+    }
   }
   
   currentRole = newRole;
@@ -358,22 +359,37 @@ function changeRole(newRole) {
 }
 
 function applyRolePermissions() {
+  const isViewer = currentRole === 'viewer';
   const isCFO = currentRole === 'cfo';
   const isTK = currentRole === 'timekeeper';
   const isAdmin = currentRole === 'admin';
 
-  document.getElementById('btn-import').style.display = isCFO ? 'none' : 'inline-flex';
-  document.getElementById('btn-import-db').style.display = isCFO ? 'none' : 'inline-block';
-  document.getElementById('btn-add-sup').style.display = isCFO ? 'none' : 'inline-flex';
-  document.getElementById('btn-db-toggle').style.display = isCFO ? 'none' : 'inline-flex';
+  // Boutons généraux
+  document.getElementById('btn-import').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
+  document.getElementById('btn-import-db').style.display = isViewer || isCFO ? 'none' : 'inline-block';
+  document.getElementById('btn-add-sup').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
+  document.getElementById('btn-db-toggle').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
 
-  document.querySelectorAll('.payroll-input').forEach(el => { el.disabled = isTK; });
-  document.querySelectorAll('.sup-name, .task-desc, .ts-badge span, .title-editable').forEach(el => { el.setAttribute('contenteditable', isCFO ? 'false' : 'true'); });
-  document.querySelectorAll('.worker-count-input, .source-select, .cat-select').forEach(el => { el.disabled = isCFO; });
-  document.querySelectorAll('.btn-remove-card, .btn-add-task, .btn-delete-task').forEach(el => { el.style.display = isCFO ? 'none' : 'inline-block'; });
+  // Champs Payroll
+  document.querySelectorAll('.payroll-input').forEach(el => { el.disabled = isViewer || isTK; });
+  
+  // Textes éditables
+  document.querySelectorAll('.sup-name, .task-desc, .ts-badge span, .title-editable').forEach(el => { 
+    el.setAttribute('contenteditable', isViewer || isCFO ? 'false' : 'true'); 
+  });
 
-  sortableInstances.forEach(s => s.option("disabled", isCFO));
-  workerSortables.forEach(s => s.option("disabled", isCFO));
+  // Inputs numériques et selects
+  document.querySelectorAll('.worker-count-input, .source-select, .cat-select').forEach(el => { 
+    el.disabled = isViewer || isCFO; 
+  });
+
+  // Boutons suppression / ajout
+  document.querySelectorAll('.btn-remove-card, .btn-add-task, .btn-delete-task').forEach(el => { 
+    el.style.display = isViewer || isCFO ? 'none' : 'inline-block'; 
+  });
+
+  sortableInstances.forEach(s => s.option("disabled", isViewer || isCFO));
+  workerSortables.forEach(s => s.option("disabled", isViewer || isCFO));
 }
 
 function toggleDrawer() { document.getElementById('workers-drawer').classList.toggle('open'); }
@@ -449,6 +465,7 @@ function setFilter(catId) {
 initLayout();
 renderCards();
 renderDrawer();
+applyRolePermissions();
 
 // --- 2. CONNEXION FIREBASE ---
 setTimeout(() => {
@@ -491,6 +508,7 @@ setTimeout(() => {
 
 // --- 3. FONCTIONS CLÉS & SYNCHRONISATION ---
 function syncToFirebase() {
+  if (currentRole === 'viewer') return; // Bloqué en lecture seule
   try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers})); } catch(e){}
   if (!docRef) return;
   isSaving = true;
@@ -593,6 +611,8 @@ function renderCards() {
 function initWorkerSortables() {
   workerSortables.forEach(s => s.destroy());
   workerSortables = [];
+  if (currentRole === 'viewer' || currentRole === 'cfo') return;
+
   document.querySelectorAll('.card-worker-dropzone, #unassigned-dropzone').forEach(el => {
     const s = new Sortable(el, {
       group: 'workers-pool', animation: 150,
@@ -600,12 +620,11 @@ function initWorkerSortables() {
     });
     workerSortables.push(s);
   });
-  const isCFO = currentRole === 'cfo';
-  workerSortables.forEach(s => s.option("disabled", isCFO));
 }
 
 // DRAG & DROP OUVRIERS
 function handleWorkerDrop(evt) {
+  if (currentRole === 'viewer' || currentRole === 'cfo') return;
   if (evt.from === evt.to) return;
   const item = evt.item, wId = item.dataset.wid, wName = item.dataset.wname, wComp = item.dataset.wcomp;
   const workerObj = { id: wId, name: wName, company: wComp };
@@ -641,7 +660,7 @@ function handleWorkerDrop(evt) {
 
 // CLIC & ENVOI RAPIDE (MODAL)
 function openWorkerModal(el) {
-  if (currentRole === 'cfo') return;
+  if (currentRole === 'viewer' || currentRole === 'cfo') return;
   
   const wId = el.dataset.wid;
   const wName = el.dataset.wname;
@@ -670,6 +689,7 @@ function closeWorkerModal() {
 }
 
 function confirmWorkerMove() {
+  if (currentRole === 'viewer' || currentRole === 'cfo') return;
   if (!currentMovingWorker) return;
   const targetCIdx = parseInt(document.getElementById('modal-sup-select').value);
   const { wId, wName, wComp, cIdx, tIdx } = currentMovingWorker;
@@ -719,6 +739,7 @@ function renderDrawer() {
 }
 
 function addManualWorker() {
+  if (currentRole === 'viewer' || currentRole === 'cfo') return;
   const idInput = document.getElementById('new-w-id');
   const nameInput = document.getElementById('new-w-name');
   const comp = document.getElementById('new-w-comp').value;
@@ -730,6 +751,7 @@ function addManualWorker() {
 }
 
 function reorderCardsBasedOnDOM() {
+  if (currentRole === 'viewer' || currentRole === 'cfo') return;
   const newCardsData = [];
   CATEGORY_INFO.forEach(cat => {
     const grid = document.getElementById(`grid-${cat.id}`);
@@ -746,18 +768,19 @@ function reorderCardsBasedOnDOM() {
   renderCards(); syncToFirebase();
 }
 
-function updateSupName(cIdx, val) { cardsData[cIdx].name = val.trim(); syncToFirebase(); }
-function updateTimesheetNo(cIdx, val) { cardsData[cIdx].timesheetNo = val.trim(); syncToFirebase(); }
-function updateTaskDesc(cIdx, tIdx, val) { cardsData[cIdx].tasks[tIdx].desc = val.trim(); syncToFirebase(); }
-function updateTaskSource(cIdx, tIdx, val, el) { cardsData[cIdx].tasks[tIdx].source = val; el.className = `source-select ${val.toLowerCase()}`; recalculateTotals(); syncToFirebase(); }
-function updateWorkerCount(cIdx, tIdx, val) { cardsData[cIdx].tasks[tIdx].workers = parseInt(val) || 0; recalculateTotals(); syncToFirebase(); }
-function changeCategory(cIdx, val) { cardsData[cIdx].category = val; renderCards(); syncToFirebase(); }
-function addTask(cIdx) { cardsData[cIdx].tasks.push({ desc: "", source: "SKYBUILDING", workers: 1, workerList: [] }); renderCards(); syncToFirebase(); }
-function removeTask(cIdx, tIdx) { cardsData[cIdx].tasks.splice(tIdx, 1); renderCards(); syncToFirebase(); }
-function addNewSupervisor() { cardsData.unshift({ name: "NOUVEAU SUPERVISEUR", category: "trades", timesheetNo: "", tasks: [{ desc: "", source: "SKYBUILDING", workers: 1, workerList: [] }] }); renderCards(); syncToFirebase(); }
-function removeSupervisor(cIdx) { if (confirm(`Supprimer ${cardsData[cIdx].name} ?`)) { cardsData.splice(cIdx, 1); renderCards(); syncToFirebase(); } }
+function updateSupName(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].name = val.trim(); syncToFirebase(); }
+function updateTimesheetNo(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].timesheetNo = val.trim(); syncToFirebase(); }
+function updateTaskDesc(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].desc = val.trim(); syncToFirebase(); }
+function updateTaskSource(cIdx, tIdx, val, el) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].source = val; el.className = `source-select ${val.toLowerCase()}`; recalculateTotals(); syncToFirebase(); }
+function updateWorkerCount(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].workers = parseInt(val) || 0; recalculateTotals(); syncToFirebase(); }
+function changeCategory(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].category = val; renderCards(); syncToFirebase(); }
+function addTask(cIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks.push({ desc: "", source: "SKYBUILDING", workers: 1, workerList: [] }); renderCards(); syncToFirebase(); }
+function removeTask(cIdx, tIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks.splice(tIdx, 1); renderCards(); syncToFirebase(); }
+function addNewSupervisor() { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData.unshift({ name: "NOUVEAU SUPERVISEUR", category: "trades", timesheetNo: "", tasks: [{ desc: "", source: "SKYBUILDING", workers: 1, workerList: [] }] }); renderCards(); syncToFirebase(); }
+function removeSupervisor(cIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; if (confirm(`Supprimer ${cardsData[cIdx].name} ?`)) { cardsData.splice(cIdx, 1); renderCards(); syncToFirebase(); } }
 
 function updatePayroll(company, val) {
+  if (currentRole === 'viewer' || currentRole === 'timekeeper') return;
   payrollCounts[company] = parseInt(val) || 0;
   recalculateTotals(); syncToFirebase();
 }
@@ -826,6 +849,7 @@ function exportBackup() {
 }
 
 function importBackup(event) {
+  if (currentRole === 'viewer') return;
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
@@ -847,7 +871,7 @@ function importBackup(event) {
 
 // --- IMPORTATION EXCEL GLOBALE (POINTAGE) ---
 function importExcelFile(event) {
-  if (currentRole === 'cfo') return; 
+  if (currentRole === 'viewer' || currentRole === 'cfo') return; 
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
@@ -1012,7 +1036,7 @@ function importExcelFile(event) {
 
 // --- IMPORTATEUR DE LA BASE OUVRIERS ---
 function importWorkersDB(event) {
-  if (currentRole === 'cfo') return;
+  if (currentRole === 'viewer' || currentRole === 'cfo') return;
   const file = event.target.files[0];
   if (!file) return;
 
