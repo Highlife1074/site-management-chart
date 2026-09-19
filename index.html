@@ -138,6 +138,7 @@
 
   .btn-add-task { background: transparent; border: 1px dashed #cbd5e1; color: #64748b; font-size: 10px; font-weight: 600; padding: 4px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 2px; }
   .btn-add-task:hover { background: #f1f5f9; color: #0f172a; }
+
   .btn-delete-task { cursor: pointer; color: #dc2626; font-size: 14px; font-weight: bold; margin-left: 3px; }
 
   .divider { width: 1px; height: 24px; background: #e2e8f0; margin: 0 4px; }
@@ -183,9 +184,14 @@
     <h3 style="font-size:16px; font-weight:800; color:#0f172a;">👷 Base Ouvriers</h3>
     <button class="btn-close-drawer" onclick="toggleDrawer()">&times;</button>
   </div>
-  <p style="font-size:11px; color:#64748b; margin-top:-6px;">Glissez ces ouvriers dans les cartes pour les assigner (le calcul se fait automatiquement).</p>
+  <p style="font-size:11px; color:#64748b; margin-top:-6px;">1. Importez votre Excel listant le personnel.<br>2. Glissez les ouvriers dans les équipes.</p>
   
-  <div style="background:#f1f5f9; padding:10px; border-radius:8px; display:flex; flex-direction:column; gap:6px;">
+  <div style="display: flex; gap: 8px; margin-top: 4px;">
+    <input type="file" id="db-file-input" accept=".xlsx, .xls" style="display:none" onchange="importWorkersDB(event)">
+    <button class="btn btn-success" id="btn-import-db" style="font-size:11px; padding:6px 10px; width:100%;" onclick="document.getElementById('db-file-input').click()">📥 Importer Base Excel</button>
+  </div>
+
+  <div style="background:#f1f5f9; padding:10px; border-radius:8px; display:flex; flex-direction:column; gap:6px; margin-top:8px;">
     <input type="text" id="new-w-id" placeholder="ID / N° (ex: 123)" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px;">
     <input type="text" id="new-w-name" placeholder="Nom Complet" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px;">
     <select id="new-w-comp" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px;">
@@ -194,12 +200,12 @@
       <option value="EUROASIA">EUROASIA</option>
       <option value="OTHER">AUTRE</option>
     </select>
-    <button class="btn btn-success" style="font-size:11px; padding:4px;" onclick="addManualWorker()">+ Ajouter Ouvrier</button>
+    <button class="btn btn-outline" style="font-size:11px; padding:4px;" onclick="addManualWorker()">+ Ajout Manuel</button>
   </div>
 
   <h4 style="font-size:12px; margin-top:10px; color:#1e293b;">Zone d'attente / Non assignés :</h4>
   <div id="unassigned-dropzone" style="flex-grow:1; border:2px dashed #cbd5e1; border-radius:8px; padding:8px; display:flex; flex-wrap:wrap; align-content:flex-start; background:#f8fafc; overflow-y:auto;">
-    <!-- Les ouvriers non assignés viendront ici -->
+    <!-- Ouvriers importés apparaitront ici -->
   </div>
 </div>
 
@@ -222,13 +228,14 @@
       </select>
     </div>
 
+    <!-- Importation affectation directe (Old school) -->
     <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display:none" onchange="importExcelFile(event)">
-    <button class="btn btn-success" id="btn-import" onclick="document.getElementById('excel-file-input').click()">📥 Importer Excel</button>
+    <button class="btn btn-success" id="btn-import" onclick="document.getElementById('excel-file-input').click()" title="Import des effectifs depuis la Timesheet">📥 Importer Pointage</button>
     <button class="btn btn-outline" id="btn-add-sup" onclick="addNewSupervisor()">+ Sup.</button>
     
     <div class="divider"></div>
 
-    <button class="btn btn-purple" id="btn-db-toggle" onclick="toggleDrawer()">👷 Ouvriers</button>
+    <button class="btn btn-purple" id="btn-db-toggle" onclick="toggleDrawer()">👷 Base Ouvriers</button>
 
     <div class="divider"></div>
 
@@ -349,6 +356,7 @@ function applyRolePermissions() {
   const isAdmin = currentRole === 'admin';
 
   document.getElementById('btn-import').style.display = isCFO ? 'none' : 'inline-flex';
+  document.getElementById('btn-import-db').style.display = isCFO ? 'none' : 'inline-block';
   document.getElementById('btn-add-sup').style.display = isCFO ? 'none' : 'inline-flex';
   document.getElementById('btn-db-toggle').style.display = isCFO ? 'none' : 'inline-flex';
   document.getElementById('btn-clear').style.display = isAdmin ? 'inline-flex' : 'none';
@@ -525,9 +533,9 @@ function renderCards() {
           ${t.importedScope ? `
             <div class="scope-imported-box">
               <span class="scope-imported-text" title="${t.importedScope}">Excel: ${t.importedScope}</span>
-              <div>
+              <div style="display:flex; align-items:center;">
                 <button class="btn-use-scope" onclick="applyImportedScope(${cIdx},${tIdx})">Utiliser</button>
-                <button class="btn-use-scope" style="background:#fca5a5; color:#7f1d1d; margin-left:4px;" onclick="removeImportedScope(${cIdx},${tIdx})" title="Supprimer ce nom Excel">&times;</button>
+                <button class="btn-use-scope" style="background:transparent; color:#dc2626; font-size:14px; margin-left:4px;" onclick="removeImportedScope(${cIdx},${tIdx})" title="Effacer ce nom de l'affichage">&times;</button>
               </div>
             </div>
           ` : ''}
@@ -554,7 +562,7 @@ function renderCards() {
       `)).join('');
 
       cardEl.innerHTML = `
-        <div class="card-header drag-handle" title="Glisser pour déplacer la carte">
+        <div class="card-header drag-handle" title="Glisser pour déplacer">
           <div style="display:flex; align-items:center; gap:8px;">
             <span style="color:#94a3b8; font-size:16px; margin-top:-2px;">⠿</span>
             <select class="cat-select" onchange="changeCategory(${cIdx}, this.value)">
@@ -579,8 +587,6 @@ function renderCards() {
         <div class="card-body">
           ${tasksHtml}
           <button class="btn-add-task" onclick="addTask(${cIdx})">+ Ajouter Ligne</button>
-          
-          <!-- Dropzone des ouvriers -->
           <div class="card-worker-dropzone" data-cidx="${cIdx}">
             ${workersHtml}
           </div>
@@ -613,7 +619,6 @@ function handleWorkerDrop(evt) {
   const item = evt.item, wId = item.dataset.wid, wName = item.dataset.wname, wComp = item.dataset.wcomp;
   const workerObj = { id: wId, name: wName, company: wComp };
 
-  // REMOVE FROM SOURCE
   if (evt.from.id === 'unassigned-dropzone') {
     unassignedWorkers = unassignedWorkers.filter(w => w.id !== wId);
   } else {
@@ -627,14 +632,13 @@ function handleWorkerDrop(evt) {
     }
   }
 
-  // ADD TO DESTINATION
   if (evt.to.id === 'unassigned-dropzone') {
     unassignedWorkers.push(workerObj);
   } else {
     const toCIdx = parseInt(evt.to.dataset.cidx);
     let targetTaskIdx = cardsData[toCIdx].tasks.findIndex(t => t.source === wComp);
     if (targetTaskIdx === -1) {
-      cardsData[toCIdx].tasks.push({ desc: 'Affectation auto.', source: wComp, workers: 0, workerList: [] });
+      cardsData[toCIdx].tasks.push({ desc: 'Affectation manuelle', source: wComp, workers: 0, workerList: [] });
       targetTaskIdx = cardsData[toCIdx].tasks.length - 1;
     }
     let t = cardsData[toCIdx].tasks[targetTaskIdx];
@@ -659,7 +663,7 @@ function addManualWorker() {
   const idInput = document.getElementById('new-w-id');
   const nameInput = document.getElementById('new-w-name');
   const comp = document.getElementById('new-w-comp').value;
-  const id = idInput.value.trim() || "W" + Math.floor(Math.random()*1000);
+  const id = idInput.value.trim() || "W-" + Math.floor(Math.random()*10000);
   const name = nameInput.value.trim() || "Ouvrier Manuel";
   unassignedWorkers.push({ id, name, company: comp });
   idInput.value = ""; nameInput.value = "";
@@ -784,7 +788,7 @@ function importBackup(event) {
   reader.readAsText(file);
 }
 
-// --- 5. IMPORTATEUR EXCEL BLINDÉ ---
+// --- IMPORTATION EXCEL GLOBALE (POINTAGE) ---
 function importExcelFile(event) {
   if (currentRole === 'cfo') return; 
   
@@ -844,13 +848,11 @@ function importExcelFile(event) {
           if (!currentScope) currentScope = "GENERAL WORKS";
 
           let workerId = idCol !== -1 ? String(row[idCol] || "").trim() : "W-" + Math.floor(Math.random()*10000);
-          
           let workerName = "";
           workerCols.forEach(wc => { let val = String(row[wc] || "").trim(); if(val) workerName += val + " "; });
           workerName = workerName.trim() || "Ouvrier";
 
           let hasWorker = workerCols.length > 0 ? workerName !== "Ouvrier" : true;
-
           if (!currentSupervisor || !hasWorker) continue;
           
           if (!importedSupervisors[currentSupervisor]) {
@@ -896,7 +898,7 @@ function importExcelFile(event) {
             }
           });
         } else {
-          let cat = "trades", sUp = supName.toUpperCase();
+          let cat = "trades"; let sUp = supName.toUpperCase();
           if (sUp.includes("TAREK") || sUp.includes("TSIRKAS") || sUp.includes("CHRISTOS") || sUp.includes("BAGU")) cat = "civil";
           else if (sUp.includes("PRAKASH") || sUp.includes("TAMMET") || sUp.includes("PROTECTION")) cat = "logistic";
           else if (sUp.includes("RAZVAN") || sUp.includes("LOUKAS") || sUp.includes("BAKHIT")) cat = "external";
@@ -911,6 +913,108 @@ function importExcelFile(event) {
       cardsData.forEach(c => { c.tasks = c.tasks.filter(t => t.workers > 0 || (t.desc && t.desc.trim() !== "")); });
       renderCards(); syncToFirebase();
       alert(`Import réussi : ${totalImportedWorkers} ouvriers détectés et liés !`);
+
+    } catch (err) { alert("Erreur technique : " + err.message); }
+    event.target.value = "";
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// --- NOUVEAU : IMPORTATEUR DE LA BASE OUVRIERS ---
+function importWorkersDB(event) {
+  if (currentRole === 'cfo') return;
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      let newWorkersCount = 0;
+
+      workbook.SheetNames.forEach(sheetName => {
+        if (!sheetName) return;
+        const upperSheet = String(sheetName).trim().toUpperCase();
+        let defaultCompany = "OTHER";
+        if (upperSheet.includes("LOAN") || upperSheet.includes("SKY")) defaultCompany = "SKYBUILDING";
+        else if (upperSheet.includes("DSS")) defaultCompany = "DSS";
+        else if (upperSheet.includes("EURO")) defaultCompany = "EUROASIA";
+
+        const worksheet = workbook.Sheets[sheetName];
+        if (!worksheet) return;
+
+        const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+        if (!rawRows || rawRows.length === 0) return;
+
+        let headerRowIdx = -1;
+        for (let r = 0; r < rawRows.length; r++) {
+          const rowArray = rawRows[r];
+          if (!Array.isArray(rowArray)) continue;
+          const lineStr = rowArray.map(cell => String(cell || "").toUpperCase()).join(" ");
+          if (lineStr.includes("NAME") || lineStr.includes("SURNAME") || lineStr.includes("NOM")) {
+            headerRowIdx = r; break;
+          }
+        }
+        if (headerRowIdx === -1) return;
+
+        const headerRow = rawRows[headerRowIdx] || [];
+        let idCol = -1, companyCol = -1, workerCols = [];
+        for (let c = 0; c < headerRow.length; c++) {
+          const colName = String(headerRow[c] || "").trim().toUpperCase();
+          if ((colName.includes("COMET") || colName === "NO." || colName === "ID" || colName.includes("NEOAXESS")) && idCol === -1) idCol = c;
+          if (colName.includes("NAME") || colName.includes("SURNAME") || colName.includes("NOM")) workerCols.push(c);
+          if (colName.includes("COMPANY") || colName.includes("SUBCONTRACTOR") || colName === "CO." || colName.includes("ENTREPRISE")) companyCol = c;
+        }
+
+        if (workerCols.length === 0) return;
+
+        for (let r = headerRowIdx + 1; r < rawRows.length; r++) {
+          const row = rawRows[r];
+          if (!Array.isArray(row) || row.length === 0) continue;
+
+          let workerName = "";
+          workerCols.forEach(wc => { let val = String(row[wc] || "").trim(); if(val) workerName += val + " "; });
+          workerName = workerName.trim();
+          if (!workerName) continue;
+
+          let workerId = idCol !== -1 ? String(row[idCol] || "").trim() : "";
+          if (!workerId) workerId = "W-" + Math.floor(Math.random()*100000);
+
+          let workerComp = defaultCompany;
+          if (companyCol !== -1 && String(row[companyCol] || "").trim() !== "") {
+            let rawComp = String(row[companyCol]).trim().toUpperCase();
+            if (rawComp.includes("SKY") || rawComp.includes("LOAN")) workerComp = "SKYBUILDING";
+            else if (rawComp.includes("DSS")) workerComp = "DSS";
+            else if (rawComp.includes("EURO")) workerComp = "EUROASIA";
+            else workerComp = "OTHER";
+          }
+
+          let isAssigned = false;
+          cardsData.forEach(c => {
+            if (c.tasks) {
+              c.tasks.forEach(t => {
+                if (t.workerList && t.workerList.find(w => w.id === workerId || w.name === workerName)) isAssigned = true;
+              });
+            }
+          });
+          
+          let isUnassigned = unassignedWorkers.find(w => w.id === workerId || w.name === workerName);
+
+          if (!isAssigned && !isUnassigned) {
+            unassignedWorkers.push({ id: workerId, name: workerName, company: workerComp });
+            newWorkersCount++;
+          }
+        }
+      });
+
+      renderDrawer();
+      syncToFirebase();
+      if (newWorkersCount > 0) {
+        alert(`Succès : ${newWorkersCount} nouveaux ouvriers ajoutés à la base !`);
+      } else {
+        alert("Aucun nouvel ouvrier ajouté (Ils sont peut-être déjà tous dans la base ou assignés).");
+      }
 
     } catch (err) { alert("Erreur technique : " + err.message); }
     event.target.value = "";
