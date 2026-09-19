@@ -47,6 +47,9 @@
   .btn-purple:hover { background: #6d28d9; }
   .btn-black { background: #0f172a; color: white; }
   .btn-black:hover { background: #334155; }
+  
+  .ts-btn-config { border: 1px solid #cbd5e1; background: white; color: #475569; padding: 2px 6px; font-size: 10px; font-weight: 700; border-radius: 4px; cursor: pointer; transition: 0.15s; }
+  .ts-btn-config:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
 
   .dashboard-container { max-width: 1540px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
 
@@ -124,7 +127,6 @@
   .card-body { padding: 4px 12px 10px 12px; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; }
   .task-item { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
   
-  /* Champ Foreman */
   .task-foreman { font-size: 9.5px; font-weight: 700; color: #64748b; margin-bottom: 2px; display: flex; align-items: center; gap: 4px; text-transform: uppercase; }
   .task-foreman span { color: #059669; min-width: 60px; outline: none; border-bottom: 1px dotted #cbd5e1; display: inline-block; cursor: text; }
   .task-foreman span:empty:before { content: "AJOUTER FOREMAN"; color: #94a3b8; }
@@ -168,7 +170,7 @@
 
   .card-worker-dropzone { min-height: 36px; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 4px; background: #f8fafc; margin-top: 6px; display: flex; flex-wrap: wrap; align-content: flex-start; transition: background 0.2s; }
 
-  /* MODAL */
+  /* MODALS */
   .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.6); display: none; align-items: center; justify-content: center; z-index: 2000; }
   .modal-box { background: white; padding: 20px; border-radius: 12px; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 12px; }
   .modal-title { font-size: 15px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
@@ -182,12 +184,10 @@
   .org-manager-col { display: flex; flex-direction: column; align-items: center; background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); min-width: 280px; position: relative; }
   .org-manager-name { font-size: 15px; font-weight: 800; color: #0f172a; margin-bottom: 4px; text-align: center; text-transform: uppercase; }
   .org-manager-total { font-size: 11px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 2px 8px; border-radius: 12px; margin-bottom: 16px; }
-  
   .org-sups-list { display: flex; flex-direction: column; gap: 12px; width: 100%; border-top: 2px solid #f1f5f9; padding-top: 16px; }
   .org-sup-card { background: #ffffff; border: 1px solid #cbd5e1; border-left-width: 5px; border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
   .org-sup-name { font-size: 13px; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
   .org-sup-meta { font-size: 10px; color: #64748b; display: flex; justify-content: space-between; font-weight: 600; }
-  
   .org-foremen-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; border-top: 1px dotted #cbd5e1; padding-top: 8px; }
   .org-foreman-card { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 8px; }
   .org-foreman-name { font-size: 11px; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 4px; }
@@ -197,6 +197,8 @@
   #timesheet-print-zone { display: none; }
   
   @media print {
+    @page { size: landscape; margin: 10mm; }
+
     body { padding: 0; background: white; margin: 0; }
     
     body:not(.print-mode-ts) .top-bar, 
@@ -207,7 +209,8 @@
     body:not(.print-mode-ts) .btn-delete-task, 
     body:not(.print-mode-ts) .drawer, 
     body:not(.print-mode-ts) .modal-overlay,
-    body:not(.print-mode-ts) .ts-checkbox { display: none !important; }
+    body:not(.print-mode-ts) .ts-checkbox,
+    body:not(.print-mode-ts) .ts-btn-config { display: none !important; }
     
     body:not(.print-mode-ts) .cards-grid { border: none !important; background: transparent !important; padding: 0 !important; gap: 8px; }
     body:not(.print-mode-ts) .category-section { break-inside: avoid; display: block !important; }
@@ -219,24 +222,25 @@
     body:not(.print-mode-ts) .ts-select { border: none; background: transparent; color: #0f172a !important; -webkit-appearance: none; }
     body:not(.print-mode-ts) .task-desc { border: none; padding: 0; }
     body:not(.print-mode-ts) .task-foreman span { border: none; }
-    
     body:not(.print-mode-ts) #orgchart-view { display: block !important; padding: 0; overflow: visible; }
     body:not(.print-mode-ts) .org-manager-col { break-inside: avoid; border: 1px solid #94a3b8; }
 
+    /* TIMESHEET PRINT MODE */
     body.print-mode-ts .top-bar,
     body.print-mode-ts .dashboard-container,
     body.print-mode-ts #orgchart-view,
     body.print-mode-ts #workers-drawer,
     body.print-mode-ts .modal-overlay { display: none !important; }
 
-    body.print-mode-ts #timesheet-print-zone { display: block !important; }
+    body.print-mode-ts #timesheet-print-zone { display: block !important; width: 100%; }
 
-    .ts-page { page-break-after: always; padding: 10mm; font-family: Arial, sans-serif; color: #000; }
-    .ts-header { text-align: center; font-size: 22px; font-weight: bold; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-    .ts-info-box { display: flex; justify-content: space-between; border: 2px solid #000; padding: 15px; margin-bottom: 20px; border-radius: 8px; font-size: 14px; font-weight: bold; line-height: 1.5; }
+    .ts-page { page-break-after: always; font-family: Arial, sans-serif; color: #000; width: 100%; }
+    .ts-header { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+    .ts-info-box { display: flex; justify-content: space-between; border: 2px solid #000; padding: 15px; margin-bottom: 20px; border-radius: 8px; font-size: 15px; font-weight: bold; line-height: 1.5; }
     .ts-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 12px; }
     .ts-table th, .ts-table td { border: 1px solid #000; padding: 8px; text-align: left; }
-    .ts-table th { background-color: #f1f5f9; font-weight: bold; }
+    .ts-table th { background-color: #f1f5f9; font-weight: bold; text-align: center; vertical-align: middle; }
+    .ts-task-col { min-width: 80px; text-align: center !important; }
     .ts-signatures { display: flex; justify-content: space-between; margin-top: 50px; font-size: 14px; font-weight: bold; }
     .ts-sign-box { border-top: 1px solid #000; width: 30%; text-align: center; padding-top: 10px; }
   }
@@ -254,6 +258,33 @@
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeWorkerModal()">Annuler</button>
       <button class="btn btn-success" onclick="confirmWorkerMove()">✅ Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL Génération Timesheets -->
+<div id="print-modal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">🖨️ Génération des Timesheets</div>
+    <p style="font-size:12px; color:#64748b; margin-top:-6px;">Sélectionnez le premier jour de la semaine (Lundi) :</p>
+    <input type="date" id="print-date-input" class="modal-select" />
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-outline" onclick="closePrintModal()">Annuler</button>
+      <button class="btn btn-black" onclick="executePrint()">Générer (6 jours)</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL Colonnes Timesheet (Tâches Impression) -->
+<div id="ts-tasks-modal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">⚙️ Colonnes de la Timesheet</div>
+    <p style="font-size:11px; color:#64748b; margin-top:-6px;">Définissez les tâches qui apparaîtront en colonnes sur la feuille imprimée (non visible sur le Dashboard).</p>
+    <div id="ts-tasks-list" style="display:flex; flex-direction:column; gap:8px; margin-top:10px; max-height: 250px; overflow-y:auto;"></div>
+    <button class="btn btn-outline" style="margin-top:10px;" onclick="addTsTaskInput()">+ Ajouter une colonne tâche</button>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-outline" onclick="closeTsTasksModal()">Annuler</button>
+      <button class="btn btn-success" onclick="saveTsTasks()">✅ Enregistrer</button>
     </div>
   </div>
 </div>
@@ -310,7 +341,6 @@
     <button id="btn-toggle-view" class="btn btn-outline" onclick="toggleView()" style="font-weight:800;">🗺️ Organigramme</button>
     <div class="divider"></div>
 
-    <!-- Import TS -->
     <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display:none" onchange="importExcelFile(event)">
     <button class="btn btn-success" id="btn-import" onclick="document.getElementById('excel-file-input').click()">📥 Importer Pointage</button>
     <button class="btn btn-outline" id="btn-add-sup" onclick="addNewSupervisor()">+ Sup.</button>
@@ -318,12 +348,12 @@
     <button class="btn btn-purple" id="btn-db-toggle" onclick="toggleDrawer()">👷 Ouvriers</button>
     
     <div class="divider"></div>
-    <button class="btn btn-black" id="btn-print-ts" onclick="printSelectedTimesheets()" title="Génère un PDF officiel pour les superviseurs cochés">📄 Imprimer TS</button>
+    <button class="btn btn-black" id="btn-print-ts" onclick="openPrintModal()" title="Génère un PDF officiel de 6 jours pour les superviseurs cochés">📄 Imprimer TS</button>
     <button class="btn btn-outline" onclick="window.print()" title="Imprime la vue courante">🖨️ PDF Vue</button>
   </div>
 </div>
 
-<!-- VUE TABLEAU DE BORD (Défaut) -->
+<!-- VUE TABLEAU DE BORD -->
 <div class="dashboard-container" id="dashboard-view">
   
   <div class="kpi-board">
@@ -417,6 +447,7 @@ let sortableInstances = [];
 let workerSortables = [];
 let currentMovingWorker = null;
 let selectedForPrint = new Set(); 
+let currentTsCardIdx = -1;
 
 function changeRole(newRole) {
   if (newRole !== 'viewer') {
@@ -458,7 +489,10 @@ function applyRolePermissions() {
     el.style.display = isViewer || isCFO ? 'none' : 'inline-block'; 
   });
   
-  document.querySelectorAll('.ts-checkbox').forEach(el => { el.disabled = isViewer || isCFO; });
+  document.querySelectorAll('.ts-checkbox, .ts-btn-config').forEach(el => { 
+    el.disabled = isViewer || isCFO; 
+    if(el.classList.contains('ts-btn-config')) el.style.display = isViewer || isCFO ? 'none' : 'inline-block';
+  });
 
   sortableInstances.forEach(s => s.option("disabled", isViewer || isCFO));
   workerSortables.forEach(s => s.option("disabled", isViewer || isCFO));
@@ -497,7 +531,7 @@ let payrollCounts = { SKYBUILDING: 0, DSS: 0, EUROASIA: 0, OTHER: 0 };
 let db = null, docRef = null, isSaving = false, currentFilter = 'all';
 
 const DEFAULT_DATA = [
-  { name: "NOUVEAU SUPERVISEUR", manager: "", category: "civil", timesheetNo: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", tasks: [{ desc: "Activité à définir", foreman: "", source: "SKYBUILDING", workers: 0, workerList: [] }] }
+  { name: "NOUVEAU SUPERVISEUR", manager: "", category: "civil", timesheetNo: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "Activité à définir", foreman: "", source: "SKYBUILDING", workers: 0, workerList: [] }] }
 ];
 
 try {
@@ -701,6 +735,7 @@ function renderCards() {
                 </select>
                 <span contenteditable="true" data-placeholder="07:00-15:00" onblur="updateShiftHours(${cIdx}, this.innerText)">${sHours}</span>
               </div>
+              <button class="ts-btn-config" onclick="openTsTasksModal(${cIdx})" title="Configurer les colonnes de la Timesheet imprimée">⚙️ Colonnes TS</button>
             </div>
           </div>
           <button class="btn-remove-card" onclick="removeSupervisor(${cIdx})">&times;</button>
@@ -721,7 +756,7 @@ function renderCards() {
   } catch (err) { console.error("Render error:", err); }
 }
 
-// --- ORGANIGRAMME ---
+// ORGANIGRAMME
 function renderOrgChart() {
   const container = document.getElementById('orgchart-view');
   const groups = {};
@@ -732,12 +767,7 @@ function renderOrgChart() {
      groups[mgr].push(c);
   });
   
-  let html = `
-    <div class="org-level-top">
-      <span>CHANTIER RIVIERA TOWER</span>
-    </div>
-    <div class="org-managers-grid">
-  `;
+  let html = `<div class="org-level-top"><span>CHANTIER RIVIERA TOWER</span></div><div class="org-managers-grid">`;
   
   Object.keys(groups).sort().forEach(mgr => {
      let mgrTotalWorkers = 0;
@@ -750,60 +780,38 @@ function renderOrgChart() {
 
         sup.tasks.forEach(t => { 
           let w = parseInt(t.workers)||0; 
-          supWorkers += w; 
-          mgrTotalWorkers += w;
-          
+          supWorkers += w; mgrTotalWorkers += w;
           let fName = (t.foreman || '').trim().toUpperCase();
           if (fName) {
              if(!foremenGroups[fName]) foremenGroups[fName] = 0;
              foremenGroups[fName] += w;
-          } else {
-             directWkrs += w;
-          }
+          } else { directWkrs += w; }
         });
         
         let foremenHtml = '';
         Object.keys(foremenGroups).forEach(fName => {
-           foremenHtml += `
-             <div class="org-foreman-card">
-               <div class="org-foreman-name">👷‍♂️ ${fName}</div>
-               <div class="org-foreman-meta">${foremenGroups[fName]} wkrs</div>
-             </div>
-           `;
+           foremenHtml += `<div class="org-foreman-card"><div class="org-foreman-name">👷‍♂️ ${fName}</div><div class="org-foreman-meta">${foremenGroups[fName]} wkrs</div></div>`;
         });
         if (directWkrs > 0) {
-           foremenHtml += `
-             <div class="org-foreman-card" style="background:#f8fafc; border-style:dashed;">
-               <div class="org-foreman-name" style="color:#64748b;">Équipiers Directs</div>
-               <div class="org-foreman-meta" style="background:#e2e8f0; color:#475569;">${directWkrs} wkrs</div>
-             </div>
-           `;
+           foremenHtml += `<div class="org-foreman-card" style="background:#f8fafc; border-style:dashed;"><div class="org-foreman-name" style="color:#64748b;">Équipiers Directs</div><div class="org-foreman-meta" style="background:#e2e8f0; color:#475569;">${directWkrs} wkrs</div></div>`;
         }
 
         const catColor = CATEGORY_INFO.find(c => c.id === sup.category)?.color || '#94a3b8';
         const catName = CATEGORY_INFO.find(c => c.id === sup.category)?.name || sup.category;
 
-        supsHtml += `
-          <div class="org-sup-card" style="border-left-color: ${catColor}">
+        supsHtml += `<div class="org-sup-card" style="border-left-color: ${catColor}">
             <div class="org-sup-name">${sup.name}</div>
-            <div class="org-sup-meta">
-              <span>${catName}</span>
-              <span style="font-weight:800; color:#0f172a;">${supWorkers} wkrs</span>
-            </div>
+            <div class="org-sup-meta"><span>${catName}</span><span style="font-weight:800; color:#0f172a;">${supWorkers} wkrs</span></div>
             ${foremenHtml ? `<div class="org-foremen-list">${foremenHtml}</div>` : ''}
-          </div>
-        `;
+          </div>`;
      });
 
      html += `<div class="org-manager-col">
         <div class="org-manager-name">${mgr === 'SANS RESPONSABLE' ? '⚠️ SANS RESPONSABLE' : '👔 ' + mgr}</div>
         <div class="org-manager-total">${mgrTotalWorkers} Ouvrier(s) supervisé(s)</div>
-        <div class="org-sups-list">
-          ${supsHtml}
-        </div>
+        <div class="org-sups-list">${supsHtml}</div>
      </div>`;
   });
-  
   html += `</div>`;
   container.innerHTML = html;
 }
@@ -879,10 +887,7 @@ function openWorkerModal(el) {
   document.getElementById('worker-modal').style.display = 'flex';
 }
 
-function closeWorkerModal() {
-  document.getElementById('worker-modal').style.display = 'none';
-  currentMovingWorker = null;
-}
+function closeWorkerModal() { document.getElementById('worker-modal').style.display = 'none'; currentMovingWorker = null; }
 
 function confirmWorkerMove() {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
@@ -969,7 +974,7 @@ function updateWorkerCount(cIdx, tIdx, val) { if (currentRole === 'viewer' || cu
 function changeCategory(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].category = val; renderCards(); syncToFirebase(); }
 function addTask(cIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks.push({ desc: "", foreman: "", source: "SKYBUILDING", workers: 1, workerList: [] }); renderCards(); syncToFirebase(); }
 function removeTask(cIdx, tIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks.splice(tIdx, 1); renderCards(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); }
-function addNewSupervisor() { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData.unshift({ name: "NOUVEAU SUPERVISEUR", manager: "", category: "trades", timesheetNo: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", tasks: [{ desc: "", foreman: "", source: "SKYBUILDING", workers: 1, workerList: [] }] }); renderCards(); syncToFirebase(); }
+function addNewSupervisor() { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData.unshift({ name: "NOUVEAU SUPERVISEUR", manager: "", category: "trades", timesheetNo: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "", foreman: "", source: "SKYBUILDING", workers: 1, workerList: [] }] }); renderCards(); syncToFirebase(); }
 function removeSupervisor(cIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; if (confirm(`Supprimer ${cardsData[cIdx].name} ?`)) { cardsData.splice(cIdx, 1); renderCards(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); } }
 
 function updatePayroll(company, val) {
@@ -1033,6 +1038,183 @@ function recalculateTotals() {
   applyRolePermissions();
 }
 
+// --- GESTION DES COLONNES TIMESHEET ---
+function openTsTasksModal(cIdx) {
+  if (currentRole === 'viewer' || currentRole === 'cfo') return;
+  currentTsCardIdx = cIdx;
+  const card = cardsData[cIdx];
+  
+  // Par défaut : prend les tâches de l'interface si l'utilisateur n'a encore rien défini
+  let pts = card.printTasks;
+  if (!pts || pts.length === 0) {
+     pts = card.tasks.map(t => {
+        let prefix = t.foreman ? `[${t.foreman}] ` : '';
+        return prefix + t.desc;
+     }).filter(d => d.trim() !== "");
+  }
+  
+  renderTsTasksList(pts);
+  document.getElementById('ts-tasks-modal').style.display = 'flex';
+}
+
+function renderTsTasksList(tasksArray) {
+  const list = document.getElementById('ts-tasks-list');
+  list.innerHTML = '';
+  if(tasksArray.length === 0) tasksArray = [""];
+  tasksArray.forEach((t) => {
+     list.innerHTML += `
+       <div style="display:flex; gap:6px;">
+         <input type="text" class="modal-select ts-task-input" value="${t}" placeholder="Nom de la tâche à pointer...">
+         <button class="btn btn-danger" onclick="this.parentElement.remove()" style="padding:4px 8px;">&times;</button>
+       </div>
+     `;
+  });
+}
+
+function addTsTaskInput() {
+  document.getElementById('ts-tasks-list').innerHTML += `
+       <div style="display:flex; gap:6px;">
+         <input type="text" class="modal-select ts-task-input" placeholder="Nom de la tâche à pointer...">
+         <button class="btn btn-danger" onclick="this.parentElement.remove()" style="padding:4px 8px;">&times;</button>
+       </div>
+  `;
+}
+
+function closeTsTasksModal() {
+  document.getElementById('ts-tasks-modal').style.display = 'none';
+}
+
+function saveTsTasks() {
+  if (currentTsCardIdx === -1) return;
+  const inputs = document.querySelectorAll('.ts-task-input');
+  const newTasks = [];
+  inputs.forEach(input => {
+     if (input.value.trim() !== "") newTasks.push(input.value.trim());
+  });
+  cardsData[currentTsCardIdx].printTasks = newTasks;
+  syncToFirebase();
+  closeTsTasksModal();
+}
+
+// --- IMPRESSION DES TIMESHEETS AVEC MODAL 6 JOURS ---
+function openPrintModal() {
+  if (selectedForPrint.size === 0) {
+    alert("Veuillez cocher au moins un superviseur (case en haut à gauche de la carte) pour imprimer sa Timesheet.");
+    return;
+  }
+  document.getElementById('print-modal').style.display = 'flex';
+}
+
+function closePrintModal() { document.getElementById('print-modal').style.display = 'none'; }
+
+function executePrint() {
+  const dateInput = document.getElementById('print-date-input').value;
+  if (!dateInput) { alert("Veuillez sélectionner une date (Lundi)."); return; }
+
+  const baseDate = new Date(dateInput);
+  const printZone = document.getElementById('timesheet-print-zone');
+  let htmlContent = '';
+
+  const daysNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+  const monthsNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+  selectedForPrint.forEach(cIdx => {
+    const card = cardsData[cIdx];
+    if (!card) return;
+
+    // Colonnes (Tâches customisées)
+    let taskHeaders = card.printTasks !== undefined ? [...card.printTasks] : card.tasks.map(t => (t.foreman ? `[${t.foreman}] ` : '') + t.desc).filter(d => d.trim() !== "");
+    // Toujours ajouter 2 colonnes vides au stylo
+    taskHeaders.push('', '');
+
+    let taskThs = taskHeaders.map(th => `<th class="ts-task-col">${th || '&nbsp;'}</th>`).join('');
+
+    // Agréger tous les ouvriers de la carte
+    const workersMap = new Map();
+    let unnamedCount = 0;
+
+    card.tasks.forEach(t => {
+      if (t.workerList && t.workerList.length > 0) {
+        t.workerList.forEach(w => workersMap.set(w.id, w));
+      } else {
+        unnamedCount += (parseInt(t.workers) || 0);
+      }
+    });
+
+    const workersList = Array.from(workersMap.values());
+    let rowsHtml = '';
+    workersList.forEach(w => {
+      let taskCells = taskHeaders.map(() => `<td></td>`).join('');
+      rowsHtml += `<tr><td>${w.id}</td><td>${w.name}</td><td>${w.company}</td>${taskCells}</tr>`;
+    });
+    
+    for(let i=0; i < unnamedCount; i++) {
+      let taskCells = taskHeaders.map(() => `<td></td>`).join('');
+      rowsHtml += `<tr><td>-</td><td><em>Ouvrier non identifié</em></td><td>-</td>${taskCells}</tr>`;
+    }
+    
+    if(rowsHtml === '') {
+       rowsHtml = `<tr><td colspan="${3 + taskHeaders.length}" style="text-align:center;">Aucun ouvrier pour cette équipe</td></tr>`;
+    }
+
+    // Générer les 6 pages (du jour choisi + 5 jours suivants)
+    for (let d = 0; d < 6; d++) {
+      let currentDate = new Date(baseDate);
+      currentDate.setDate(currentDate.getDate() + d);
+      let dayStr = `${daysNames[currentDate.getDay()]} ${currentDate.getDate().toString().padStart(2,'0')} ${monthsNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+
+      htmlContent += `
+        <div class="ts-page">
+          <div class="ts-header">DAILY TIMESHEET</div>
+          <div class="ts-info-box">
+            <div>
+              <div style="margin-bottom:6px;">PROJECT: <span style="font-weight:normal;">Riviera Tower</span></div>
+              <div style="margin-bottom:6px;">SUPERVISOR: <span style="font-weight:normal;">${card.name}</span></div>
+              <div>CATEGORY: <span style="font-weight:normal;">${(CATEGORY_INFO.find(c=>c.id===card.category)||{}).name || card.category}</span></div>
+            </div>
+            <div style="text-align:right;">
+              <div style="margin-bottom:6px;">DATE: <span style="font-weight:normal;">${dayStr}</span></div>
+              <div style="margin-bottom:6px;">TIMESHEET N°: <span style="font-weight:normal;">${card.timesheetNo || '_____'}</span></div>
+              <div>SHIFT: <span style="font-weight:normal;">${card.shiftType || 'Shift 1'} (${card.shiftHours || '07:00 - 15:00'})</span></div>
+            </div>
+          </div>
+
+          <table class="ts-table">
+            <thead>
+              <tr>
+                <th style="width:10%">ID</th>
+                <th style="width:25%">Name</th>
+                <th style="width:15%">Company</th>
+                ${taskThs}
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+              <tr style="background-color:#f8fafc; font-weight:bold;">
+                <td colspan="3" style="text-align:right;">TOTAL WORKERS :</td>
+                <td colspan="${taskHeaders.length}" style="text-align:center;">${workersList.length + unnamedCount}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="ts-signatures">
+            <div class="ts-sign-box">Supervisor Signature</div>
+            <div class="ts-sign-box">Timekeeper Signature</div>
+            <div class="ts-sign-box">Site Manager Signature</div>
+          </div>
+        </div>
+      `;
+    }
+  });
+
+  printZone.innerHTML = htmlContent;
+  closePrintModal();
+  
+  document.body.classList.add('print-mode-ts');
+  window.print();
+  setTimeout(() => { document.body.classList.remove('print-mode-ts'); }, 500);
+}
+
 function exportBackup() {
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({cardsData, payrollCounts, unassignedWorkers}, null, 2));
   const dlAnchorElem = document.createElement('a');
@@ -1041,101 +1223,25 @@ function exportBackup() {
   document.body.appendChild(dlAnchorElem); dlAnchorElem.click(); dlAnchorElem.remove();
 }
 
-// --- IMPRESSION DES TIMESHEETS ---
-function printSelectedTimesheets() {
-  if (selectedForPrint.size === 0) {
-    alert("Veuillez cocher au moins un superviseur (case en haut à gauche de la carte) pour imprimer sa Timesheet.");
-    return;
-  }
-
-  const printZone = document.getElementById('timesheet-print-zone');
-  let htmlContent = '';
-  const dateStr = new Date().toLocaleDateString('fr-FR');
-
-  selectedForPrint.forEach(cIdx => {
-    const card = cardsData[cIdx];
-    if (!card) return;
-
-    let totalWorkers = 0;
-    let rowsHtml = '';
-    
-    card.tasks.forEach(t => {
-      totalWorkers += parseInt(t.workers) || 0;
-      let taskPrefix = t.foreman ? `<strong>[${t.foreman.toUpperCase()}]</strong> - ` : '';
-
-      if (t.workerList && t.workerList.length > 0) {
-        t.workerList.forEach((w, i) => {
-          rowsHtml += `
-            <tr>
-              <td>${w.id}</td>
-              <td>${w.name}</td>
-              <td>${w.company}</td>
-              <td>${i === 0 ? taskPrefix + t.desc : '"'}</td>
-            </tr>
-          `;
-        });
-      } else {
-        if (t.workers > 0) {
-          rowsHtml += `
-            <tr>
-              <td>-</td>
-              <td><em>${t.workers} Ouvrier(s) non identifié(s)</em></td>
-              <td>${t.source}</td>
-              <td>${taskPrefix + t.desc}</td>
-            </tr>
-          `;
-        }
-      }
-    });
-
-    htmlContent += `
-      <div class="ts-page">
-        <div class="ts-header">DAILY TIMESHEET</div>
-        <div class="ts-info-box">
-          <div>
-            <div style="margin-bottom:6px;">PROJECT: <span style="font-weight:normal;">Riviera Tower</span></div>
-            <div style="margin-bottom:6px;">SUPERVISOR: <span style="font-weight:normal;">${card.name}</span></div>
-            <div>CATEGORY: <span style="font-weight:normal;">${(CATEGORY_INFO.find(c=>c.id===card.category)||{}).name || card.category}</span></div>
-          </div>
-          <div style="text-align:right;">
-            <div style="margin-bottom:6px;">DATE: <span style="font-weight:normal;">${dateStr}</span></div>
-            <div style="margin-bottom:6px;">TIMESHEET N°: <span style="font-weight:normal;">${card.timesheetNo || '_____'}</span></div>
-            <div>SHIFT: <span style="font-weight:normal;">${card.shiftType || 'Shift 1'} (${card.shiftHours || '07:00 - 15:00'})</span></div>
-          </div>
-        </div>
-
-        <table class="ts-table">
-          <thead>
-            <tr>
-              <th style="width:15%">Worker ID</th>
-              <th style="width:30%">Name</th>
-              <th style="width:15%">Company</th>
-              <th style="width:40%">Task / Scope</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rowsHtml || `<tr><td colspan="4" style="text-align:center;">Aucune donnée</td></tr>`}
-            <tr style="background-color:#f8fafc; font-weight:bold;">
-              <td colspan="3" style="text-align:right;">TOTAL WORKERS :</td>
-              <td>${totalWorkers}</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div class="ts-signatures">
-          <div class="ts-sign-box">Supervisor Signature</div>
-          <div class="ts-sign-box">Timekeeper Signature</div>
-          <div class="ts-sign-box">Site Manager Signature</div>
-        </div>
-      </div>
-    `;
-  });
-
-  printZone.innerHTML = htmlContent;
-  
-  document.body.classList.add('print-mode-ts');
-  window.print();
-  setTimeout(() => { document.body.classList.remove('print-mode-ts'); }, 500);
+function importBackup(event) {
+  if (currentRole === 'viewer') return;
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (parsed.cardsData) {
+        cardsData = parsed.cardsData;
+        payrollCounts = parsed.payrollCounts || payrollCounts;
+        unassignedWorkers = parsed.unassignedWorkers || [];
+        renderCards(); renderDrawer(); syncToFirebase();
+        alert("Sauvegarde restaurée avec succès !");
+      } else { alert("Fichier invalide."); }
+    } catch (err) { alert("Erreur : " + err.message); }
+    event.target.value = "";
+  };
+  reader.readAsText(file);
 }
 
 // --- IMPORTATION EXCEL GLOBALE (POINTAGE) ---
@@ -1279,13 +1385,13 @@ function importExcelFile(event) {
           else if (sUp.includes("AHMED") || sUp.includes("FRED")) cat = "indirect";
           else if (sUp.includes("TASSOS")) cat = "facade";
 
-          cardsData.push({ name: supName, manager: "", category: cat, timesheetNo: supData.timesheetNo, shiftType: "Shift 1", shiftHours: "07:00 - 15:00", tasks: newTaskList });
+          cardsData.push({ name: supName, manager: "", category: cat, timesheetNo: supData.timesheetNo, shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: newTaskList });
         }
       });
 
       cardsData.forEach(c => { c.tasks = c.tasks.filter(t => t.workers > 0 || (t.desc && t.desc.trim() !== "")); });
       renderCards(); syncToFirebase();
-      alert(`Import réussi : ${totalImportedWorkers} ouvriers liés !`);
+      alert(`Import réussi : ${totalImportedWorkers} ouvriers détectés et liés !`);
 
     } catch (err) { alert("Erreur technique : " + err.message); }
     event.target.value = "";
