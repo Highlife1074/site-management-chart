@@ -43,8 +43,6 @@
   .btn-success:hover { background: #047857; }
   .btn-warning { background: #f59e0b; }
   .btn-warning:hover { background: #d97706; }
-  .btn-danger { background: white; color: #dc2626; border: 1px solid #fca5a5; }
-  .btn-danger:hover { background: #fef2f2; }
   .btn-purple { background: #7c3aed; color: white; }
   .btn-purple:hover { background: #6d28d9; }
 
@@ -117,11 +115,6 @@
   .task-item { background: #f8fafc; border: 1px solid #edf2f7; border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
   .task-desc { font-size: 11px; font-weight: 600; color: #1e293b; outline: none; line-height: 1.35; background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 4px; padding: 4px 6px; min-height: 24px; }
   .task-desc:focus { border-style: solid; border-color: #2563eb; background: #eff6ff; }
-  
-  .scope-imported-box { background: #e2e8f0; border-radius: 4px; padding: 3px 6px; display: flex; justify-content: space-between; align-items: center; gap: 4px; }
-  .scope-imported-text { font-size: 9.5px; font-weight: 600; color: #334155; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .btn-use-scope { background: #cbd5e1; border: none; border-radius: 3px; padding: 1px 5px; font-size: 9px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
-  .btn-use-scope:hover { background: #94a3b8; color: white; }
 
   .task-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 3px; }
   .source-select { font-size: 10px; font-weight: 700; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 4px; outline: none; cursor: pointer; }
@@ -170,7 +163,7 @@
 
   @media print {
     body { padding: 0; background: white; }
-    .top-bar, .btn-add-task, .btn-remove-card, .btn-use-scope, #error-banner, .filter-bar, .btn-delete-task, .drawer, .modal-overlay { display: none !important; }
+    .top-bar, .btn-add-task, .btn-remove-card, #error-banner, .filter-bar, .btn-delete-task, .drawer, .modal-overlay { display: none !important; }
     .dashboard-container { gap: 8px; max-width: 100%; }
     .cards-grid { border: none !important; background: transparent !important; padding: 0 !important; min-height: 0 !important; gap: 8px; }
     .category-section { break-inside: avoid; display: block !important; }
@@ -261,7 +254,6 @@
     <button class="btn btn-outline" onclick="document.getElementById('backup-file-input').click()" title="Restaurer copie">📂 Rest.</button>
     <div class="divider"></div>
     <button class="btn btn-outline" onclick="window.print()">🖨️ PDF</button>
-    <button class="btn btn-danger" id="btn-clear" onclick="resetCache()" title="Vider le cache système">🗑️ Vider</button>
   </div>
 </div>
 
@@ -340,26 +332,25 @@
 window.onerror = function(msg, url, line) {
   const errDiv = document.getElementById("error-banner");
   errDiv.style.display = "block";
-  errDiv.innerText = `Erreur système (Ligne ${line}): ${msg}. Cliquez sur "Vider le cache".`;
+  errDiv.innerText = `Erreur système (Ligne ${line}): ${msg}`;
   return false;
 };
 
 // --- GESTION DES RÔLES / PROFILS ---
-const PASSWORDS = { admin: 'admin', cfo: 'cfo' };
+const PASSWORDS = { admin: 'admin', cfo: 'cfo', timekeeper: 'timekeeper' };
 let currentRole = localStorage.getItem('app_role') || 'timekeeper';
 let sortableInstances = [];
 let workerSortables = [];
 let currentMovingWorker = null;
 
 function changeRole(newRole) {
-  if (newRole !== 'timekeeper') {
-    const pwd = prompt(`Mot de passe pour le profil ${newRole.toUpperCase()} :`);
-    if (pwd !== PASSWORDS[newRole]) {
-      alert("Mot de passe incorrect.");
-      document.getElementById('role-selector').value = currentRole;
-      return;
-    }
+  const pwd = prompt(`Mot de passe pour le profil ${newRole.toUpperCase()} :`);
+  if (pwd !== PASSWORDS[newRole]) {
+    alert("Mot de passe incorrect.");
+    document.getElementById('role-selector').value = currentRole;
+    return;
   }
+  
   currentRole = newRole;
   localStorage.setItem('app_role', currentRole);
   document.getElementById('role-selector').value = currentRole;
@@ -375,22 +366,14 @@ function applyRolePermissions() {
   document.getElementById('btn-import-db').style.display = isCFO ? 'none' : 'inline-block';
   document.getElementById('btn-add-sup').style.display = isCFO ? 'none' : 'inline-flex';
   document.getElementById('btn-db-toggle').style.display = isCFO ? 'none' : 'inline-flex';
-  document.getElementById('btn-clear').style.display = isAdmin ? 'inline-flex' : 'none';
 
   document.querySelectorAll('.payroll-input').forEach(el => { el.disabled = isTK; });
   document.querySelectorAll('.sup-name, .task-desc, .ts-badge span, .title-editable').forEach(el => { el.setAttribute('contenteditable', isCFO ? 'false' : 'true'); });
   document.querySelectorAll('.worker-count-input, .source-select, .cat-select').forEach(el => { el.disabled = isCFO; });
-  document.querySelectorAll('.btn-remove-card, .btn-add-task, .btn-use-scope, .btn-delete-task').forEach(el => { el.style.display = isCFO ? 'none' : 'inline-block'; });
+  document.querySelectorAll('.btn-remove-card, .btn-add-task, .btn-delete-task').forEach(el => { el.style.display = isCFO ? 'none' : 'inline-block'; });
 
   sortableInstances.forEach(s => s.option("disabled", isCFO));
   workerSortables.forEach(s => s.option("disabled", isCFO));
-}
-
-function resetCache() {
-  if (confirm("Vider le cache réinitialisera l'application à son état d'origine. Continuer ?")) {
-    localStorage.removeItem("site_chart_backup");
-    window.location.reload();
-  }
 }
 
 function toggleDrawer() { document.getElementById('workers-drawer').classList.toggle('open'); }
@@ -546,15 +529,6 @@ function renderCards() {
       let tasksHtml = card.tasks.map((t, tIdx) => `
         <div class="task-item">
           <div class="task-desc" contenteditable="true" onblur="updateTaskDesc(${cIdx}, ${tIdx}, this.innerText)">${t.desc || ''}</div>
-          ${t.importedScope ? `
-            <div class="scope-imported-box">
-              <span class="scope-imported-text" title="${t.importedScope}">Excel: ${t.importedScope}</span>
-              <div style="display:flex; align-items:center;">
-                <button class="btn-use-scope" onclick="applyImportedScope(${cIdx},${tIdx})">Utiliser</button>
-                <button class="btn-use-scope" style="background:transparent; color:#dc2626; font-size:14px; margin-left:4px;" onclick="removeImportedScope(${cIdx},${tIdx})" title="Effacer ce nom de l'affichage">&times;</button>
-              </div>
-            </div>
-          ` : ''}
           <div class="task-controls">
             <select class="source-select ${String(t.source||'').toLowerCase()}" onchange="updateTaskSource(${cIdx}, ${tIdx}, this.value, this)">
               <option value="SKYBUILDING" ${t.source==='SKYBUILDING'?'selected':''}>SKYBUILDING</option>
@@ -704,7 +678,6 @@ function confirmWorkerMove() {
   
   const workerObj = { id: wId, name: wName, company: wComp };
   
-  // Enlever
   if (cIdx === -1) {
      unassignedWorkers = unassignedWorkers.filter(w => w.id !== wId);
   } else {
@@ -715,7 +688,6 @@ function confirmWorkerMove() {
      }
   }
   
-  // Ajouter
   if (targetCIdx === -1) {
      unassignedWorkers.push(workerObj);
   } else {
@@ -777,14 +749,12 @@ function reorderCardsBasedOnDOM() {
 function updateSupName(cIdx, val) { cardsData[cIdx].name = val.trim(); syncToFirebase(); }
 function updateTimesheetNo(cIdx, val) { cardsData[cIdx].timesheetNo = val.trim(); syncToFirebase(); }
 function updateTaskDesc(cIdx, tIdx, val) { cardsData[cIdx].tasks[tIdx].desc = val.trim(); syncToFirebase(); }
-function applyImportedScope(cIdx, tIdx) { cardsData[cIdx].tasks[tIdx].desc = cardsData[cIdx].tasks[tIdx].importedScope; renderCards(); syncToFirebase(); }
-function removeImportedScope(cIdx, tIdx) { cardsData[cIdx].tasks[tIdx].importedScope = ""; renderCards(); syncToFirebase(); }
 function updateTaskSource(cIdx, tIdx, val, el) { cardsData[cIdx].tasks[tIdx].source = val; el.className = `source-select ${val.toLowerCase()}`; recalculateTotals(); syncToFirebase(); }
 function updateWorkerCount(cIdx, tIdx, val) { cardsData[cIdx].tasks[tIdx].workers = parseInt(val) || 0; recalculateTotals(); syncToFirebase(); }
 function changeCategory(cIdx, val) { cardsData[cIdx].category = val; renderCards(); syncToFirebase(); }
-function addTask(cIdx) { cardsData[cIdx].tasks.push({ desc: "", importedScope: "", source: "SKYBUILDING", workers: 1, workerList: [] }); renderCards(); syncToFirebase(); }
+function addTask(cIdx) { cardsData[cIdx].tasks.push({ desc: "", source: "SKYBUILDING", workers: 1, workerList: [] }); renderCards(); syncToFirebase(); }
 function removeTask(cIdx, tIdx) { cardsData[cIdx].tasks.splice(tIdx, 1); renderCards(); syncToFirebase(); }
-function addNewSupervisor() { cardsData.unshift({ name: "NOUVEAU SUPERVISEUR", category: "trades", timesheetNo: "", tasks: [{ desc: "", importedScope: "", source: "SKYBUILDING", workers: 1, workerList: [] }] }); renderCards(); syncToFirebase(); }
+function addNewSupervisor() { cardsData.unshift({ name: "NOUVEAU SUPERVISEUR", category: "trades", timesheetNo: "", tasks: [{ desc: "", source: "SKYBUILDING", workers: 1, workerList: [] }] }); renderCards(); syncToFirebase(); }
 function removeSupervisor(cIdx) { if (confirm(`Supprimer ${cardsData[cIdx].name} ?`)) { cardsData.splice(cIdx, 1); renderCards(); syncToFirebase(); } }
 
 function updatePayroll(company, val) {
@@ -875,7 +845,7 @@ function importBackup(event) {
   reader.readAsText(file);
 }
 
-// --- IMPORTATION EXCEL GLOBALE (POINTAGE) AVEC CONSERVATION ---
+// --- IMPORTATION EXCEL GLOBALE (POINTAGE) ---
 function importExcelFile(event) {
   if (currentRole === 'cfo') return; 
   const file = event.target.files[0];
@@ -928,9 +898,8 @@ function importExcelFile(event) {
           if (!Array.isArray(row) || row.length === 0) continue;
 
           let currentSupervisor = String(row[supCol] || "").trim().toUpperCase();
-          let currentScope = scopeCol !== -1 ? String(row[scopeCol] || "").trim().toUpperCase() : "GENERAL WORKS";
+          let currentScope = scopeCol !== -1 ? String(row[scopeCol] || "").trim().toUpperCase() : "";
           let currentTimesheet = tsCol !== -1 ? String(row[tsCol] || "").trim() : "";
-          if (!currentScope) currentScope = "GENERAL WORKS";
 
           let workerId = idCol !== -1 ? String(row[idCol] || "").trim() : "W-" + Math.floor(Math.random()*10000);
           let workerName = "";
@@ -948,7 +917,7 @@ function importExcelFile(event) {
 
           const taskKey = `${companySource}___${currentScope}`;
           if (!importedSupervisors[currentSupervisor].tasks[taskKey]) {
-            importedSupervisors[currentSupervisor].tasks[taskKey] = { source: companySource, importedScope: currentScope, workers: 0, workerList: [] };
+            importedSupervisors[currentSupervisor].tasks[taskKey] = { source: companySource, desc: currentScope, workers: 0, workerList: [] };
           }
           importedSupervisors[currentSupervisor].tasks[taskKey].workers += 1;
           importedSupervisors[currentSupervisor].tasks[taskKey].workerList.push({ id: workerId, name: workerName, company: companySource });
@@ -958,7 +927,6 @@ function importExcelFile(event) {
 
       if (totalImportedWorkers === 0) { alert("Aucun ouvrier détecté."); event.target.value = ""; return; }
 
-      // --- LOGIQUE DE CONSERVATION DES TIMESHEETS EXISTANTES ---
       let matchedIndices = new Set();
       Object.keys(importedSupervisors).forEach(supName => {
         let existingCardIdx = cardsData.findIndex(c => {
@@ -990,19 +958,14 @@ function importExcelFile(event) {
       let nextCardsData = [];
       cardsData.forEach((c, idx) => {
         if (matchedIndices.has(idx)) {
-          // Carte présente dans l'Excel : on remet à zéro ses compteurs pour les écraser avec les nouvelles données
           c.tasks.forEach(t => { t.workers = 0; t.workerList = []; });
           nextCardsData.push(c);
         } else {
-          // Carte absente de l'Excel
-          if (keepMissing) {
-            nextCardsData.push(c); // On la garde intacte
-          }
+          if (keepMissing) { nextCardsData.push(c); }
         }
       });
       cardsData = nextCardsData;
 
-      // Fusion avec les nouvelles données importées
       Object.keys(importedSupervisors).forEach(supName => {
         const supData = importedSupervisors[supName];
         let existingCard = cardsData.find(c => {
@@ -1017,12 +980,11 @@ function importExcelFile(event) {
         if (existingCard) {
           existingCard.timesheetNo = supData.timesheetNo || existingCard.timesheetNo;
           newTaskList.forEach(newT => {
-            let matchTask = existingCard.tasks.find(t => t.source === newT.source && t.importedScope === newT.importedScope);
-            if (!matchTask) matchTask = existingCard.tasks.find(t => t.source === newT.source && !t.importedScope);
+            let matchTask = existingCard.tasks.find(t => t.source === newT.source && t.desc === newT.desc);
             if (matchTask) { 
-              matchTask.importedScope = newT.importedScope; matchTask.workers = newT.workers; matchTask.workerList = newT.workerList; 
+              matchTask.workers = newT.workers; matchTask.workerList = newT.workerList; 
             } else { 
-              existingCard.tasks.push({ desc: "", importedScope: newT.importedScope, source: newT.source, workers: newT.workers, workerList: newT.workerList }); 
+              existingCard.tasks.push(newT); 
             }
           });
         } else {
@@ -1034,7 +996,7 @@ function importExcelFile(event) {
           else if (sUp.includes("AHMED") || sUp.includes("FRED")) cat = "indirect";
           else if (sUp.includes("TASSOS")) cat = "facade";
 
-          cardsData.push({ name: supName, category: cat, timesheetNo: supData.timesheetNo, tasks: newTaskList.map(nt => ({ desc: "", importedScope: nt.importedScope, source: nt.source, workers: nt.workers, workerList: nt.workerList })) });
+          cardsData.push({ name: supName, category: cat, timesheetNo: supData.timesheetNo, tasks: newTaskList });
         }
       });
 
