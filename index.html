@@ -138,7 +138,6 @@
 
   .btn-add-task { background: transparent; border: 1px dashed #cbd5e1; color: #64748b; font-size: 10px; font-weight: 600; padding: 4px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 2px; }
   .btn-add-task:hover { background: #f1f5f9; color: #0f172a; }
-
   .btn-delete-task { cursor: pointer; color: #dc2626; font-size: 14px; font-weight: bold; margin-left: 3px; }
 
   .divider { width: 1px; height: 24px; background: #e2e8f0; margin: 0 4px; }
@@ -151,7 +150,8 @@
   .btn-close-drawer:hover { color: #0f172a; }
 
   /* WORKER PILLS */
-  .worker-pill { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; cursor: grab; border: 1px solid #cbd5e1; background: white; color: #334155; margin: 2px; }
+  .worker-pill { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #334155; margin: 2px; transition: transform 0.1s, box-shadow 0.1s; }
+  .worker-pill:hover { transform: scale(1.05); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
   .worker-pill:active { cursor: grabbing; }
   .worker-pill.skybuilding { border-color: #7dd3fc; background: #e0f2fe; color: #0284c7; }
   .worker-pill.dss { border-color: #fde68a; background: #fef3c7; color: #d97706; }
@@ -159,11 +159,18 @@
   .worker-pill.other { border-color: #cbd5e1; background: #f1f5f9; color: #475569; }
 
   .card-worker-dropzone { min-height: 36px; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 4px; background: #f8fafc; margin-top: 6px; display: flex; flex-wrap: wrap; align-content: flex-start; transition: background 0.2s; }
-  .card-worker-dropzone:empty::before { content: "Glissez des ouvriers ici"; font-size: 10px; color: #94a3b8; width: 100%; text-align: center; margin-top: 6px; }
+  .card-worker-dropzone:empty::before { content: "Glissez ou cliquez pour assigner"; font-size: 10px; color: #94a3b8; width: 100%; text-align: center; margin-top: 6px; }
+
+  /* MODAL */
+  .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.6); display: none; align-items: center; justify-content: center; z-index: 2000; }
+  .modal-box { background: white; padding: 20px; border-radius: 12px; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 12px; }
+  .modal-title { font-size: 15px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
+  .modal-select { padding: 8px; font-size: 13px; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; width: 100%; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 
   @media print {
     body { padding: 0; background: white; }
-    .top-bar, .btn-add-task, .btn-remove-card, .btn-use-scope, #error-banner, .filter-bar, .btn-delete-task, .drawer { display: none !important; }
+    .top-bar, .btn-add-task, .btn-remove-card, .btn-use-scope, #error-banner, .filter-bar, .btn-delete-task, .drawer, .modal-overlay { display: none !important; }
     .dashboard-container { gap: 8px; max-width: 100%; }
     .cards-grid { border: none !important; background: transparent !important; padding: 0 !important; min-height: 0 !important; gap: 8px; }
     .category-section { break-inside: avoid; display: block !important; }
@@ -178,13 +185,26 @@
 
 <div id="error-banner"></div>
 
-<!-- DRAWER: Base de Données des Ouvriers -->
+<!-- MODAL Clic Rapide Ouvrier -->
+<div id="worker-modal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">Déplacer : <span id="modal-worker-name" style="color:#2563eb;"></span></div>
+    <p style="font-size:11px; color:#64748b; margin-top:-6px;">Sélectionnez le superviseur / Timesheet de destination :</p>
+    <select id="modal-sup-select" class="modal-select"></select>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeWorkerModal()">Annuler</button>
+      <button class="btn btn-success" onclick="confirmWorkerMove()">✅ Confirmer le transfert</button>
+    </div>
+  </div>
+</div>
+
+<!-- DRAWER: Base Ouvriers -->
 <div id="workers-drawer" class="drawer">
   <div class="drawer-header">
     <h3 style="font-size:16px; font-weight:800; color:#0f172a;">👷 Base Ouvriers</h3>
     <button class="btn-close-drawer" onclick="toggleDrawer()">&times;</button>
   </div>
-  <p style="font-size:11px; color:#64748b; margin-top:-6px;">1. Importez votre Excel listant le personnel.<br>2. Glissez les ouvriers dans les équipes.</p>
+  <p style="font-size:11px; color:#64748b; margin-top:-6px;">1. Importez la liste globale.<br>2. Cliquez ou glissez pour assigner.</p>
   
   <div style="display: flex; gap: 8px; margin-top: 4px;">
     <input type="file" id="db-file-input" accept=".xlsx, .xls" style="display:none" onchange="importWorkersDB(event)">
@@ -203,7 +223,7 @@
     <button class="btn btn-outline" style="font-size:11px; padding:4px;" onclick="addManualWorker()">+ Ajout Manuel</button>
   </div>
 
-  <h4 style="font-size:12px; margin-top:10px; color:#1e293b;">Zone d'attente / Non assignés :</h4>
+  <h4 style="font-size:12px; margin-top:10px; color:#1e293b;">Ouvriers Non Assignés (Attente) :</h4>
   <div id="unassigned-dropzone" style="flex-grow:1; border:2px dashed #cbd5e1; border-radius:8px; padding:8px; display:flex; flex-wrap:wrap; align-content:flex-start; background:#f8fafc; overflow-y:auto;">
     <!-- Ouvriers importés apparaitront ici -->
   </div>
@@ -228,23 +248,18 @@
       </select>
     </div>
 
-    <!-- Importation affectation directe (Old school) -->
+    <!-- Import TS (Pointage) avec conservation -->
     <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display:none" onchange="importExcelFile(event)">
     <button class="btn btn-success" id="btn-import" onclick="document.getElementById('excel-file-input').click()" title="Import des effectifs depuis la Timesheet">📥 Importer Pointage</button>
     <button class="btn btn-outline" id="btn-add-sup" onclick="addNewSupervisor()">+ Sup.</button>
     
     <div class="divider"></div>
-
     <button class="btn btn-purple" id="btn-db-toggle" onclick="toggleDrawer()">👷 Base Ouvriers</button>
-
     <div class="divider"></div>
-
     <button class="btn btn-warning" onclick="exportBackup()" title="Télécharger copie de sécurité">💾 Sauv.</button>
     <input type="file" id="backup-file-input" accept=".json" style="display:none" onchange="importBackup(event)">
     <button class="btn btn-outline" onclick="document.getElementById('backup-file-input').click()" title="Restaurer copie">📂 Rest.</button>
-
     <div class="divider"></div>
-
     <button class="btn btn-outline" onclick="window.print()">🖨️ PDF</button>
     <button class="btn btn-danger" id="btn-clear" onclick="resetCache()" title="Vider le cache système">🗑️ Vider</button>
   </div>
@@ -334,6 +349,7 @@ const PASSWORDS = { admin: 'admin', cfo: 'cfo' };
 let currentRole = localStorage.getItem('app_role') || 'timekeeper';
 let sortableInstances = [];
 let workerSortables = [];
+let currentMovingWorker = null;
 
 function changeRole(newRole) {
   if (newRole !== 'timekeeper') {
@@ -395,7 +411,7 @@ let payrollCounts = { SKYBUILDING: 0, DSS: 0, EUROASIA: 0, OTHER: 0 };
 let db = null, docRef = null, isSaving = false, currentFilter = 'all';
 
 const DEFAULT_DATA = [
-  { name: "TAREK", category: "civil", timesheetNo: "LOAN-2", tasks: [{ desc: "Pools and Terraces – Hydrodemolition follow up", source: "SKYBUILDING", workers: 26, workerList: [] }] }
+  { name: "NOUVEAU SUPERVISEUR", category: "civil", timesheetNo: "TS-1", tasks: [{ desc: "Activité à définir", source: "SKYBUILDING", workers: 0, workerList: [] }] }
 ];
 
 try {
@@ -556,7 +572,7 @@ function renderCards() {
       `).join('');
 
       let workersHtml = card.tasks.flatMap((t, tIdx) => (t.workerList || []).map(w => `
-        <div class="worker-pill ${w.company.toLowerCase()}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-fromtidx="${tIdx}">
+        <div class="worker-pill ${w.company.toLowerCase()}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="${cIdx}" data-tidx="${tIdx}" onclick="openWorkerModal(this)">
           ${w.id} - ${w.name}
         </div>
       `)).join('');
@@ -614,6 +630,7 @@ function initWorkerSortables() {
   workerSortables.forEach(s => s.option("disabled", isCFO));
 }
 
+// DRAG & DROP OUVRIERS
 function handleWorkerDrop(evt) {
   if (evt.from === evt.to) return;
   const item = evt.item, wId = item.dataset.wid, wName = item.dataset.wname, wComp = item.dataset.wcomp;
@@ -623,10 +640,9 @@ function handleWorkerDrop(evt) {
     unassignedWorkers = unassignedWorkers.filter(w => w.id !== wId);
   } else {
     const fromCIdx = parseInt(evt.from.dataset.cidx);
-    const oldTIdx = parseInt(item.dataset.fromtidx);
+    const oldTIdx = parseInt(item.dataset.tidx);
     if (cardsData[fromCIdx] && cardsData[fromCIdx].tasks[oldTIdx]) {
       let t = cardsData[fromCIdx].tasks[oldTIdx];
-      if (!t.workerList) t.workerList = [];
       t.workerList = t.workerList.filter(w => w.id !== wId);
       t.workers = Math.max(0, t.workers - 1);
     }
@@ -649,11 +665,82 @@ function handleWorkerDrop(evt) {
   renderCards(); renderDrawer(); syncToFirebase();
 }
 
+// CLIC & ENVOI RAPIDE (MODAL)
+function openWorkerModal(el) {
+  if (currentRole === 'cfo') return;
+  
+  const wId = el.dataset.wid;
+  const wName = el.dataset.wname;
+  const wComp = el.dataset.wcomp;
+  const cIdx = el.dataset.cidx === "unassigned" ? -1 : parseInt(el.dataset.cidx);
+  const tIdx = el.dataset.tidx === "unassigned" ? -1 : parseInt(el.dataset.tidx);
+  
+  currentMovingWorker = { wId, wName, wComp, cIdx, tIdx };
+  
+  document.getElementById('modal-worker-name').innerText = `${wName} (${wComp})`;
+  
+  let html = `<option value="-1">👷 Renvoyer à la Base (Non assigné)</option>`;
+  cardsData.forEach((c, idx) => {
+     const tsInfo = c.timesheetNo ? ` [TS: ${c.timesheetNo}]` : '';
+     html += `<option value="${idx}">➡️ ${c.name}${tsInfo}</option>`;
+  });
+  
+  document.getElementById('modal-sup-select').innerHTML = html;
+  document.getElementById('modal-sup-select').value = cIdx;
+  document.getElementById('worker-modal').style.display = 'flex';
+}
+
+function closeWorkerModal() {
+  document.getElementById('worker-modal').style.display = 'none';
+  currentMovingWorker = null;
+}
+
+function confirmWorkerMove() {
+  if (!currentMovingWorker) return;
+  const targetCIdx = parseInt(document.getElementById('modal-sup-select').value);
+  const { wId, wName, wComp, cIdx, tIdx } = currentMovingWorker;
+  
+  if (targetCIdx === cIdx) { closeWorkerModal(); return; }
+  
+  const workerObj = { id: wId, name: wName, company: wComp };
+  
+  // Enlever
+  if (cIdx === -1) {
+     unassignedWorkers = unassignedWorkers.filter(w => w.id !== wId);
+  } else {
+     if (cardsData[cIdx] && cardsData[cIdx].tasks[tIdx]) {
+        let t = cardsData[cIdx].tasks[tIdx];
+        t.workerList = t.workerList.filter(w => w.id !== wId);
+        t.workers = Math.max(0, t.workers - 1);
+     }
+  }
+  
+  // Ajouter
+  if (targetCIdx === -1) {
+     unassignedWorkers.push(workerObj);
+  } else {
+     let targetTaskIdx = cardsData[targetCIdx].tasks.findIndex(t => t.source === wComp);
+     if (targetTaskIdx === -1) {
+        cardsData[targetCIdx].tasks.push({ desc: 'Affectation rapide', source: wComp, workers: 0, workerList: [] });
+        targetTaskIdx = cardsData[targetCIdx].tasks.length - 1;
+     }
+     let t = cardsData[targetCIdx].tasks[targetTaskIdx];
+     if (!t.workerList) t.workerList = [];
+     t.workerList.push(workerObj);
+     t.workers += 1;
+  }
+  
+  closeWorkerModal();
+  renderCards();
+  renderDrawer();
+  syncToFirebase();
+}
+
 function renderDrawer() {
   const dz = document.getElementById('unassigned-dropzone');
   if (!dz) return;
   dz.innerHTML = unassignedWorkers.map(w => `
-    <div class="worker-pill ${w.company.toLowerCase()}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}">
+    <div class="worker-pill ${w.company.toLowerCase()}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="unassigned" data-tidx="unassigned" onclick="openWorkerModal(this)">
       ${w.id} - ${w.name}
     </div>
   `).join('');
@@ -788,13 +875,11 @@ function importBackup(event) {
   reader.readAsText(file);
 }
 
-// --- IMPORTATION EXCEL GLOBALE (POINTAGE) ---
+// --- IMPORTATION EXCEL GLOBALE (POINTAGE) AVEC CONSERVATION ---
 function importExcelFile(event) {
   if (currentRole === 'cfo') return; 
-  
   const file = event.target.files[0];
   if (!file) return;
-
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
@@ -873,8 +958,51 @@ function importExcelFile(event) {
 
       if (totalImportedWorkers === 0) { alert("Aucun ouvrier détecté."); event.target.value = ""; return; }
 
-      cardsData.forEach(c => c.tasks.forEach(t => { t.workers = 0; t.workerList = []; }));
+      // --- LOGIQUE DE CONSERVATION DES TIMESHEETS EXISTANTES ---
+      let matchedIndices = new Set();
+      Object.keys(importedSupervisors).forEach(supName => {
+        let existingCardIdx = cardsData.findIndex(c => {
+          const cleanExist = String(c.name || "").toUpperCase().replace(/[^A-Z]/g, '');
+          const cleanImport = String(supName || "").toUpperCase().replace(/[^A-Z]/g, '');
+          if (!cleanExist || !cleanImport) return false;
+          return cleanExist.includes(cleanImport) || cleanImport.includes(cleanExist) || (cleanExist.substring(0,5) === cleanImport.substring(0,5));
+        });
+        if (existingCardIdx !== -1) matchedIndices.add(existingCardIdx);
+      });
 
+      let missingNamesArr = [];
+      cardsData.forEach((c, idx) => {
+        if (!matchedIndices.has(idx)) {
+          missingNamesArr.push(c.name + (c.timesheetNo ? ` (TS: ${c.timesheetNo})` : ''));
+        }
+      });
+
+      let keepMissing = true;
+      if (missingNamesArr.length > 0) {
+        const msg = "⚠️ ATTENTION : Les équipes suivantes sont ABSENTES du fichier Excel importé :\n\n" + 
+                    missingNamesArr.join("\n") + 
+                    "\n\nSouhaitez-vous les CONSERVER dans l'application ?\n" + 
+                    "• [OK] : Les conserver telles quelles avec leurs effectifs.\n" + 
+                    "• [Annuler] : Les supprimer définitivement du tableau de bord.";
+        keepMissing = confirm(msg);
+      }
+
+      let nextCardsData = [];
+      cardsData.forEach((c, idx) => {
+        if (matchedIndices.has(idx)) {
+          // Carte présente dans l'Excel : on remet à zéro ses compteurs pour les écraser avec les nouvelles données
+          c.tasks.forEach(t => { t.workers = 0; t.workerList = []; });
+          nextCardsData.push(c);
+        } else {
+          // Carte absente de l'Excel
+          if (keepMissing) {
+            nextCardsData.push(c); // On la garde intacte
+          }
+        }
+      });
+      cardsData = nextCardsData;
+
+      // Fusion avec les nouvelles données importées
       Object.keys(importedSupervisors).forEach(supName => {
         const supData = importedSupervisors[supName];
         let existingCard = cardsData.find(c => {
@@ -920,7 +1048,7 @@ function importExcelFile(event) {
   reader.readAsArrayBuffer(file);
 }
 
-// --- NOUVEAU : IMPORTATEUR DE LA BASE OUVRIERS ---
+// --- IMPORTATEUR DE LA BASE OUVRIERS ---
 function importWorkersDB(event) {
   if (currentRole === 'cfo') return;
   const file = event.target.files[0];
@@ -952,9 +1080,7 @@ function importWorkersDB(event) {
           const rowArray = rawRows[r];
           if (!Array.isArray(rowArray)) continue;
           const lineStr = rowArray.map(cell => String(cell || "").toUpperCase()).join(" ");
-          if (lineStr.includes("NAME") || lineStr.includes("SURNAME") || lineStr.includes("NOM")) {
-            headerRowIdx = r; break;
-          }
+          if (lineStr.includes("NAME") || lineStr.includes("SURNAME") || lineStr.includes("NOM")) { headerRowIdx = r; break; }
         }
         if (headerRowIdx === -1) return;
 
@@ -1008,13 +1134,9 @@ function importWorkersDB(event) {
         }
       });
 
-      renderDrawer();
-      syncToFirebase();
-      if (newWorkersCount > 0) {
-        alert(`Succès : ${newWorkersCount} nouveaux ouvriers ajoutés à la base !`);
-      } else {
-        alert("Aucun nouvel ouvrier ajouté (Ils sont peut-être déjà tous dans la base ou assignés).");
-      }
+      renderDrawer(); syncToFirebase();
+      if (newWorkersCount > 0) alert(`Succès : ${newWorkersCount} nouveaux ouvriers ajoutés à la base !`);
+      else alert("Aucun nouvel ouvrier ajouté (Ils sont peut-être déjà tous dans la base ou assignés).");
 
     } catch (err) { alert("Erreur technique : " + err.message); }
     event.target.value = "";
