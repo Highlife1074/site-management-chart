@@ -122,8 +122,14 @@
   .btn-remove-card:hover { color: #dc2626; }
 
   .card-body { padding: 4px 12px 10px 12px; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; }
-  .task-item { background: #f8fafc; border: 1px solid #edf2f7; border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
-  .task-desc { font-size: 11px; font-weight: 600; color: #1e293b; outline: none; line-height: 1.35; background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 4px; padding: 4px 6px; min-height: 24px; }
+  .task-item { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+  
+  /* Champ Foreman */
+  .task-foreman { font-size: 9.5px; font-weight: 700; color: #64748b; margin-bottom: 2px; display: flex; align-items: center; gap: 4px; text-transform: uppercase; }
+  .task-foreman span { color: #059669; min-width: 60px; outline: none; border-bottom: 1px dotted #cbd5e1; display: inline-block; cursor: text; }
+  .task-foreman span:empty:before { content: "AJOUTER FOREMAN"; color: #94a3b8; }
+
+  .task-desc { font-size: 11px; font-weight: 600; color: #1e293b; outline: none; line-height: 1.35; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 4px; padding: 4px 6px; min-height: 24px; }
   .task-desc:focus { border-style: solid; border-color: #2563eb; background: #eff6ff; }
 
   .task-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 3px; }
@@ -154,6 +160,7 @@
 
   .worker-pill { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #334155; margin: 2px; transition: transform 0.1s, box-shadow 0.1s; }
   .worker-pill:hover { transform: scale(1.05); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  .worker-pill:active { cursor: grabbing; }
   .worker-pill.skybuilding { border-color: #7dd3fc; background: #e0f2fe; color: #0284c7; }
   .worker-pill.dss { border-color: #fde68a; background: #fef3c7; color: #d97706; }
   .worker-pill.euroasia { border-color: #ddd6fe; background: #ede9fe; color: #7c3aed; }
@@ -175,10 +182,16 @@
   .org-manager-col { display: flex; flex-direction: column; align-items: center; background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); min-width: 280px; position: relative; }
   .org-manager-name { font-size: 15px; font-weight: 800; color: #0f172a; margin-bottom: 4px; text-align: center; text-transform: uppercase; }
   .org-manager-total { font-size: 11px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 2px 8px; border-radius: 12px; margin-bottom: 16px; }
+  
   .org-sups-list { display: flex; flex-direction: column; gap: 12px; width: 100%; border-top: 2px solid #f1f5f9; padding-top: 16px; }
-  .org-sup-card { background: #f8fafc; border: 1px solid #cbd5e1; border-left-width: 5px; border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+  .org-sup-card { background: #ffffff; border: 1px solid #cbd5e1; border-left-width: 5px; border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
   .org-sup-name { font-size: 13px; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
   .org-sup-meta { font-size: 10px; color: #64748b; display: flex; justify-content: space-between; font-weight: 600; }
+  
+  .org-foremen-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; border-top: 1px dotted #cbd5e1; padding-top: 8px; }
+  .org-foreman-card { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 8px; }
+  .org-foreman-name { font-size: 11px; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 4px; }
+  .org-foreman-meta { font-size: 10px; font-weight: 800; color: #059669; background: #d1fae5; padding: 1px 6px; border-radius: 10px; }
 
   /* STYLE D'IMPRESSION */
   #timesheet-print-zone { display: none; }
@@ -186,7 +199,6 @@
   @media print {
     body { padding: 0; background: white; margin: 0; }
     
-    /* Mode Print Normal (Dashboard ou OrgChart) */
     body:not(.print-mode-ts) .top-bar, 
     body:not(.print-mode-ts) .btn-add-task, 
     body:not(.print-mode-ts) .btn-remove-card, 
@@ -206,11 +218,11 @@
     body:not(.print-mode-ts) .payroll-input,
     body:not(.print-mode-ts) .ts-select { border: none; background: transparent; color: #0f172a !important; -webkit-appearance: none; }
     body:not(.print-mode-ts) .task-desc { border: none; padding: 0; }
+    body:not(.print-mode-ts) .task-foreman span { border: none; }
     
     body:not(.print-mode-ts) #orgchart-view { display: block !important; padding: 0; overflow: visible; }
     body:not(.print-mode-ts) .org-manager-col { break-inside: avoid; border: 1px solid #94a3b8; }
 
-    /* Mode Print Timesheets (Templates officiels) */
     body.print-mode-ts .top-bar,
     body.print-mode-ts .dashboard-container,
     body.print-mode-ts #orgchart-view,
@@ -426,7 +438,6 @@ function applyRolePermissions() {
   const isViewer = currentRole === 'viewer';
   const isCFO = currentRole === 'cfo';
   const isTK = currentRole === 'timekeeper';
-  const isAdmin = currentRole === 'admin';
 
   document.getElementById('btn-import').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
   document.getElementById('btn-import-db').style.display = isViewer || isCFO ? 'none' : 'inline-block';
@@ -435,7 +446,7 @@ function applyRolePermissions() {
 
   document.querySelectorAll('.payroll-input').forEach(el => { el.disabled = isViewer || isTK; });
   
-  document.querySelectorAll('.sup-name, .manager-name, .task-desc, .ts-badge span, .title-editable').forEach(el => { 
+  document.querySelectorAll('.sup-name, .manager-name, .task-desc, .task-foreman span, .ts-badge span, .title-editable').forEach(el => { 
     el.setAttribute('contenteditable', isViewer || isCFO ? 'false' : 'true'); 
   });
 
@@ -486,7 +497,7 @@ let payrollCounts = { SKYBUILDING: 0, DSS: 0, EUROASIA: 0, OTHER: 0 };
 let db = null, docRef = null, isSaving = false, currentFilter = 'all';
 
 const DEFAULT_DATA = [
-  { name: "NOUVEAU SUPERVISEUR", manager: "", category: "civil", timesheetNo: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", tasks: [{ desc: "Activité à définir", source: "SKYBUILDING", workers: 0, workerList: [] }] }
+  { name: "NOUVEAU SUPERVISEUR", manager: "", category: "civil", timesheetNo: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", tasks: [{ desc: "Activité à définir", foreman: "", source: "SKYBUILDING", workers: 0, workerList: [] }] }
 ];
 
 try {
@@ -628,6 +639,9 @@ function renderCards() {
       
       let tasksHtml = card.tasks.map((t, tIdx) => `
         <div class="task-item">
+          <div class="task-foreman">
+            👷‍♂️ Foreman: <span contenteditable="true" data-placeholder="Nom..." onblur="updateTaskForeman(${cIdx}, ${tIdx}, this.innerText)">${t.foreman || ''}</span>
+          </div>
           <div class="task-desc" contenteditable="true" onblur="updateTaskDesc(${cIdx}, ${tIdx}, this.innerText)">${t.desc || ''}</div>
           <div class="task-controls">
             <select class="source-select ${String(t.source||'').toLowerCase()}" onchange="updateTaskSource(${cIdx}, ${tIdx}, this.value, this)">
@@ -707,7 +721,7 @@ function renderCards() {
   } catch (err) { console.error("Render error:", err); }
 }
 
-// ORGANIGRAMME (ORG CHART) RENDERER
+// --- ORGANIGRAMME ---
 function renderOrgChart() {
   const container = document.getElementById('orgchart-view');
   const groups = {};
@@ -731,12 +745,41 @@ function renderOrgChart() {
      
      groups[mgr].forEach(sup => {
         let supWorkers = 0;
+        let foremenGroups = {};
+        let directWkrs = 0;
+
         sup.tasks.forEach(t => { 
-          const w = parseInt(t.workers)||0; 
+          let w = parseInt(t.workers)||0; 
           supWorkers += w; 
           mgrTotalWorkers += w;
+          
+          let fName = (t.foreman || '').trim().toUpperCase();
+          if (fName) {
+             if(!foremenGroups[fName]) foremenGroups[fName] = 0;
+             foremenGroups[fName] += w;
+          } else {
+             directWkrs += w;
+          }
         });
         
+        let foremenHtml = '';
+        Object.keys(foremenGroups).forEach(fName => {
+           foremenHtml += `
+             <div class="org-foreman-card">
+               <div class="org-foreman-name">👷‍♂️ ${fName}</div>
+               <div class="org-foreman-meta">${foremenGroups[fName]} wkrs</div>
+             </div>
+           `;
+        });
+        if (directWkrs > 0) {
+           foremenHtml += `
+             <div class="org-foreman-card" style="background:#f8fafc; border-style:dashed;">
+               <div class="org-foreman-name" style="color:#64748b;">Équipiers Directs</div>
+               <div class="org-foreman-meta" style="background:#e2e8f0; color:#475569;">${directWkrs} wkrs</div>
+             </div>
+           `;
+        }
+
         const catColor = CATEGORY_INFO.find(c => c.id === sup.category)?.color || '#94a3b8';
         const catName = CATEGORY_INFO.find(c => c.id === sup.category)?.name || sup.category;
 
@@ -745,8 +788,9 @@ function renderOrgChart() {
             <div class="org-sup-name">${sup.name}</div>
             <div class="org-sup-meta">
               <span>${catName}</span>
-              <span style="font-weight:800; color:#0f172a;">${supWorkers} <span style="font-size:8px;">wkrs</span></span>
+              <span style="font-weight:800; color:#0f172a;">${supWorkers} wkrs</span>
             </div>
+            ${foremenHtml ? `<div class="org-foremen-list">${foremenHtml}</div>` : ''}
           </div>
         `;
      });
@@ -918,14 +962,15 @@ function updateSupName(cIdx, val) { if (currentRole === 'viewer' || currentRole 
 function updateTimesheetNo(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].timesheetNo = val.trim(); syncToFirebase(); }
 function updateShiftType(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].shiftType = val; syncToFirebase(); }
 function updateShiftHours(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].shiftHours = val.trim(); syncToFirebase(); }
+function updateTaskForeman(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].foreman = val.trim(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); }
 function updateTaskDesc(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].desc = val.trim(); syncToFirebase(); }
 function updateTaskSource(cIdx, tIdx, val, el) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].source = val; el.className = `source-select ${val.toLowerCase()}`; recalculateTotals(); syncToFirebase(); }
-function updateWorkerCount(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].workers = parseInt(val) || 0; recalculateTotals(); syncToFirebase(); }
+function updateWorkerCount(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].workers = parseInt(val) || 0; recalculateTotals(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); }
 function changeCategory(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].category = val; renderCards(); syncToFirebase(); }
-function addTask(cIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks.push({ desc: "", source: "SKYBUILDING", workers: 1, workerList: [] }); renderCards(); syncToFirebase(); }
-function removeTask(cIdx, tIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks.splice(tIdx, 1); renderCards(); syncToFirebase(); }
-function addNewSupervisor() { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData.unshift({ name: "NOUVEAU SUPERVISEUR", manager: "", category: "trades", timesheetNo: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", tasks: [{ desc: "", source: "SKYBUILDING", workers: 1, workerList: [] }] }); renderCards(); syncToFirebase(); }
-function removeSupervisor(cIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; if (confirm(`Supprimer ${cardsData[cIdx].name} ?`)) { cardsData.splice(cIdx, 1); renderCards(); syncToFirebase(); } }
+function addTask(cIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks.push({ desc: "", foreman: "", source: "SKYBUILDING", workers: 1, workerList: [] }); renderCards(); syncToFirebase(); }
+function removeTask(cIdx, tIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks.splice(tIdx, 1); renderCards(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); }
+function addNewSupervisor() { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData.unshift({ name: "NOUVEAU SUPERVISEUR", manager: "", category: "trades", timesheetNo: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", tasks: [{ desc: "", foreman: "", source: "SKYBUILDING", workers: 1, workerList: [] }] }); renderCards(); syncToFirebase(); }
+function removeSupervisor(cIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; if (confirm(`Supprimer ${cardsData[cIdx].name} ?`)) { cardsData.splice(cIdx, 1); renderCards(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); } }
 
 function updatePayroll(company, val) {
   if (currentRole === 'viewer' || currentRole === 'timekeeper') return;
@@ -1016,6 +1061,8 @@ function printSelectedTimesheets() {
     
     card.tasks.forEach(t => {
       totalWorkers += parseInt(t.workers) || 0;
+      let taskPrefix = t.foreman ? `<strong>[${t.foreman.toUpperCase()}]</strong> - ` : '';
+
       if (t.workerList && t.workerList.length > 0) {
         t.workerList.forEach((w, i) => {
           rowsHtml += `
@@ -1023,7 +1070,7 @@ function printSelectedTimesheets() {
               <td>${w.id}</td>
               <td>${w.name}</td>
               <td>${w.company}</td>
-              <td>${i === 0 ? t.desc : '"'}</td>
+              <td>${i === 0 ? taskPrefix + t.desc : '"'}</td>
             </tr>
           `;
         });
@@ -1034,7 +1081,7 @@ function printSelectedTimesheets() {
               <td>-</td>
               <td><em>${t.workers} Ouvrier(s) non identifié(s)</em></td>
               <td>${t.source}</td>
-              <td>${t.desc}</td>
+              <td>${taskPrefix + t.desc}</td>
             </tr>
           `;
         }
@@ -1114,7 +1161,6 @@ function importExcelFile(event) {
 
         const worksheet = workbook.Sheets[sheetName];
         if (!worksheet) return;
-
         const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
         if (!rawRows || rawRows.length === 0) return;
 
@@ -1146,7 +1192,6 @@ function importExcelFile(event) {
           let currentSupervisor = String(row[supCol] || "").trim().toUpperCase();
           let currentScope = scopeCol !== -1 ? String(row[scopeCol] || "").trim().toUpperCase() : "";
           let currentTimesheet = tsCol !== -1 ? String(row[tsCol] || "").trim() : "";
-
           let workerId = idCol !== -1 ? String(row[idCol] || "").trim() : "W-" + Math.floor(Math.random()*10000);
           let workerName = "";
           workerCols.forEach(wc => { let val = String(row[wc] || "").trim(); if(val) workerName += val + " "; });
@@ -1193,7 +1238,7 @@ function importExcelFile(event) {
 
       let keepMissing = true;
       if (missingNamesArr.length > 0) {
-        keepMissing = confirm("⚠️ ATTENTION : Les équipes suivantes sont ABSENTES du fichier Excel :\n\n" + missingNamesArr.join("\n") + "\n\nSouhaitez-vous les CONSERVER dans l'application ?\n• [OK] : Les conserver\n• [Annuler] : Les supprimer");
+        keepMissing = confirm("⚠️ ATTENTION : Les équipes absentes de l'Excel :\n\n" + missingNamesArr.join("\n") + "\n\n• [OK] : Conserver\n• [Annuler] : Supprimer");
       }
 
       let nextCardsData = [];
@@ -1240,7 +1285,7 @@ function importExcelFile(event) {
 
       cardsData.forEach(c => { c.tasks = c.tasks.filter(t => t.workers > 0 || (t.desc && t.desc.trim() !== "")); });
       renderCards(); syncToFirebase();
-      alert(`Import réussi : ${totalImportedWorkers} ouvriers détectés et liés !`);
+      alert(`Import réussi : ${totalImportedWorkers} ouvriers liés !`);
 
     } catch (err) { alert("Erreur technique : " + err.message); }
     event.target.value = "";
