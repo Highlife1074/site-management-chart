@@ -20,17 +20,21 @@
 
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, sans-serif; }
-  body { background: #f8fafc; padding: 20px; color: #0f172a; }
+  body { background: #f8fafc; padding: 20px; color: #0f172a; overflow-x: hidden; }
 
   #error-banner { display: none; background: #fef2f2; color: #991b1b; padding: 12px; margin: 0 auto 16px auto; max-width: 1540px; border: 1px solid #f87171; border-radius: 8px; font-weight: 600; }
 
-  /* Barre supérieure */
   .top-bar { max-width: 1540px; margin: 0 auto 16px auto; display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 14px 20px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.04); }
   .top-bar-title h1 { font-size: 18px; font-weight: 800; }
   .sync-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #64748b; margin-top: 2px; }
   .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; }
 
   .actions-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  
+  .role-container { display: flex; align-items: center; gap: 6px; background: #f1f5f9; padding: 6px 10px; border-radius: 8px; border: 1px solid #cbd5e1; margin-right: 10px; }
+  .role-label { font-size: 11px; font-weight: 800; color: #475569; letter-spacing: 0.5px; }
+  .role-select { font-size: 12px; font-weight: 700; border: none; background: transparent; outline: none; cursor: pointer; color: #0f172a; }
+
   .btn { background: #2563eb; color: white; border: none; padding: 8px 12px; font-size: 12px; font-weight: 600; border-radius: 7px; cursor: pointer; transition: background 0.15s; }
   .btn:hover { background: #1d4ed8; }
   .btn-outline { background: white; color: #334155; border: 1px solid #cbd5e1; }
@@ -41,10 +45,11 @@
   .btn-warning:hover { background: #d97706; }
   .btn-danger { background: white; color: #dc2626; border: 1px solid #fca5a5; }
   .btn-danger:hover { background: #fef2f2; }
+  .btn-purple { background: #7c3aed; color: white; }
+  .btn-purple:hover { background: #6d28d9; }
 
   .dashboard-container { max-width: 1540px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
 
-  /* KPI Global */
   .kpi-board { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px 22px; box-shadow: 0 3px 6px rgba(0,0,0,0.03); }
   .kpi-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 14px; }
   .title-editable { font-size: 19px; font-weight: 800; color: #1e3a8a; outline: none; }
@@ -61,23 +66,21 @@
   .stat-pill .tag-color { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
   .stat-pill .count { font-weight: 800; color: #0f172a; margin-left: 2px; }
 
-  /* Table Payroll vs TS */
   .payroll-table { width: 100%; border-collapse: collapse; font-size: 11.5px; font-weight: 600; }
   .payroll-table th { text-align: left; color: #64748b; padding-bottom: 4px; border-bottom: 1px solid #e2e8f0; }
   .payroll-table td { padding: 5px 0; border-bottom: 1px solid #f1f5f9; }
-  .payroll-input { width: 48px; font-size: 11px; font-weight: 800; text-align: center; padding: 2px 4px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; color: #0f172a; }
+  .payroll-input { width: 56px; font-size: 12px; font-weight: 800; text-align: center; padding: 3px 4px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; color: #0f172a; }
   .payroll-input:focus { border-color: #2563eb; background: #eff6ff; }
+  .payroll-input:disabled { background: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; cursor: not-allowed; }
   .diff-badge { padding: 3px 8px; border-radius: 12px; font-size: 10.5px; font-weight: 800; display: inline-block; min-width: 32px; text-align: center; }
   .diff-ok { background: #dcfce7; color: #166534; }
   .diff-warn { background: #fee2e2; color: #991b1b; }
 
-  /* Filtres */
   .filter-bar { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 8px; }
   .filter-btn { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; background: #ffffff; color: #64748b; border: 1px solid #cbd5e1; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
   .filter-btn:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
   .filter-btn.active { background: #1e293b; color: white; border-color: #1e293b; }
 
-  /* Sections & Cartes */
   .category-section { margin-top: 10px; margin-bottom: 20px; }
   .category-title { font-size: 14px; font-weight: 800; padding-bottom: 6px; margin-bottom: 12px; text-transform: uppercase; }
   .cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; min-height: 90px; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 10px; }
@@ -103,7 +106,6 @@
   .card-title-row { padding: 8px 12px 6px 12px; display: flex; justify-content: space-between; align-items: flex-start; }
   .sup-name { font-size: 13px; font-weight: 800; outline: none; width: 100%; color: #0f172a; }
   
-  /* Nouveau champ Timesheet No */
   .ts-badge { font-size: 10px; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 1px 6px; color: #475569; display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; }
   .ts-badge span { outline: none; min-width: 25px; display: inline-block; color: #2563eb; }
   .ts-badge span:empty:before { content: attr(data-placeholder); color: #94a3b8; }
@@ -123,6 +125,8 @@
 
   .task-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 3px; }
   .source-select { font-size: 10px; font-weight: 700; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 4px; outline: none; cursor: pointer; }
+  .source-select:disabled { background: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; cursor: not-allowed; }
+  
   .source-select.skybuilding { color: #0284c7; }
   .source-select.dss { color: #d97706; }
   .source-select.euroasia { color: #7c3aed; }
@@ -130,26 +134,74 @@
 
   .worker-count-input { width: 44px; font-size: 11px; font-weight: 800; text-align: right; padding: 2px 4px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; }
   .worker-count-input:focus { border-color: #2563eb; background: #eff6ff; }
+  .worker-count-input:disabled { background: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; cursor: not-allowed; }
+
   .btn-add-task { background: transparent; border: 1px dashed #cbd5e1; color: #64748b; font-size: 10px; font-weight: 600; padding: 4px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 2px; }
   .btn-add-task:hover { background: #f1f5f9; color: #0f172a; }
+  .btn-delete-task { cursor: pointer; color: #dc2626; font-size: 14px; font-weight: bold; margin-left: 3px; }
 
   .divider { width: 1px; height: 24px; background: #e2e8f0; margin: 0 4px; }
 
+  /* DRAWER (Base Ouvriers) */
+  .drawer { position: fixed; top: 0; right: -360px; width: 360px; height: 100vh; background: white; box-shadow: -4px 0 15px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; padding: 20px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+  .drawer.open { right: 0; }
+  .drawer-header { display: flex; justify-content: space-between; align-items: center; }
+  .btn-close-drawer { background: none; border: none; font-size: 26px; cursor: pointer; color: #64748b; line-height: 1; }
+  .btn-close-drawer:hover { color: #0f172a; }
+
+  /* WORKER PILLS */
+  .worker-pill { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; cursor: grab; border: 1px solid #cbd5e1; background: white; color: #334155; margin: 2px; }
+  .worker-pill:active { cursor: grabbing; }
+  .worker-pill.skybuilding { border-color: #7dd3fc; background: #e0f2fe; color: #0284c7; }
+  .worker-pill.dss { border-color: #fde68a; background: #fef3c7; color: #d97706; }
+  .worker-pill.euroasia { border-color: #ddd6fe; background: #ede9fe; color: #7c3aed; }
+  .worker-pill.other { border-color: #cbd5e1; background: #f1f5f9; color: #475569; }
+
+  .card-worker-dropzone { min-height: 36px; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 4px; background: #f8fafc; margin-top: 6px; display: flex; flex-wrap: wrap; align-content: flex-start; transition: background 0.2s; }
+  .card-worker-dropzone:empty::before { content: "Glissez des ouvriers ici"; font-size: 10px; color: #94a3b8; width: 100%; text-align: center; margin-top: 6px; }
+
   @media print {
     body { padding: 0; background: white; }
-    .top-bar, .btn-add-task, .btn-remove-card, .btn-use-scope, #error-banner, .filter-bar { display: none; }
+    .top-bar, .btn-add-task, .btn-remove-card, .btn-use-scope, #error-banner, .filter-bar, .btn-delete-task, .drawer { display: none !important; }
     .dashboard-container { gap: 8px; max-width: 100%; }
     .cards-grid { border: none !important; background: transparent !important; padding: 0 !important; min-height: 0 !important; gap: 8px; }
     .category-section { break-inside: avoid; display: block !important; }
     .card { break-inside: avoid; box-shadow: none !important; border: 1px solid #cbd5e1; }
-    .worker-count-input, .source-select, .cat-select, .payroll-input { border: none; background: transparent; }
+    .worker-count-input, .source-select, .cat-select, .payroll-input { border: none; background: transparent; color: #0f172a !important; -webkit-text-fill-color: #0f172a; }
     .task-desc { border: none; padding: 0; }
+    .worker-pill { border: 1px solid #000; background: transparent; color: #000; }
   }
 </style>
 </head>
 <body>
 
 <div id="error-banner"></div>
+
+<!-- DRAWER: Base de Données des Ouvriers -->
+<div id="workers-drawer" class="drawer">
+  <div class="drawer-header">
+    <h3 style="font-size:16px; font-weight:800; color:#0f172a;">👷 Base Ouvriers</h3>
+    <button class="btn-close-drawer" onclick="toggleDrawer()">&times;</button>
+  </div>
+  <p style="font-size:11px; color:#64748b; margin-top:-6px;">Glissez ces ouvriers dans les cartes pour les assigner (le calcul se fait automatiquement).</p>
+  
+  <div style="background:#f1f5f9; padding:10px; border-radius:8px; display:flex; flex-direction:column; gap:6px;">
+    <input type="text" id="new-w-id" placeholder="ID / N° (ex: 123)" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px;">
+    <input type="text" id="new-w-name" placeholder="Nom Complet" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px;">
+    <select id="new-w-comp" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px;">
+      <option value="SKYBUILDING">SKYBUILDING</option>
+      <option value="DSS">DSS</option>
+      <option value="EUROASIA">EUROASIA</option>
+      <option value="OTHER">AUTRE</option>
+    </select>
+    <button class="btn btn-success" style="font-size:11px; padding:4px;" onclick="addManualWorker()">+ Ajouter Ouvrier</button>
+  </div>
+
+  <h4 style="font-size:12px; margin-top:10px; color:#1e293b;">Zone d'attente / Non assignés :</h4>
+  <div id="unassigned-dropzone" style="flex-grow:1; border:2px dashed #cbd5e1; border-radius:8px; padding:8px; display:flex; flex-wrap:wrap; align-content:flex-start; background:#f8fafc; overflow-y:auto;">
+    <!-- Les ouvriers non assignés viendront ici -->
+  </div>
+</div>
 
 <div class="top-bar">
   <div class="top-bar-title">
@@ -160,20 +212,34 @@
     </div>
   </div>
   <div class="actions-group">
+    
+    <div class="role-container">
+      <span class="role-label">PROFIL :</span>
+      <select id="role-selector" class="role-select" onchange="changeRole(this.value)">
+        <option value="timekeeper">⏱️ Timekeeper</option>
+        <option value="cfo">💰 CFO</option>
+        <option value="admin">⚙️ Admin</option>
+      </select>
+    </div>
+
     <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display:none" onchange="importExcelFile(event)">
-    <button class="btn btn-success" onclick="document.getElementById('excel-file-input').click()">📥 Importer Excel</button>
-    <button class="btn btn-outline" onclick="addNewSupervisor()">+ Superviseur</button>
+    <button class="btn btn-success" id="btn-import" onclick="document.getElementById('excel-file-input').click()">📥 Importer Excel</button>
+    <button class="btn btn-outline" id="btn-add-sup" onclick="addNewSupervisor()">+ Sup.</button>
     
     <div class="divider"></div>
 
-    <button class="btn btn-warning" onclick="exportBackup()" title="Télécharger une copie de sécurité de cette configuration">💾 Sauvegarder</button>
+    <button class="btn btn-purple" id="btn-db-toggle" onclick="toggleDrawer()">👷 Ouvriers</button>
+
+    <div class="divider"></div>
+
+    <button class="btn btn-warning" onclick="exportBackup()" title="Télécharger copie de sécurité">💾 Sauv.</button>
     <input type="file" id="backup-file-input" accept=".json" style="display:none" onchange="importBackup(event)">
-    <button class="btn btn-outline" onclick="document.getElementById('backup-file-input').click()" title="Restaurer une ancienne copie de sécurité">📂 Restaurer</button>
+    <button class="btn btn-outline" onclick="document.getElementById('backup-file-input').click()" title="Restaurer copie">📂 Rest.</button>
 
     <div class="divider"></div>
 
     <button class="btn btn-outline" onclick="window.print()">🖨️ PDF</button>
-    <button class="btn btn-danger" onclick="resetCache()" title="Effacer le cache et recharger la page par défaut">🗑️ Vider</button>
+    <button class="btn btn-danger" id="btn-clear" onclick="resetCache()" title="Vider le cache système">🗑️ Vider</button>
   </div>
 </div>
 
@@ -183,7 +249,7 @@
     <div class="kpi-header">
       <div>
         <div class="title-editable" contenteditable="true" id="chart-title">SITE MANAGEMENT & SUPERVISORY CHART</div>
-        <div style="font-size: 11px; color: #64748b; font-weight: 600; margin-top: 3px;" contenteditable="true">WEEKS 37 / 38 &bull; REAL-TIME WORKFORCE ALLOCATION</div>
+        <div class="title-editable" style="font-size: 11px; color: #64748b; font-weight: 600; margin-top: 3px;" contenteditable="true">WEEKS 37 / 38 &bull; REAL-TIME WORKFORCE ALLOCATION</div>
       </div>
       <div class="total-badge-container">
         <span class="total-label">Effectif Total Chantier :</span>
@@ -192,15 +258,13 @@
     </div>
 
     <div class="summaries-row">
-      
-      <!-- Pointage vs Payroll -->
       <div class="summary-box">
         <div class="summary-title">Effectifs : Pointage (TS) vs Payroll HR</div>
         <table class="payroll-table">
           <tr>
             <th>Entreprise</th>
             <th style="text-align:center;">TS Pointage</th>
-            <th style="text-align:center; color:#2563eb;">Payroll (Auto/Saisie)</th>
+            <th style="text-align:center; color:#2563eb;">Payroll Officiel</th>
             <th style="text-align:center;">Écart</th>
           </tr>
           <tr>
@@ -258,12 +322,54 @@ window.onerror = function(msg, url, line) {
   return false;
 };
 
+// --- GESTION DES RÔLES / PROFILS ---
+const PASSWORDS = { admin: 'admin', cfo: 'cfo' };
+let currentRole = localStorage.getItem('app_role') || 'timekeeper';
+let sortableInstances = [];
+let workerSortables = [];
+
+function changeRole(newRole) {
+  if (newRole !== 'timekeeper') {
+    const pwd = prompt(`Mot de passe pour le profil ${newRole.toUpperCase()} :`);
+    if (pwd !== PASSWORDS[newRole]) {
+      alert("Mot de passe incorrect.");
+      document.getElementById('role-selector').value = currentRole;
+      return;
+    }
+  }
+  currentRole = newRole;
+  localStorage.setItem('app_role', currentRole);
+  document.getElementById('role-selector').value = currentRole;
+  applyRolePermissions();
+}
+
+function applyRolePermissions() {
+  const isCFO = currentRole === 'cfo';
+  const isTK = currentRole === 'timekeeper';
+  const isAdmin = currentRole === 'admin';
+
+  document.getElementById('btn-import').style.display = isCFO ? 'none' : 'inline-flex';
+  document.getElementById('btn-add-sup').style.display = isCFO ? 'none' : 'inline-flex';
+  document.getElementById('btn-db-toggle').style.display = isCFO ? 'none' : 'inline-flex';
+  document.getElementById('btn-clear').style.display = isAdmin ? 'inline-flex' : 'none';
+
+  document.querySelectorAll('.payroll-input').forEach(el => { el.disabled = isTK; });
+  document.querySelectorAll('.sup-name, .task-desc, .ts-badge span, .title-editable').forEach(el => { el.setAttribute('contenteditable', isCFO ? 'false' : 'true'); });
+  document.querySelectorAll('.worker-count-input, .source-select, .cat-select').forEach(el => { el.disabled = isCFO; });
+  document.querySelectorAll('.btn-remove-card, .btn-add-task, .btn-use-scope, .btn-delete-task').forEach(el => { el.style.display = isCFO ? 'none' : 'inline-block'; });
+
+  sortableInstances.forEach(s => s.option("disabled", isCFO));
+  workerSortables.forEach(s => s.option("disabled", isCFO));
+}
+
 function resetCache() {
   if (confirm("Vider le cache réinitialisera l'application à son état d'origine. Continuer ?")) {
     localStorage.removeItem("site_chart_backup");
     window.location.reload();
   }
 }
+
+function toggleDrawer() { document.getElementById('workers-drawer').classList.toggle('open'); }
 
 const CATEGORY_INFO = [
   { id: 'civil', name: 'CIVIL WORKS', color: '#ea580c' },
@@ -275,17 +381,13 @@ const CATEGORY_INFO = [
   { id: 'plant', name: 'PLANT & EQUIPMENT', color: '#dc2626' }
 ];
 
-// État global
 let cardsData = [];
+let unassignedWorkers = [];
 let payrollCounts = { SKYBUILDING: 0, DSS: 0, EUROASIA: 0, OTHER: 0 };
-let db = null;
-let docRef = null;
-let isSaving = false;
-let currentFilter = 'all';
+let db = null, docRef = null, isSaving = false, currentFilter = 'all';
 
 const DEFAULT_DATA = [
-  { name: "TAREK", category: "civil", timesheetNo: "LOAN-2", tasks: [{ desc: "Pools and Terraces – Hydrodemolition follow up", source: "SKYBUILDING", workers: 26 }] },
-  { name: "NELSON", category: "trades", timesheetNo: "EUROASIA-12", tasks: [{ desc: "Drywall & Doors/Parquet", source: "EUROASIA", workers: 18 }, { desc: "Dry wall partition", source: "DSS", workers: 14 }] }
+  { name: "TAREK", category: "civil", timesheetNo: "LOAN-2", tasks: [{ desc: "Pools and Terraces – Hydrodemolition follow up", source: "SKYBUILDING", workers: 26, workerList: [] }] }
 ];
 
 try {
@@ -295,42 +397,35 @@ try {
     if (parsed.cardsData && Array.isArray(parsed.cardsData)) { 
       cardsData = parsed.cardsData; 
       payrollCounts = parsed.payrollCounts || payrollCounts;
-    } 
-    else if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].tasks) { cardsData = parsed; } 
-    else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
-  } else {
-    cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA));
-  }
+      unassignedWorkers = parsed.unassignedWorkers || [];
+    } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
+  } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 } catch(e) { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 
 // --- 1. INITIALISATION DE L'INTERFACE ---
 function initLayout() {
+  document.getElementById('role-selector').value = currentRole;
+
   const filterBar = document.getElementById('filter-bar');
   filterBar.innerHTML = `
     <button class="filter-btn active" id="filter-all" onclick="setFilter('all')">TOUT AFFICHER</button>
-    ${CATEGORY_INFO.map(cat => `
-      <button class="filter-btn" id="filter-${cat.id}" onclick="setFilter('${cat.id}')" style="border-left: 4px solid ${cat.color};">${cat.name}</button>
-    `).join('')}
+    ${CATEGORY_INFO.map(cat => `<button class="filter-btn" id="filter-${cat.id}" onclick="setFilter('${cat.id}')" style="border-left: 4px solid ${cat.color};">${cat.name}</button>`).join('')}
   `;
 
   const board = document.getElementById('categories-board');
   board.innerHTML = CATEGORY_INFO.map(cat => `
     <div class="category-section" id="section-${cat.id}">
-      <h2 class="category-title" style="color: ${cat.color}; border-bottom: 2px solid ${cat.color};">
-        ${cat.name}
-      </h2>
+      <h2 class="category-title" style="color: ${cat.color}; border-bottom: 2px solid ${cat.color};">${cat.name}</h2>
       <div class="cards-grid" id="grid-${cat.id}" data-category="${cat.id}"></div>
     </div>
   `).join('');
 
   CATEGORY_INFO.forEach(cat => {
-    new Sortable(document.getElementById(`grid-${cat.id}`), {
-      group: 'supervisors',
-      handle: '.drag-handle',
-      animation: 150,
-      ghostClass: 'sortable-ghost',
+    const s = new Sortable(document.getElementById(`grid-${cat.id}`), {
+      group: 'supervisors', handle: '.drag-handle', animation: 150, ghostClass: 'sortable-ghost',
       onEnd: function (evt) { reorderCardsBasedOnDOM(); }
     });
+    sortableInstances.push(s);
   });
 }
 
@@ -338,7 +433,6 @@ function setFilter(catId) {
   currentFilter = catId;
   document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
   document.getElementById(`filter-${catId}`).classList.add('active');
-
   CATEGORY_INFO.forEach(cat => {
     const section = document.getElementById(`section-${cat.id}`);
     if (section) section.style.display = (catId === 'all' || catId === cat.id) ? 'block' : 'none';
@@ -347,6 +441,7 @@ function setFilter(catId) {
 
 initLayout();
 renderCards();
+renderDrawer();
 
 // --- 2. CONNEXION FIREBASE ---
 setTimeout(() => {
@@ -371,7 +466,9 @@ setTimeout(() => {
         const data = doc.data();
         if (data.cardsData) cardsData = data.cardsData;
         if (data.payrollCounts) payrollCounts = data.payrollCounts;
+        if (data.unassignedWorkers) unassignedWorkers = data.unassignedWorkers;
         renderCards();
+        renderDrawer();
       } else { syncToFirebase(); }
       document.getElementById("sync-dot").style.background = "#16a34a";
       document.getElementById("sync-text").innerText = "Connecté à Firebase";
@@ -387,14 +484,13 @@ setTimeout(() => {
 
 // --- 3. FONCTIONS CLÉS & SYNCHRONISATION ---
 function syncToFirebase() {
-  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts})); } catch(e){}
+  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers})); } catch(e){}
   if (!docRef) return;
   isSaving = true;
   document.getElementById("sync-text").innerText = "Enregistrement...";
 
   docRef.set({
-    cardsData: cardsData,
-    payrollCounts: payrollCounts,
+    cardsData, payrollCounts, unassignedWorkers,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   }, { merge: true }).then(() => {
     document.getElementById("sync-dot").style.background = "#16a34a";
@@ -429,7 +525,10 @@ function renderCards() {
           ${t.importedScope ? `
             <div class="scope-imported-box">
               <span class="scope-imported-text" title="${t.importedScope}">Excel: ${t.importedScope}</span>
-              <button class="btn-use-scope" onclick="applyImportedScope(${cIdx},${tIdx})">Utiliser</button>
+              <div>
+                <button class="btn-use-scope" onclick="applyImportedScope(${cIdx},${tIdx})">Utiliser</button>
+                <button class="btn-use-scope" style="background:#fca5a5; color:#7f1d1d; margin-left:4px;" onclick="removeImportedScope(${cIdx},${tIdx})" title="Supprimer ce nom Excel">&times;</button>
+              </div>
             </div>
           ` : ''}
           <div class="task-controls">
@@ -442,17 +541,23 @@ function renderCards() {
             <div style="display:flex; align-items:center; gap:3px;">
               <input type="number" min="0" class="worker-count-input" value="${t.workers || 0}" oninput="updateWorkerCount(${cIdx}, ${tIdx}, this.value)" />
               <span style="font-size:10px; font-weight:700;">p.</span>
-              <span style="cursor:pointer; color:#dc2626; font-size:14px; font-weight:bold; margin-left:3px;" onclick="removeTask(${cIdx}, ${tIdx})">&times;</span>
+              <span class="btn-delete-task" title="Supprimer cette ligne" onclick="removeTask(${cIdx}, ${tIdx})">&times;</span>
             </div>
           </div>
         </div>
       `).join('');
 
+      let workersHtml = card.tasks.flatMap((t, tIdx) => (t.workerList || []).map(w => `
+        <div class="worker-pill ${w.company.toLowerCase()}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-fromtidx="${tIdx}">
+          ${w.id} - ${w.name}
+        </div>
+      `)).join('');
+
       cardEl.innerHTML = `
-        <div class="card-header drag-handle" title="Glisser pour déplacer">
+        <div class="card-header drag-handle" title="Glisser pour déplacer la carte">
           <div style="display:flex; align-items:center; gap:8px;">
             <span style="color:#94a3b8; font-size:16px; margin-top:-2px;">⠿</span>
-            <select class="cat-select" onchange="changeCategory(${cIdx}, this.value)" style="cursor:pointer;">
+            <select class="cat-select" onchange="changeCategory(${cIdx}, this.value)">
               <option value="civil" ${catId==='civil'?'selected':''}>Civil</option>
               <option value="trades" ${catId==='trades'?'selected':''}>Trades</option>
               <option value="facade" ${catId==='facade'?'selected':''}>Façade</option>
@@ -474,13 +579,91 @@ function renderCards() {
         <div class="card-body">
           ${tasksHtml}
           <button class="btn-add-task" onclick="addTask(${cIdx})">+ Ajouter Ligne</button>
+          
+          <!-- Dropzone des ouvriers -->
+          <div class="card-worker-dropzone" data-cidx="${cIdx}">
+            ${workersHtml}
+          </div>
         </div>
       `;
       grid.appendChild(cardEl);
     });
 
     recalculateTotals();
+    initWorkerSortables();
   } catch (err) { console.error("Render error:", err); }
+}
+
+function initWorkerSortables() {
+  workerSortables.forEach(s => s.destroy());
+  workerSortables = [];
+  document.querySelectorAll('.card-worker-dropzone, #unassigned-dropzone').forEach(el => {
+    const s = new Sortable(el, {
+      group: 'workers-pool', animation: 150,
+      onEnd: function(evt) { handleWorkerDrop(evt); }
+    });
+    workerSortables.push(s);
+  });
+  const isCFO = currentRole === 'cfo';
+  workerSortables.forEach(s => s.option("disabled", isCFO));
+}
+
+function handleWorkerDrop(evt) {
+  if (evt.from === evt.to) return;
+  const item = evt.item, wId = item.dataset.wid, wName = item.dataset.wname, wComp = item.dataset.wcomp;
+  const workerObj = { id: wId, name: wName, company: wComp };
+
+  // REMOVE FROM SOURCE
+  if (evt.from.id === 'unassigned-dropzone') {
+    unassignedWorkers = unassignedWorkers.filter(w => w.id !== wId);
+  } else {
+    const fromCIdx = parseInt(evt.from.dataset.cidx);
+    const oldTIdx = parseInt(item.dataset.fromtidx);
+    if (cardsData[fromCIdx] && cardsData[fromCIdx].tasks[oldTIdx]) {
+      let t = cardsData[fromCIdx].tasks[oldTIdx];
+      if (!t.workerList) t.workerList = [];
+      t.workerList = t.workerList.filter(w => w.id !== wId);
+      t.workers = Math.max(0, t.workers - 1);
+    }
+  }
+
+  // ADD TO DESTINATION
+  if (evt.to.id === 'unassigned-dropzone') {
+    unassignedWorkers.push(workerObj);
+  } else {
+    const toCIdx = parseInt(evt.to.dataset.cidx);
+    let targetTaskIdx = cardsData[toCIdx].tasks.findIndex(t => t.source === wComp);
+    if (targetTaskIdx === -1) {
+      cardsData[toCIdx].tasks.push({ desc: 'Affectation auto.', source: wComp, workers: 0, workerList: [] });
+      targetTaskIdx = cardsData[toCIdx].tasks.length - 1;
+    }
+    let t = cardsData[toCIdx].tasks[targetTaskIdx];
+    if (!t.workerList) t.workerList = [];
+    t.workerList.push(workerObj);
+    t.workers += 1;
+  }
+  renderCards(); renderDrawer(); syncToFirebase();
+}
+
+function renderDrawer() {
+  const dz = document.getElementById('unassigned-dropzone');
+  if (!dz) return;
+  dz.innerHTML = unassignedWorkers.map(w => `
+    <div class="worker-pill ${w.company.toLowerCase()}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}">
+      ${w.id} - ${w.name}
+    </div>
+  `).join('');
+}
+
+function addManualWorker() {
+  const idInput = document.getElementById('new-w-id');
+  const nameInput = document.getElementById('new-w-name');
+  const comp = document.getElementById('new-w-comp').value;
+  const id = idInput.value.trim() || "W" + Math.floor(Math.random()*1000);
+  const name = nameInput.value.trim() || "Ouvrier Manuel";
+  unassignedWorkers.push({ id, name, company: comp });
+  idInput.value = ""; nameInput.value = "";
+  renderDrawer(); syncToFirebase();
 }
 
 function reorderCardsBasedOnDOM() {
@@ -497,26 +680,25 @@ function reorderCardsBasedOnDOM() {
     });
   });
   cardsData = newCardsData;
-  renderCards();
-  syncToFirebase();
+  renderCards(); syncToFirebase();
 }
 
 function updateSupName(cIdx, val) { cardsData[cIdx].name = val.trim(); syncToFirebase(); }
 function updateTimesheetNo(cIdx, val) { cardsData[cIdx].timesheetNo = val.trim(); syncToFirebase(); }
 function updateTaskDesc(cIdx, tIdx, val) { cardsData[cIdx].tasks[tIdx].desc = val.trim(); syncToFirebase(); }
 function applyImportedScope(cIdx, tIdx) { cardsData[cIdx].tasks[tIdx].desc = cardsData[cIdx].tasks[tIdx].importedScope; renderCards(); syncToFirebase(); }
+function removeImportedScope(cIdx, tIdx) { cardsData[cIdx].tasks[tIdx].importedScope = ""; renderCards(); syncToFirebase(); }
 function updateTaskSource(cIdx, tIdx, val, el) { cardsData[cIdx].tasks[tIdx].source = val; el.className = `source-select ${val.toLowerCase()}`; recalculateTotals(); syncToFirebase(); }
 function updateWorkerCount(cIdx, tIdx, val) { cardsData[cIdx].tasks[tIdx].workers = parseInt(val) || 0; recalculateTotals(); syncToFirebase(); }
 function changeCategory(cIdx, val) { cardsData[cIdx].category = val; renderCards(); syncToFirebase(); }
-function addTask(cIdx) { cardsData[cIdx].tasks.push({ desc: "", importedScope: "", source: "SKYBUILDING", workers: 1 }); renderCards(); syncToFirebase(); }
+function addTask(cIdx) { cardsData[cIdx].tasks.push({ desc: "", importedScope: "", source: "SKYBUILDING", workers: 1, workerList: [] }); renderCards(); syncToFirebase(); }
 function removeTask(cIdx, tIdx) { cardsData[cIdx].tasks.splice(tIdx, 1); renderCards(); syncToFirebase(); }
-function addNewSupervisor() { cardsData.unshift({ name: "NOUVEAU SUPERVISEUR", category: "trades", timesheetNo: "", tasks: [{ desc: "", importedScope: "", source: "SKYBUILDING", workers: 1 }] }); renderCards(); syncToFirebase(); }
+function addNewSupervisor() { cardsData.unshift({ name: "NOUVEAU SUPERVISEUR", category: "trades", timesheetNo: "", tasks: [{ desc: "", importedScope: "", source: "SKYBUILDING", workers: 1, workerList: [] }] }); renderCards(); syncToFirebase(); }
 function removeSupervisor(cIdx) { if (confirm(`Supprimer ${cardsData[cIdx].name} ?`)) { cardsData.splice(cIdx, 1); renderCards(); syncToFirebase(); } }
 
 function updatePayroll(company, val) {
   payrollCounts[company] = parseInt(val) || 0;
-  recalculateTotals();
-  syncToFirebase();
+  recalculateTotals(); syncToFirebase();
 }
 
 function recalculateTotals() {
@@ -554,18 +736,15 @@ function recalculateTotals() {
   document.getElementById("cat-indirect").innerText = cats.indirect;
   document.getElementById("cat-plant").innerText = cats.plant;
 
-  // Calcul et affichage des écarts (Variance)
   const updateDiff = (company, tsTotal) => {
     const prTotal = payrollCounts[company] || 0;
     const diff = tsTotal - prTotal;
     const el = document.getElementById(`diff-${company.toLowerCase()}`);
     const inputEl = document.getElementById(`pr-${company.toLowerCase()}`);
     if (inputEl && document.activeElement !== inputEl) inputEl.value = prTotal;
-    
     if (el) {
       el.innerText = diff > 0 ? `+${diff}` : diff;
       el.className = `diff-badge ${diff === 0 ? 'diff-ok' : 'diff-warn'}`;
-      el.title = diff > 0 ? `${diff} p. en trop sur les Timesheets` : (diff < 0 ? `${Math.abs(diff)} p. manquantes sur les Timesheets` : "Parfaitement aligné");
     }
   };
 
@@ -573,17 +752,16 @@ function recalculateTotals() {
   updateDiff("DSS", dss);
   updateDiff("EUROASIA", euro);
   updateDiff("OTHER", other);
+
+  applyRolePermissions();
 }
 
-// --- 4. SAUVEGARDE ET RESTAURATION MANUELLE ---
 function exportBackup() {
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({cardsData, payrollCounts}, null, 2));
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({cardsData, payrollCounts, unassignedWorkers}, null, 2));
   const dlAnchorElem = document.createElement('a');
   dlAnchorElem.setAttribute("href", dataStr);
   dlAnchorElem.setAttribute("download", `site_backup_${new Date().toISOString().split('T')[0]}.json`);
-  document.body.appendChild(dlAnchorElem);
-  dlAnchorElem.click();
-  dlAnchorElem.remove();
+  document.body.appendChild(dlAnchorElem); dlAnchorElem.click(); dlAnchorElem.remove();
 }
 
 function importBackup(event) {
@@ -596,8 +774,8 @@ function importBackup(event) {
       if (parsed.cardsData) {
         cardsData = parsed.cardsData;
         payrollCounts = parsed.payrollCounts || payrollCounts;
-        renderCards();
-        syncToFirebase();
+        unassignedWorkers = parsed.unassignedWorkers || [];
+        renderCards(); renderDrawer(); syncToFirebase();
         alert("Sauvegarde restaurée avec succès !");
       } else { alert("Fichier invalide."); }
     } catch (err) { alert("Erreur : " + err.message); }
@@ -606,8 +784,10 @@ function importBackup(event) {
   reader.readAsText(file);
 }
 
-// --- 5. IMPORTATEUR EXCEL ---
+// --- 5. IMPORTATEUR EXCEL BLINDÉ ---
 function importExcelFile(event) {
+  if (currentRole === 'cfo') return; 
+  
   const file = event.target.files[0];
   if (!file) return;
 
@@ -643,12 +823,13 @@ function importExcelFile(event) {
         if (headerRowIdx === -1) return;
 
         const headerRow = rawRows[headerRowIdx] || [];
-        let supCol = -1, scopeCol = -1, tsCol = -1, workerCols = [];
+        let supCol = -1, scopeCol = -1, tsCol = -1, idCol = -1, workerCols = [];
         for (let c = 0; c < headerRow.length; c++) {
           const colName = String(headerRow[c] || "").trim().toUpperCase();
           if (colName.includes("SUPERVISOR") && supCol === -1) supCol = c;
           if (colName.includes("SCOPE") && scopeCol === -1) scopeCol = c;
           if (colName.includes("TIMESHEET") && tsCol === -1) tsCol = c;
+          if ((colName.includes("COMET") || colName === "NO." || colName === "ID") && idCol === -1) idCol = c;
           if (colName.includes("NAME") || colName.includes("SURNAME")) workerCols.push(c);
         }
         if (supCol === -1) return;
@@ -662,10 +843,13 @@ function importExcelFile(event) {
           let currentTimesheet = tsCol !== -1 ? String(row[tsCol] || "").trim() : "";
           if (!currentScope) currentScope = "GENERAL WORKS";
 
-          let hasWorker = false;
-          if (workerCols.length > 0) {
-            for (let wc of workerCols) { if (String(row[wc] || "").trim() !== "") { hasWorker = true; break; } }
-          } else { hasWorker = true; }
+          let workerId = idCol !== -1 ? String(row[idCol] || "").trim() : "W-" + Math.floor(Math.random()*10000);
+          
+          let workerName = "";
+          workerCols.forEach(wc => { let val = String(row[wc] || "").trim(); if(val) workerName += val + " "; });
+          workerName = workerName.trim() || "Ouvrier";
+
+          let hasWorker = workerCols.length > 0 ? workerName !== "Ouvrier" : true;
 
           if (!currentSupervisor || !hasWorker) continue;
           
@@ -677,16 +861,17 @@ function importExcelFile(event) {
 
           const taskKey = `${companySource}___${currentScope}`;
           if (!importedSupervisors[currentSupervisor].tasks[taskKey]) {
-            importedSupervisors[currentSupervisor].tasks[taskKey] = { source: companySource, importedScope: currentScope, workers: 0 };
+            importedSupervisors[currentSupervisor].tasks[taskKey] = { source: companySource, importedScope: currentScope, workers: 0, workerList: [] };
           }
           importedSupervisors[currentSupervisor].tasks[taskKey].workers += 1;
+          importedSupervisors[currentSupervisor].tasks[taskKey].workerList.push({ id: workerId, name: workerName, company: companySource });
           totalImportedWorkers += 1;
         }
       });
 
       if (totalImportedWorkers === 0) { alert("Aucun ouvrier détecté."); event.target.value = ""; return; }
 
-      cardsData.forEach(c => c.tasks.forEach(t => t.workers = 0));
+      cardsData.forEach(c => c.tasks.forEach(t => { t.workers = 0; t.workerList = []; }));
 
       Object.keys(importedSupervisors).forEach(supName => {
         const supData = importedSupervisors[supName];
@@ -704,12 +889,14 @@ function importExcelFile(event) {
           newTaskList.forEach(newT => {
             let matchTask = existingCard.tasks.find(t => t.source === newT.source && t.importedScope === newT.importedScope);
             if (!matchTask) matchTask = existingCard.tasks.find(t => t.source === newT.source && !t.importedScope);
-            if (matchTask) { matchTask.importedScope = newT.importedScope; matchTask.workers = newT.workers; } 
-            else { existingCard.tasks.push({ desc: "", importedScope: newT.importedScope, source: newT.source, workers: newT.workers }); }
+            if (matchTask) { 
+              matchTask.importedScope = newT.importedScope; matchTask.workers = newT.workers; matchTask.workerList = newT.workerList; 
+            } else { 
+              existingCard.tasks.push({ desc: "", importedScope: newT.importedScope, source: newT.source, workers: newT.workers, workerList: newT.workerList }); 
+            }
           });
         } else {
-          let cat = "trades";
-          let sUp = supName.toUpperCase();
+          let cat = "trades", sUp = supName.toUpperCase();
           if (sUp.includes("TAREK") || sUp.includes("TSIRKAS") || sUp.includes("CHRISTOS") || sUp.includes("BAGU")) cat = "civil";
           else if (sUp.includes("PRAKASH") || sUp.includes("TAMMET") || sUp.includes("PROTECTION")) cat = "logistic";
           else if (sUp.includes("RAZVAN") || sUp.includes("LOUKAS") || sUp.includes("BAKHIT")) cat = "external";
@@ -717,13 +904,13 @@ function importExcelFile(event) {
           else if (sUp.includes("AHMED") || sUp.includes("FRED")) cat = "indirect";
           else if (sUp.includes("TASSOS")) cat = "facade";
 
-          cardsData.push({ name: supName, category: cat, timesheetNo: supData.timesheetNo, tasks: newTaskList.map(nt => ({ desc: "", importedScope: nt.importedScope, source: nt.source, workers: nt.workers })) });
+          cardsData.push({ name: supName, category: cat, timesheetNo: supData.timesheetNo, tasks: newTaskList.map(nt => ({ desc: "", importedScope: nt.importedScope, source: nt.source, workers: nt.workers, workerList: nt.workerList })) });
         }
       });
 
       cardsData.forEach(c => { c.tasks = c.tasks.filter(t => t.workers > 0 || (t.desc && t.desc.trim() !== "")); });
       renderCards(); syncToFirebase();
-      alert(`Import réussi : ${totalImportedWorkers} ouvriers détectés et numéros de Timesheet récupérés !`);
+      alert(`Import réussi : ${totalImportedWorkers} ouvriers détectés et liés !`);
 
     } catch (err) { alert("Erreur technique : " + err.message); }
     event.target.value = "";
