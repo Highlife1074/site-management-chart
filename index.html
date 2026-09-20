@@ -109,7 +109,7 @@
   .manager-name { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; outline: none; border-bottom: 1px dotted #cbd5e1; display: inline-block; cursor: text; }
   .manager-name:empty:before { content: "AJOUTER MANAGER N+1"; color: #cbd5e1; }
   
-  .sup-name { font-size: 16px; font-weight: 800; color: #0f172a; outline: none; width: 100%; display: block; }
+  .sup-name { font-size: 16px; font-weight: 800; color: #0f172a; outline: none; width: 100%; display: block; margin-top: 2px; }
   
   .card-total-badge { font-size: 11px; font-weight: 800; padding: 4px 8px; border-radius: 20px; display: inline-flex; align-items: center; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; }
   .card-total-badge.error { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
@@ -157,18 +157,26 @@
 
   /* ZONE PANIER (Dropzone Ouvriers) - CORRIGÉE AVEC PADDING ET MARGIN */
   .card-worker-dropzone { 
-    margin: 0 16px 16px 16px; /* Marges pour se détacher des bords de la carte */
-    padding: 12px;            /* Espace intérieur (respiration) */
+    margin: 0 16px 16px 16px; 
+    padding: 16px; 
     background: #f8fafc; 
-    border: 2px dashed #e2e8f0; 
+    border: 2px dashed #93c5fd; 
     border-radius: 8px;
-    min-height: 46px; 
+    min-height: 60px; 
     display: flex; 
     flex-wrap: wrap; 
-    gap: 6px; 
+    gap: 8px; 
     align-content: flex-start; 
   }
-  .card-worker-dropzone:empty::before { content: "+ Glissez les équipiers ici"; font-size: 11px; color: #94a3b8; font-weight: 600; width: 100%; text-align: center; margin-top: 4px; }
+  .card-worker-dropzone:empty::before { 
+    content: "📥 Glissez les ouvriers ici"; 
+    font-size: 11px; 
+    color: #64748b; 
+    font-weight: 600; 
+    width: 100%; 
+    text-align: center; 
+    margin-top: 4px; 
+  }
 
   .worker-pill { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #334155; transition: transform 0.1s, box-shadow 0.1s; }
   .worker-pill:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
@@ -208,6 +216,7 @@
   .modal-box { background: white; padding: 24px; border-radius: 16px; width: 420px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 16px; }
   .modal-title { font-size: 18px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
   .modal-select { padding: 10px 12px; font-size: 13px; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; width: 100%; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 
   /* STYLE D'IMPRESSION TIMESHEET */
   #timesheet-print-zone { display: none; }
@@ -476,10 +485,9 @@ function applyRolePermissions() {
   const isCFO = currentRole === 'cfo';
   const isTK = currentRole === 'timekeeper';
 
-  document.getElementById('btn-import').style.display = isViewer || isCFO ? 'none' : 'flex';
-  document.getElementById('btn-import-db').style.display = isViewer || isCFO ? 'none' : 'flex';
-  document.getElementById('btn-add-sup').style.display = isViewer || isCFO ? 'none' : 'flex';
+  document.getElementById('btn-settings-menu').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
   document.getElementById('btn-db-toggle').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
+  document.getElementById('btn-print-ts').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
 
   document.querySelectorAll('.payroll-input').forEach(el => { el.disabled = isViewer || isTK; });
   
