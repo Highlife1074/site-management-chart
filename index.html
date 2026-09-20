@@ -20,80 +20,79 @@
 
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, sans-serif; }
-  body { background: #f1f5f9; padding: 20px 30px; color: #0f172a; overflow-x: hidden; }
+  body { background: #f8fafc; padding: 20px; color: #0f172a; overflow-x: hidden; }
 
-  #error-banner { display: none; background: #fef2f2; color: #991b1b; padding: 12px; margin: 0 auto 16px auto; max-width: 1600px; border: 1px solid #f87171; border-radius: 8px; font-weight: 600; }
+  #error-banner { display: none; background: #fef2f2; color: #991b1b; padding: 12px; margin: 0 auto 16px auto; max-width: 1540px; border: 1px solid #f87171; border-radius: 8px; font-weight: 600; }
 
-  /* TOP BAR MODERNE */
-  .top-bar { max-width: 1600px; margin: 0 auto 24px auto; display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 16px 24px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-  .top-bar-title h1 { font-size: 18px; font-weight: 800; margin:0; }
-  .top-bar-title span.subtitle { color: #94a3b8; font-weight: 500; }
-  .sync-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #16a34a; margin-top: 4px; }
-  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; }
+  .top-bar { max-width: 1540px; margin: 0 auto 16px auto; display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 14px 20px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.04); }
+  .top-bar-title h1 { font-size: 18px; font-weight: 800; }
+  .sync-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #64748b; margin-top: 2px; }
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; }
 
-  .actions-group { display: flex; gap: 12px; align-items: center; position: relative; }
+  .actions-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   
-  .role-container { display: flex; align-items: center; gap: 6px; background: #f8fafc; padding: 6px 12px; border-radius: 6px; border: 1px solid #cbd5e1; }
-  .role-label { font-size: 12px; font-weight: 700; color: #475569; }
-  .role-select { font-size: 12px; font-weight: 700; border: none; background: transparent; outline: none; cursor: pointer; color: #2563eb; }
+  .role-container { display: flex; align-items: center; gap: 6px; background: #f1f5f9; padding: 6px 10px; border-radius: 8px; border: 1px solid #cbd5e1; margin-right: 10px; }
+  .role-label { font-size: 11px; font-weight: 800; color: #475569; letter-spacing: 0.5px; }
+  .role-select { font-size: 12px; font-weight: 700; border: none; background: transparent; outline: none; cursor: pointer; color: #0f172a; }
 
-  .btn { border: none; padding: 8px 16px; font-size: 13px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn { background: #2563eb; color: white; border: none; padding: 8px 12px; font-size: 12px; font-weight: 600; border-radius: 7px; cursor: pointer; transition: background 0.15s; }
+  .btn:hover { background: #1d4ed8; }
   .btn-outline { background: white; color: #334155; border: 1px solid #cbd5e1; }
-  .btn-outline:hover { background: #f8fafc; color: #0f172a; }
-  .btn-success { background: #059669; color: white; }
+  .btn-outline:hover { background: #f1f5f9; color: #0f172a; }
+  .btn-success { background: #059669; }
   .btn-success:hover { background: #047857; }
+  .btn-warning { background: #f59e0b; }
+  .btn-warning:hover { background: #d97706; }
   .btn-purple { background: #7c3aed; color: white; }
   .btn-purple:hover { background: #6d28d9; }
   .btn-black { background: #0f172a; color: white; }
   .btn-black:hover { background: #334155; }
-  .btn-icon { padding: 8px 12px; background: #e2e8f0; color: #334155; }
-  .btn-icon:hover { background: #cbd5e1; }
 
-  /* MENU ADMIN (Caché) */
-  #admin-dropdown { display: none; position: absolute; top: 45px; right: 0; background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 12px; z-index: 100; min-width: 200px; flex-direction: column; gap: 8px; }
+  .dashboard-container { max-width: 1540px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
 
-  .dashboard-container { max-width: 1600px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+  .kpi-board { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px 22px; box-shadow: 0 3px 6px rgba(0,0,0,0.03); }
+  .kpi-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 14px; }
+  .title-editable { font-size: 19px; font-weight: 800; color: #1e3a8a; outline: none; }
+  .total-badge-container { display: flex; align-items: center; gap: 10px; }
+  .total-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+  .total-number { background: #1e3a8a; color: white; font-size: 22px; font-weight: 800; padding: 4px 16px; border-radius: 30px; box-shadow: 0 4px 10px rgba(30,58,138,0.2); }
 
-  .kpi-board { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
-  .kpi-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 16px; margin-bottom: 16px; }
-  .title-editable { font-size: 20px; font-weight: 800; color: #0f172a; outline: none; }
-  .total-badge-container { display: flex; align-items: center; gap: 12px; }
-  .total-label { font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; }
-  .total-number { background: #0f172a; color: white; font-size: 24px; font-weight: 800; padding: 6px 20px; border-radius: 30px; box-shadow: 0 4px 10px rgba(15,23,42,0.15); }
-
-  .summaries-row { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
-  .summary-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; }
-  .summary-title { font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 10px; }
+  .summaries-row { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; }
+  .summary-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; }
+  .summary-title { font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 8px; }
   
-  .pill-group { display: flex; flex-wrap: wrap; gap: 8px; }
-  .stat-pill { display: flex; align-items: center; gap: 6px; background: white; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+  .pill-group { display: flex; flex-wrap: wrap; gap: 6px; }
+  .stat-pill { display: flex; align-items: center; gap: 5px; background: white; border: 1px solid #e2e8f0; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
   .stat-pill .tag-color { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
   .stat-pill .count { font-weight: 800; color: #0f172a; margin-left: 2px; }
 
-  .payroll-table { width: 100%; border-collapse: collapse; font-size: 12px; font-weight: 600; }
-  .payroll-table th { text-align: left; color: #64748b; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; font-size: 11px; text-transform: uppercase; }
-  .payroll-table td { padding: 6px 0; border-bottom: 1px solid #f1f5f9; }
-  .payroll-input { width: 60px; font-size: 13px; font-weight: 800; text-align: center; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; color: #0f172a; }
+  .payroll-table { width: 100%; border-collapse: collapse; font-size: 11.5px; font-weight: 600; }
+  .payroll-table th { text-align: left; color: #64748b; padding-bottom: 4px; border-bottom: 1px solid #e2e8f0; }
+  .payroll-table td { padding: 5px 0; border-bottom: 1px solid #f1f5f9; }
+  .payroll-input { width: 56px; font-size: 12px; font-weight: 800; text-align: center; padding: 3px 4px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; color: #0f172a; }
   .payroll-input:focus { border-color: #2563eb; background: #eff6ff; }
-  .payroll-input:disabled { background: transparent; border: none; }
-  .diff-badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 800; display: inline-block; min-width: 36px; text-align: center; }
-  .diff-ok { background: #f1f5f9; color: #475569; }
-  .diff-warn { background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; }
+  .payroll-input:disabled { background: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; cursor: not-allowed; }
+  .diff-badge { padding: 3px 8px; border-radius: 12px; font-size: 10.5px; font-weight: 800; display: inline-block; min-width: 32px; text-align: center; }
+  .diff-ok { background: #dcfce7; color: #166534; }
+  .diff-warn { background: #fee2e2; color: #991b1b; }
 
   .filter-bar { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 8px; }
-  .filter-btn { padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; background: #ffffff; color: #64748b; border: 1px solid #cbd5e1; transition: 0.15s; }
-  .filter-btn:hover { background: #f8fafc; color: #0f172a; }
-  .filter-btn.active { background: #0f172a; color: white; border-color: #0f172a; }
+  .filter-btn { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; background: #ffffff; color: #64748b; border: 1px solid #cbd5e1; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+  .filter-btn:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
+  .filter-btn.active { background: #1e293b; color: white; border-color: #1e293b; }
 
-  .category-section { margin-top: 10px; margin-bottom: 24px; }
-  .category-title { font-size: 15px; font-weight: 800; padding-bottom: 8px; margin-bottom: 16px; text-transform: uppercase; }
+  .category-section { margin-top: 10px; margin-bottom: 20px; }
+  .category-title { font-size: 14px; font-weight: 800; padding-bottom: 6px; margin-bottom: 12px; text-transform: uppercase; }
+  .cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; min-height: 90px; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 10px; }
   
-  .cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; min-height: 100px; padding: 10px 0; }
+  .card { background: white; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; border-top: 4px solid #94a3b8; transition: transform 0.15s, box-shadow 0.15s; position: relative; }
+  .card:hover { box-shadow: 0 6px 12px rgba(0,0,0,0.08); }
   
-  /* CARTE SUPERVISEUR REFONTE */
-  .card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; border-top: 4px solid #94a3b8; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.15s; position: relative; }
-  .card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); }
-  
+  .ts-checkbox { width: 16px; height: 16px; cursor: pointer; accent-color: #2563eb; }
+  .drag-handle { cursor: grab; }
+  .drag-handle:active { cursor: grabbing; }
+  .sortable-ghost { opacity: 0.3; background: #e2e8f0; border: 2px dashed #94a3b8; transform: scale(0.98); }
+
   .cat-civil { border-top-color: #ea580c !important; }
   .cat-trades { border-top-color: #2563eb !important; }
   .cat-facade { border-top-color: #0891b2 !important; }
@@ -102,121 +101,126 @@
   .cat-indirect { border-top-color: #475569 !important; }
   .cat-plant { border-top-color: #dc2626 !important; }
 
-  .card-header { padding: 16px 16px 12px 16px; border-bottom: 1px solid #f1f5f9; position: relative; cursor: grab; background: #ffffff; }
-  .card-header:active { cursor: grabbing; }
-  
-  .card-meta-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
-  .manager-name { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; outline: none; border-bottom: 1px dotted #cbd5e1; display: inline-block; cursor: text; }
-  .manager-name:empty:before { content: "AJOUTER MANAGER N+1"; color: #cbd5e1; }
-  
-  .sup-name { font-size: 16px; font-weight: 800; color: #0f172a; outline: none; width: 100%; display: block; margin-top: 2px; }
-  
-  .card-total-badge { font-size: 11px; font-weight: 800; padding: 4px 8px; border-radius: 20px; display: inline-flex; align-items: center; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; }
+  .card-header { padding: 8px 12px; background: #fafafa; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+  .cat-select { font-size: 10px; font-weight: 700; text-transform: uppercase; border: 1px solid #cbd5e1; border-radius: 5px; padding: 2px 4px; outline: none; cursor: pointer; }
+  .card-total-badge { font-size: 10.5px; font-weight: 800; background: #e0e7ff; color: #3730a3; padding: 2px 7px; border-radius: 10px; display:inline-flex; align-items:center; }
   .card-total-badge.error { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
 
-  .ts-badges-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
-  .ts-pill { background: #f1f5f9; color: #475569; font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; }
-  .ts-pill span, .ts-pill select { background: transparent; border: none; font-size: 11px; font-weight: 700; color: #2563eb; outline: none; cursor: pointer; padding: 0; }
-  .ts-pill span:empty:before { content: "---"; color: #94a3b8; }
+  .card-title-row { padding: 8px 12px 6px 12px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .sup-name { font-size: 13px; font-weight: 800; outline: none; width: 100%; color: #0f172a; margin-top: 2px; }
   
-  .ts-btn-config { border: 1px solid #cbd5e1; background: white; color: #475569; padding: 2px 6px; font-size: 10px; font-weight: 700; border-radius: 4px; cursor: pointer; transition: 0.15s; }
+  .manager-field { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; display: flex; align-items: center; gap: 4px; }
+  .manager-name { color: #0284c7; outline: none; border-bottom: 1px dotted #cbd5e1; min-width: 60px; display: inline-block; cursor: text; }
+  .manager-name:empty:before { content: "Nom N+1"; color: #94a3b8; }
+
+  .ts-badge-container { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; align-items: center; }
+  .ts-badge { font-size: 10px; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 1px 4px; color: #475569; display: inline-flex; align-items: center; gap: 3px; }
+  .ts-badge span { outline: none; min-width: 20px; display: inline-block; color: #2563eb; }
+  .ts-badge span:empty:before { content: attr(data-placeholder); color: #94a3b8; }
+  .ts-select { border: none; background: transparent; font-size: 10px; font-weight: 700; color: #475569; outline: none; cursor: pointer; }
+
+  .ts-btn-config { border: 1px solid #cbd5e1; background: white; color: #475569; padding: 1px 6px; font-size: 10px; font-weight: 700; border-radius: 4px; cursor: pointer; transition: 0.15s; }
   .ts-btn-config:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
 
-  .btn-remove-card { position: absolute; top: 12px; right: 12px; background: none; border: none; color: #cbd5e1; cursor: pointer; font-size: 18px; font-weight: bold; }
+  .btn-remove-card { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: -2px; }
   .btn-remove-card:hover { color: #dc2626; }
 
-  .card-body { padding: 16px; flex-grow: 1; display: flex; flex-direction: column; gap: 12px; background: #fdfdfd; }
+  .card-body { padding: 4px 12px 10px 12px; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; }
+  .task-item { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
   
-  .task-item { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
-  
-  .task-foreman { font-size: 10px; font-weight: 700; color: #059669; display: flex; align-items: center; gap: 4px; text-transform: uppercase; }
+  .task-foreman { font-size: 9.5px; font-weight: 700; color: #64748b; margin-bottom: 2px; display: flex; align-items: center; gap: 4px; text-transform: uppercase; }
   .task-foreman span { color: #059669; outline: none; border-bottom: 1px dotted #a7f3d0; display: inline-block; cursor: text; min-width: 80px; }
   .task-foreman span:empty:before { content: "+ NOM DU FOREMAN"; color: #a7f3d0; }
 
-  .task-desc { font-size: 12px; font-weight: 600; color: #1e293b; outline: none; line-height: 1.4; min-height: 20px; }
-  .task-desc:focus { background: #eff6ff; border-radius: 4px; padding: 2px; margin: -2px; }
+  .task-desc { font-size: 11px; font-weight: 600; color: #1e293b; outline: none; line-height: 1.35; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 4px; padding: 4px 6px; min-height: 24px; }
+  .task-desc:focus { border-style: solid; border-color: #2563eb; background: #eff6ff; }
 
-  .task-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+  .task-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 3px; }
   
-  .source-select { appearance: none; background: #e0f2fe; color: #0284c7; font-size: 10px; font-weight: 800; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; outline: none; }
-  .source-select.dss { background: #fef3c7; color: #d97706; }
-  .source-select.euroasia { background: #ede9fe; color: #7c3aed; }
-  .source-select.other { background: #f1f5f9; color: #64748b; }
-  .source-select:disabled { cursor: not-allowed; opacity: 0.7; }
+  .source-select { font-size: 10px; font-weight: 700; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 4px; outline: none; cursor: pointer; }
+  .source-select.skybuilding { color: #0284c7; }
+  .source-select.dss { color: #d97706; }
+  .source-select.euroasia { color: #7c3aed; }
+  .source-select.other { color: #64748b; }
+  .source-select:disabled { background: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; cursor: not-allowed; }
 
-  .count-comparator { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #64748b; }
-  .count-comparator.error { color: #dc2626; }
-  .count-comparator input { width: 36px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 4px; font-size: 12px; font-weight: 800; text-align: center; color: inherit; background: white; outline: none; }
-  .count-comparator.error input { background: #fef2f2; border-color: #fca5a5; }
+  .count-comparator { display: flex; align-items: center; gap: 4px; border: 1px solid; border-radius: 4px; padding: 2px 4px; background: white; font-weight: 800; font-size: 11px; }
+  .count-comparator.diff-warn { border-color: #fca5a5; background: #fef2f2; color: #dc2626; }
+  .count-comparator.diff-ok { border-color: #cbd5e1; background: #ffffff; color: #475569; }
+  .count-comparator input { width: 32px; border: none; background: transparent; font-size: 11px; font-weight: 800; text-align: center; color: inherit; padding: 0; outline: none; }
+  .count-comparator input:focus { border-bottom: 1px dashed currentColor; }
+  .count-comparator input:disabled { cursor: not-allowed; opacity: 0.8; }
 
-  .btn-delete-task { cursor: pointer; color: #cbd5e1; font-size: 16px; font-weight: bold; margin-left: 4px; transition: 0.15s; }
+  .btn-delete-task { cursor: pointer; color: #cbd5e1; font-size: 14px; font-weight: bold; margin-left: 4px; transition: 0.15s; }
   .btn-delete-task:hover { color: #dc2626; }
 
-  .btn-add-task { background: transparent; border: 1px dashed #cbd5e1; color: #64748b; font-size: 11px; font-weight: 600; padding: 8px; border-radius: 6px; cursor: pointer; width: 100%; transition: 0.15s; }
-  .btn-add-task:hover { background: #f8fafc; color: #0f172a; border-color: #94a3b8; }
+  .btn-add-task { background: transparent; border: 1px dashed #cbd5e1; color: #64748b; font-size: 10px; font-weight: 600; padding: 4px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 2px; }
+  .btn-add-task:hover { background: #f1f5f9; color: #0f172a; }
 
-  /* ZONE PANIER (Dropzone Ouvriers) - CORRIGÉE AVEC PADDING ET MARGIN */
+  .divider { width: 1px; height: 24px; background: #e2e8f0; margin: 0 4px; }
+
+  /* ZONE PANIER (Dropzone Ouvriers) : RETOUR À LA NORMALE À L'INTÉRIEUR DU CARD-BODY */
   .card-worker-dropzone { 
-    margin: 0 16px 16px 16px; 
-    padding: 16px; 
+    min-height: 36px; 
+    border: 1px dashed #cbd5e1; 
+    border-radius: 6px; 
+    padding: 4px; 
     background: #f8fafc; 
-    border: 2px dashed #93c5fd; 
-    border-radius: 8px;
-    min-height: 60px; 
+    margin-top: 6px; 
     display: flex; 
     flex-wrap: wrap; 
-    gap: 8px; 
     align-content: flex-start; 
+    transition: background 0.2s; 
   }
   .card-worker-dropzone:empty::before { 
-    content: "📥 Glissez les ouvriers ici"; 
-    font-size: 11px; 
-    color: #64748b; 
-    font-weight: 600; 
+    content: "Glissez ou cliquez pour assigner"; 
+    font-size: 10px; 
+    color: #94a3b8; 
     width: 100%; 
     text-align: center; 
-    margin-top: 4px; 
+    margin-top: 6px; 
   }
 
-  .worker-pill { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #334155; transition: transform 0.1s, box-shadow 0.1s; }
-  .worker-pill:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+  .worker-pill { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #334155; margin: 2px; transition: transform 0.1s, box-shadow 0.1s; }
+  .worker-pill:hover { transform: scale(1.05); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
   .worker-pill:active { cursor: grabbing; }
-  .worker-pill.skybuilding { border-color: #7dd3fc; color: #0284c7; }
-  .worker-pill.dss { border-color: #fde68a; color: #d97706; }
-  .worker-pill.euroasia { border-color: #ddd6fe; color: #7c3aed; }
+  .worker-pill.skybuilding { border-color: #7dd3fc; background: #e0f2fe; color: #0284c7; }
+  .worker-pill.dss { border-color: #fde68a; background: #fef3c7; color: #d97706; }
+  .worker-pill.euroasia { border-color: #ddd6fe; background: #ede9fe; color: #7c3aed; }
+  .worker-pill.other { border-color: #cbd5e1; background: #f1f5f9; color: #475569; }
+
+  /* DRAWER (Base Ouvriers) */
+  .drawer { position: fixed; top: 0; right: -360px; width: 360px; height: 100vh; background: white; box-shadow: -4px 0 15px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; padding: 20px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+  .drawer.open { right: 0; }
+  .drawer-header { display: flex; justify-content: space-between; align-items: center; }
+  .btn-close-drawer { background: none; border: none; font-size: 26px; cursor: pointer; color: #64748b; line-height: 1; }
+  .btn-close-drawer:hover { color: #0f172a; }
+
+  /* MODALS */
+  .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.6); display: none; align-items: center; justify-content: center; z-index: 2000; }
+  .modal-box { background: white; padding: 20px; border-radius: 12px; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 12px; }
+  .modal-title { font-size: 15px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
+  .modal-select { padding: 8px; font-size: 13px; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; width: 100%; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 
   /* VUE ORGANIGRAMME */
   #orgchart-view { display: none; padding: 20px 0; overflow-x: auto; min-height: 60vh; }
   .org-level-top { text-align: center; margin-bottom: 40px; }
-  .org-level-top span { background: #0f172a; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 800; font-size: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+  .org-level-top span { background: #1e293b; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 800; font-size: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
   .org-managers-grid { display: flex; gap: 24px; align-items: flex-start; justify-content: center; flex-wrap: wrap; }
   .org-manager-col { display: flex; flex-direction: column; align-items: center; background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); min-width: 280px; position: relative; }
   .org-manager-name { font-size: 15px; font-weight: 800; color: #0f172a; margin-bottom: 4px; text-align: center; text-transform: uppercase; }
-  .org-manager-total { font-size: 11px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 4px 10px; border-radius: 12px; margin-bottom: 16px; }
+  .org-manager-total { font-size: 11px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 2px 8px; border-radius: 12px; margin-bottom: 16px; }
   .org-sups-list { display: flex; flex-direction: column; gap: 12px; width: 100%; border-top: 2px solid #f1f5f9; padding-top: 16px; }
-  .org-sup-card { background: #ffffff; border: 1px solid #cbd5e1; border-left-width: 5px; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
-  .org-sup-name { font-size: 14px; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
-  .org-sup-meta { font-size: 11px; color: #64748b; display: flex; justify-content: space-between; font-weight: 600; }
-  .org-foremen-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; border-top: 1px dotted #cbd5e1; padding-top: 12px; padding-left: 12px; position: relative; }
-  .org-foremen-list::before { content: ""; position: absolute; left: 4px; top: 10px; bottom: 10px; width: 2px; background: #e2e8f0; }
-  .org-foreman-card { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 10px; position: relative; margin-left: 8px; }
-  .org-foreman-card::before { content: ""; position: absolute; left: -16px; top: 50%; width: 16px; height: 2px; background: #e2e8f0; }
+  .org-sup-card { background: #ffffff; border: 1px solid #cbd5e1; border-left-width: 5px; border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+  .org-sup-name { font-size: 13px; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
+  .org-sup-meta { font-size: 10px; color: #64748b; display: flex; justify-content: space-between; font-weight: 600; }
+  .org-foremen-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; border-top: 1px dotted #cbd5e1; padding-top: 8px; padding-left: 8px; position: relative; }
+  .org-foremen-list::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 2px; background: #e2e8f0; }
+  .org-foreman-card { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 8px; position: relative; margin-left: 8px; }
+  .org-foreman-card::before { content: ""; position: absolute; left: -12px; top: 50%; width: 12px; height: 2px; background: #e2e8f0; }
   .org-foreman-name { font-size: 11px; font-weight: 700; color: #334155; }
-  .org-foreman-meta { font-size: 10px; font-weight: 800; color: #059669; background: #d1fae5; padding: 2px 8px; border-radius: 12px; }
-
-  /* DRAWER (Base Ouvriers) */
-  .drawer { position: fixed; top: 0; right: -380px; width: 380px; height: 100vh; background: white; box-shadow: -4px 0 15px rgba(0,0,0,0.05); transition: right 0.3s ease; z-index: 1000; padding: 24px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; border-left: 1px solid #e2e8f0; }
-  .drawer.open { right: 0; }
-  .drawer-header { display: flex; justify-content: space-between; align-items: center; }
-  .btn-close-drawer { background: #f1f5f9; border: none; font-size: 20px; cursor: pointer; color: #64748b; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.15s; }
-  .btn-close-drawer:hover { background: #e2e8f0; color: #0f172a; }
-
-  /* MODALS */
-  .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(2px); display: none; align-items: center; justify-content: center; z-index: 2000; }
-  .modal-box { background: white; padding: 24px; border-radius: 16px; width: 420px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 16px; }
-  .modal-title { font-size: 18px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
-  .modal-select { padding: 10px 12px; font-size: 13px; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; width: 100%; }
-  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+  .org-foreman-meta { font-size: 10px; font-weight: 800; color: #059669; background: #d1fae5; padding: 1px 6px; border-radius: 10px; }
 
   /* STYLE D'IMPRESSION TIMESHEET */
   #timesheet-print-zone { display: none; }
@@ -293,36 +297,35 @@
 <!-- DRAWER: Base Ouvriers -->
 <div id="workers-drawer" class="drawer">
   <div class="drawer-header">
-    <h3 style="font-size:18px; font-weight:800; margin:0;">👷 Base Ouvriers</h3>
+    <h3 style="font-size:16px; font-weight:800; margin:0;">👷 Base Ouvriers</h3>
     <button class="btn-close-drawer" onclick="toggleDrawer()">&times;</button>
   </div>
   
   <div style="display: flex; gap: 8px; margin-top: 4px;">
     <input type="file" id="db-file-input" accept=".xlsx, .xls" style="display:none" onchange="importWorkersDB(event)">
-    <button class="btn btn-success" id="btn-import-db" style="width:100%; justify-content:center;" onclick="document.getElementById('db-file-input').click()">📥 Importer Excel Global</button>
+    <button class="btn btn-success" id="btn-import-db" style="font-size:11px; padding:6px 10px; width:100%;" onclick="document.getElementById('db-file-input').click()">📥 Importer Base Excel</button>
   </div>
 
-  <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:16px; border-radius:12px; display:flex; flex-direction:column; gap:8px; margin-top:8px;">
-    <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase;">Création Manuelle</div>
-    <input type="text" id="new-w-id" placeholder="ID / N° (ex: W-123)" style="padding:8px 10px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; outline:none;">
-    <input type="text" id="new-w-name" placeholder="Nom Complet" style="padding:8px 10px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; outline:none;">
-    <select id="new-w-comp" style="padding:8px 10px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; outline:none;">
+  <div style="background:#f1f5f9; padding:10px; border-radius:8px; display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+    <input type="text" id="new-w-id" placeholder="ID / N° (ex: W-123)" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;">
+    <input type="text" id="new-w-name" placeholder="Nom Complet" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;">
+    <select id="new-w-comp" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;">
       <option value="SKYBUILDING">SKYBUILDING</option>
       <option value="DSS">DSS</option>
       <option value="EUROASIA">EUROASIA</option>
       <option value="OTHER">AUTRE</option>
     </select>
-    <button class="btn btn-outline" style="justify-content:center;" onclick="addManualWorker()">+ Ajouter</button>
+    <button class="btn btn-outline" style="font-size:11px; padding:4px; justify-content:center;" onclick="addManualWorker()">+ Ajout Manuel</button>
   </div>
 
-  <h4 style="font-size:13px; font-weight:800; margin-top:12px; padding-bottom:8px; border-bottom:1px solid #e2e8f0;">Ouvriers Non Assignés</h4>
-  <div id="unassigned-dropzone" style="flex-grow:1; border:2px dashed #cbd5e1; border-radius:12px; padding:12px; display:flex; flex-wrap:wrap; align-content:flex-start; background:#fdfdfd; overflow-y:auto; gap:6px;"></div>
+  <h4 style="font-size:12px; margin-top:10px;">Ouvriers Non Assignés :</h4>
+  <div id="unassigned-dropzone" style="flex-grow:1; border:2px dashed #cbd5e1; border-radius:8px; padding:8px; display:flex; flex-wrap:wrap; align-content:flex-start; background:#f8fafc; overflow-y:auto; gap:4px;"></div>
 </div>
 
 <!-- TOP BAR -->
 <div class="top-bar">
   <div class="top-bar-title">
-    <h1>Riviera Tower <span class="subtitle">| Supervision and Workers Organisation Chart</span></h1>
+    <h1>Riviera Tower Supervision and Workers Organisation Chart</h1>
     <div class="sync-status">
       <span class="sync-dot" id="sync-dot"></span>
       <span id="sync-text">Connexion...</span>
@@ -331,7 +334,7 @@
   <div class="actions-group">
     
     <div class="role-container">
-      <span class="role-label">Profil:</span>
+      <span class="role-label">PROFIL :</span>
       <select id="role-selector" class="role-select" onchange="changeRole(this.value)">
         <option value="viewer">👁️ Lecteur</option>
         <option value="timekeeper">⏱️ Timekeeper</option>
@@ -341,23 +344,22 @@
     </div>
 
     <button id="btn-toggle-view" class="btn btn-outline" onclick="toggleView()">🗺️ Organigramme</button>
-    <button class="btn btn-purple" id="btn-db-toggle" onclick="toggleDrawer()">👷 Base Ouvriers</button>
-    <button class="btn btn-black" id="btn-print-ts" onclick="openPrintModal()">📄 Imprimer TS</button>
-    
-    <!-- Bouton Paramètres (Cache les outils techniques) -->
-    <button class="btn btn-icon" id="btn-settings-menu" onclick="toggleAdminMenu()" title="Outils avancés">⚙️</button>
-    
-    <div id="admin-dropdown">
-      <span style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase;">Outils Techniques</span>
-      <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display:none" onchange="importExcelFile(event)">
-      <button class="btn btn-outline" style="width:100%; justify-content:left;" id="btn-import" onclick="document.getElementById('excel-file-input').click()">📥 Import Pointages</button>
-      <button class="btn btn-outline" style="width:100%; justify-content:left;" id="btn-add-sup" onclick="addNewSupervisor()">+ Ajout Superviseur</button>
-      <hr style="border:0; border-top:1px solid #e2e8f0; margin:4px 0;">
-      <button class="btn btn-outline" style="width:100%; justify-content:left;" onclick="exportBackup()">💾 Sauvegarder (JSON)</button>
-      <input type="file" id="backup-file-input" accept=".json" style="display:none" onchange="importBackup(event)">
-      <button class="btn btn-outline" style="width:100%; justify-content:left;" onclick="document.getElementById('backup-file-input').click()">📂 Restaurer (JSON)</button>
-    </div>
+    <div class="divider"></div>
 
+    <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display:none" onchange="importExcelFile(event)">
+    <button class="btn btn-success" id="btn-import" onclick="document.getElementById('excel-file-input').click()">📥 Importer Pointage</button>
+    <button class="btn btn-outline" id="btn-add-sup" onclick="addNewSupervisor()">+ Sup.</button>
+    
+    <button class="btn btn-purple" id="btn-db-toggle" onclick="toggleDrawer()">👷 Base Ouvriers</button>
+    
+    <div class="divider"></div>
+    <button class="btn btn-black" id="btn-print-ts" onclick="openPrintModal()">📄 Imprimer TS</button>
+    <button class="btn btn-outline" onclick="window.print()">🖨️ PDF Vue</button>
+    
+    <div class="divider"></div>
+    <button class="btn btn-warning" onclick="exportBackup()" title="Sauvegarder">💾</button>
+    <input type="file" id="backup-file-input" accept=".json" style="display:none" onchange="importBackup(event)">
+    <button class="btn btn-outline" onclick="document.getElementById('backup-file-input').click()" title="Restaurer">📂</button>
   </div>
 </div>
 
@@ -367,11 +369,11 @@
   <div class="kpi-board">
     <div class="kpi-header">
       <div>
-        <div class="title-editable" contenteditable="false" id="chart-title">RIVIERA TOWER SUPERVISION AND WORKERS ORGANISATION CHART</div>
-        <div class="title-editable" style="font-size: 12px; color: #64748b; font-weight: 600; margin-top: 4px;" contenteditable="false">WEEKS 37 / 38 &bull; REAL-TIME WORKFORCE ALLOCATION</div>
+        <div class="title-editable" contenteditable="false" id="chart-title">SITE MANAGEMENT & SUPERVISORY CHART</div>
+        <div class="title-editable" style="font-size: 11px; color: #64748b; font-weight: 600; margin-top: 3px;" contenteditable="false">WEEKS 37 / 38 &bull; REAL-TIME WORKFORCE ALLOCATION</div>
       </div>
       <div class="total-badge-container">
-        <span class="total-label">Effectif Total Chantier</span>
+        <span class="total-label">Effectif Total Chantier :</span>
         <span class="total-number" id="grand-total">0</span>
       </div>
     </div>
@@ -387,19 +389,19 @@
             <th style="text-align:center;">Écart</th>
           </tr>
           <tr>
-            <td><span class="tag-color" style="background:#0284c7; width:8px; height:8px; display:inline-block; border-radius:50%; margin-right:4px;"></span> SKYBUILDING</td>
+            <td><span class="tag-color" style="background:#0284c7;"></span> SKYBUILDING</td>
             <td style="text-align:center; font-weight:800;" id="total-sky">0</td>
             <td style="text-align:center;"><input type="number" id="pr-skybuilding" class="payroll-input" value="0" disabled oninput="updatePayroll('SKYBUILDING', this.value)"></td>
             <td style="text-align:center;"><span id="diff-skybuilding" class="diff-badge diff-ok">0</span></td>
           </tr>
           <tr>
-            <td><span class="tag-color" style="background:#d97706; width:8px; height:8px; display:inline-block; border-radius:50%; margin-right:4px;"></span> DSS</td>
+            <td><span class="tag-color" style="background:#d97706;"></span> DSS</td>
             <td style="text-align:center; font-weight:800;" id="total-dss">0</td>
             <td style="text-align:center;"><input type="number" id="pr-dss" class="payroll-input" value="0" disabled oninput="updatePayroll('DSS', this.value)"></td>
             <td style="text-align:center;"><span id="diff-dss" class="diff-badge diff-ok">0</span></td>
           </tr>
           <tr>
-            <td><span class="tag-color" style="background:#7c3aed; width:8px; height:8px; display:inline-block; border-radius:50%; margin-right:4px;"></span> EUROASIA</td>
+            <td><span class="tag-color" style="background:#7c3aed;"></span> EUROASIA</td>
             <td style="text-align:center; font-weight:800;" id="total-euro">0</td>
             <td style="text-align:center;"><input type="number" id="pr-euroasia" class="payroll-input" value="0" disabled oninput="updatePayroll('EUROASIA', this.value)"></td>
             <td style="text-align:center;"><span id="diff-euroasia" class="diff-badge diff-ok">0</span></td>
@@ -410,13 +412,13 @@
       <div class="summary-box">
         <div class="summary-title">Effectifs par Lot de Travaux</div>
         <div class="pill-group">
-          <div class="stat-pill"><span class="tag-color" style="background:#ea580c;"></span><span style="color:#64748b;">CIVIL:</span><span class="count" id="cat-civil">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#2563eb;"></span><span style="color:#64748b;">TRADES:</span><span class="count" id="cat-trades">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#0891b2;"></span><span style="color:#64748b;">FAÇADE:</span><span class="count" id="cat-facade">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#8b5cf6;"></span><span style="color:#64748b;">LOGISTIC:</span><span class="count" id="cat-logistic">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#059669;"></span><span style="color:#64748b;">EXTERNAL:</span><span class="count" id="cat-external">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#475569;"></span><span style="color:#64748b;">INDIRECT:</span><span class="count" id="cat-indirect">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#dc2626;"></span><span style="color:#64748b;">PLANT:</span><span class="count" id="cat-plant">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#ea580c;"></span><span>CIVIL:</span><span class="count" id="cat-civil">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#2563eb;"></span><span>TRADES:</span><span class="count" id="cat-trades">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#0891b2;"></span><span>FAÇADE:</span><span class="count" id="cat-facade">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#8b5cf6;"></span><span>LOGISTIC:</span><span class="count" id="cat-logistic">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#059669;"></span><span>EXTERNAL:</span><span class="count" id="cat-external">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#475569;"></span><span>INDIRECT:</span><span class="count" id="cat-indirect">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#dc2626;"></span><span>PLANT:</span><span class="count" id="cat-plant">0</span></div>
         </div>
       </div>
     </div>
@@ -440,20 +442,6 @@ window.onerror = function(msg, url, line) {
   errDiv.innerText = `Erreur système (Ligne ${line}): ${msg}`;
   return false;
 };
-
-function toggleAdminMenu() {
-  const menu = document.getElementById('admin-dropdown');
-  menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
-}
-
-// Ferme le dropdown admin si on clique ailleurs
-document.addEventListener('click', function(e) {
-  const btn = document.getElementById('btn-settings-menu');
-  const menu = document.getElementById('admin-dropdown');
-  if (btn && menu && !btn.contains(e.target) && !menu.contains(e.target)) {
-    menu.style.display = 'none';
-  }
-});
 
 // --- GESTION DES RÔLES / PROFILS ---
 const PASSWORDS = { viewer: '', timekeeper: 'timekeeper', cfo: 'cfo', admin: 'admin' };
@@ -485,9 +473,10 @@ function applyRolePermissions() {
   const isCFO = currentRole === 'cfo';
   const isTK = currentRole === 'timekeeper';
 
-  document.getElementById('btn-settings-menu').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
+  document.getElementById('btn-import').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
+  document.getElementById('btn-import-db').style.display = isViewer || isCFO ? 'none' : 'inline-block';
+  document.getElementById('btn-add-sup').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
   document.getElementById('btn-db-toggle').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
-  document.getElementById('btn-print-ts').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
 
   document.querySelectorAll('.payroll-input').forEach(el => { el.disabled = isViewer || isTK; });
   
@@ -707,7 +696,7 @@ function renderCards() {
             </select>
             <div style="display:flex; align-items:center; gap:6px;">
               <div class="count-comparator ${compClass}" title="${compTitle}">
-                <span style="margin-right:2px; font-weight:700;">👥 ${linkedCount}</span> <span style="font-weight:400; margin:0 2px;">/</span>
+                <span style="margin-right:2px; font-weight:700;">👥 ${linkedCount}</span> /
                 <input type="number" min="0" class="worker-count-input" value="${manualCount}" oninput="updateWorkerCount(${cIdx}, ${tIdx}, this.value)" />
               </div>
               <span class="btn-delete-task" title="Supprimer cette ligne" onclick="removeTask(${cIdx}, ${tIdx})">&times;</span>
@@ -748,7 +737,7 @@ function renderCards() {
               <option value="plant" ${catId==='plant'?'selected':''}>Plant & Eq</option>
             </select>
           </div>
-          <span class="card-total-badge ${cardManualSum !== cardLinkedSum ? 'error' : ''}" id="card-total-${cIdx}">${mismatchIcon}${cardManualSum} Wkrs</span>
+          <span class="card-total-badge" id="card-total-${cIdx}" style="${cardManualSum !== cardLinkedSum ? 'background:#fef2f2; color:#991b1b; border:1px solid #fca5a5;' : ''}">${mismatchIcon}${cardManualSum} Wkrs</span>
         </div>
         <div class="card-title-row">
           <div style="display:flex; flex-direction:column; gap:2px; width:100%;">
@@ -756,9 +745,9 @@ function renderCards() {
               Mgr: <span class="manager-name" contenteditable="true" onblur="updateManager(${cIdx}, this.innerText)">${card.manager || ''}</span>
             </div>
             <div class="sup-name" contenteditable="true" onblur="updateSupName(${cIdx}, this.innerText)">${card.name || 'Inconnu'}</div>
-            <div class="ts-badges-row">
-              <div class="ts-pill" title="Numéro Timesheet">TS: <span contenteditable="true" data-placeholder="---" onblur="updateTimesheetNo(${cIdx}, this.innerText)">${card.timesheetNo || ''}</span></div>
-              <div class="ts-pill">
+            <div class="ts-badge-container">
+              <div class="ts-badge" title="Numéro Timesheet">TS: <span contenteditable="true" data-placeholder="---" onblur="updateTimesheetNo(${cIdx}, this.innerText)">${card.timesheetNo || ''}</span></div>
+              <div class="ts-badge">
                 <select class="ts-select" onchange="updateShiftType(${cIdx}, this.value)">
                   <option value="Shift 1" ${sType==='Shift 1'?'selected':''}>Shift 1</option>
                   <option value="Shift 2" ${sType==='Shift 2'?'selected':''}>Shift 2</option>
@@ -774,9 +763,12 @@ function renderCards() {
         <div class="card-body">
           ${tasksHtml}
           <button class="btn-add-task" onclick="addTask(${cIdx})">+ Ajouter Ligne</button>
-        </div>
-        <div class="card-worker-dropzone" data-cidx="${cIdx}">
-          ${workersHtml}
+          
+          <!-- L'ERREUR ÉTAIT ICI : LA DROPZONE EST MAINTENANT BIEN À L'INTÉRIEUR DU CARD-BODY -->
+          <div class="card-worker-dropzone" data-cidx="${cIdx}">
+            ${workersHtml}
+          </div>
+
         </div>
       `;
       grid.appendChild(cardEl);
@@ -1041,11 +1033,6 @@ function recalculateTotals() {
       const cardLinkedSum = card.tasks.reduce((acc, t) => acc + (t.workerList ? t.workerList.length : 0), 0);
       const mismatchIcon = cardSum !== cardLinkedSum ? `<span title="Alerte: ${cardLinkedSum} nommés vs ${cardSum} saisis" style="color:#dc2626; margin-right:4px;">⚠️</span>` : '';
       b.innerHTML = `${mismatchIcon}${cardSum} Wkrs`;
-      if(cardSum !== cardLinkedSum){
-        b.classList.add('error');
-      } else {
-        b.classList.remove('error');
-      }
     }
     if (cats.hasOwnProperty(card.category)) cats[card.category] += cardSum;
   });
