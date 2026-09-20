@@ -119,6 +119,9 @@
   .ts-pill span, .ts-pill select { background: transparent; border: none; font-size: 11px; font-weight: 700; color: #2563eb; outline: none; cursor: pointer; padding: 0; }
   .ts-pill span:empty:before { content: "---"; color: #94a3b8; }
   
+  .ts-btn-config { border: 1px solid #cbd5e1; background: white; color: #475569; padding: 2px 6px; font-size: 10px; font-weight: 700; border-radius: 4px; cursor: pointer; transition: 0.15s; }
+  .ts-btn-config:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
+
   .btn-remove-card { position: absolute; top: 12px; right: 12px; background: none; border: none; color: #cbd5e1; cursor: pointer; font-size: 18px; font-weight: bold; }
   .btn-remove-card:hover { color: #dc2626; }
 
@@ -152,9 +155,20 @@
   .btn-add-task { background: transparent; border: 1px dashed #cbd5e1; color: #64748b; font-size: 11px; font-weight: 600; padding: 8px; border-radius: 6px; cursor: pointer; width: 100%; transition: 0.15s; }
   .btn-add-task:hover { background: #f8fafc; color: #0f172a; border-color: #94a3b8; }
 
-  /* ZONE PANIER (Dropzone Ouvriers) */
-  .card-worker-dropzone { background: #f8fafc; padding: 12px 16px; border-top: 1px solid #f1f5f9; min-height: 50px; display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; }
-  .card-worker-dropzone:empty::before { content: "+ Glissez les équipiers ici"; font-size: 11px; color: #94a3b8; font-weight: 600; width: 100%; text-align: left; }
+  /* ZONE PANIER (Dropzone Ouvriers) - CORRIGÉE AVEC PADDING ET MARGIN */
+  .card-worker-dropzone { 
+    margin: 0 16px 16px 16px; /* Marges pour se détacher des bords de la carte */
+    padding: 12px;            /* Espace intérieur (respiration) */
+    background: #f8fafc; 
+    border: 2px dashed #e2e8f0; 
+    border-radius: 8px;
+    min-height: 46px; 
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 6px; 
+    align-content: flex-start; 
+  }
+  .card-worker-dropzone:empty::before { content: "+ Glissez les équipiers ici"; font-size: 11px; color: #94a3b8; font-weight: 600; width: 100%; text-align: center; margin-top: 4px; }
 
   .worker-pill { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #334155; transition: transform 0.1s, box-shadow 0.1s; }
   .worker-pill:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
@@ -982,7 +996,7 @@ function updateTaskSource(cIdx, tIdx, val, el) { if (currentRole === 'viewer' ||
 function updateWorkerCount(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].workers = parseInt(val) || 0; renderCards(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); }
 function changeCategory(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].category = val; renderCards(); syncToFirebase(); }
 function addTask(cIdx) { 
-  if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); // Sécurité : sauve le champ en cours
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); 
   if (currentRole === 'viewer' || currentRole === 'cfo') return; 
   cardsData[cIdx].tasks.push({ desc: "", foreman: "", source: "SKYBUILDING", workers: 0, workerList: [] }); 
   renderCards(); 
