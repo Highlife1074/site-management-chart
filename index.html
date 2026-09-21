@@ -343,7 +343,6 @@
        <span style="font-size:12px; color:#64748b;">Modifiez les champs directement. Toute modification est sauvegardée.</span>
        
        <div style="display:flex; gap:8px;">
-          <!-- NOUVEAU: Le bouton magique de nettoyage des doublons -->
           <button class="btn btn-warning" onclick="cleanDuplicates()" title="Supprime automatiquement les doublons (garde l'ouvrier assigné en priorité)">🧹 Nettoyer Doublons</button>
           <button class="btn btn-outline" onclick="exportWorkersExcel()">💾 Exporter Excel</button>
           <button class="btn btn-outline" onclick="printDB()">🖨️ Imprimer</button>
@@ -727,7 +726,7 @@ try {
   } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 } catch(e) { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 
-// --- FONCTION UTILITAIRE : VÉRIFICATION DOUBLONS (MODIFIÉE POUR EDIT) ---
+// --- FONCTION UTILITAIRE : VÉRIFICATION DOUBLONS ---
 function findWorkerDuplicate(searchId, searchName, excludeId = null) {
   const norm = str => String(str || '').trim().toUpperCase();
   const sId = searchId ? norm(searchId) : null;
@@ -900,7 +899,6 @@ window.cleanDuplicates = function() {
 
   const isDup = (w) => {
       const normId = String(w.id || '').trim().toUpperCase();
-      // On retire les espaces multiples pour une comparaison stricte
       const normName = String(w.name || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase().replace(/\s+/g, ' ');
       
       if ((normId !== '' && seenIds.has(normId)) || (normName !== '' && seenNames.has(normName))) {
@@ -1014,23 +1012,36 @@ function editWorker(oldId, field, newVal, context, cIdx, tIdx, inputEl) {
   let w = context === 'unassigned' ? unassignedWorkers.find(x => x.id === oldId) : cardsData[cIdx].tasks[tIdx].workerList.find(x => x.id === oldId);
   if (!w) return;
 
-  // Si on modifie l'ID, on vérifie uniquement s'il y a un conflit sur le NOUVEL ID
-  if (field === 'id') {
-    const dup = findWorkerDuplicate(newVal.trim(), null, oldId);
-    if (dup.found) {
-      alert(`⚠️ Erreur Doublon : L'ID ${newVal} est déjà utilisé ${dup.location}.`);
-      if (inputEl) inputEl.value = w.id;
-      return;
-    }
-  }
+  let dup = { found: false };
   
-  // Si on modifie le Nom, on vérifie uniquement s'il y a un conflit sur le NOUVEAU NOM
-  if (field === 'name') {
-    const dup = findWorkerDuplicate(null, newVal.trim(), oldId);
-    if (dup.found) {
-      alert(`⚠️ Erreur Doublon : Le nom ${newVal} est déjà utilisé ${dup.location}. Vous pouvez le supprimer avec la croix rouge à droite.`);
-      if (inputEl) inputEl.value = w.name;
-      return;
+  // On vérifie le conflit uniquement sur le champ qu'on est en train de modifier
+  if (field === 'id') {
+    dup = findWorkerDuplicate(newVal.trim(), null, oldId);
+  } else if (field === 'name') {
+    dup = findWorkerDuplicate(null, newVal.trim(), oldId);
+  }
+
+  if (dup.found) {
+    // NOUVEAU COMPORTEMENT : On propose de SUPPRIMER LA LIGNE FANTÔME (Celle qu'on modifie)
+    const msg = `⚠️ DOUBLON DÉTECTÉ !\n\nL'information "${newVal}" est déjà utilisée ${dup.location} par l'ouvrier [${dup.worker.name}].\n\nConserver ces deux lignes va fausser les effectifs du chantier.\n\nVoulez-vous SUPPRIMER définitivement la ligne que vous êtes en train de modifier pour nettoyer la base ?`;
+    
+    if (confirm(msg)) {
+       if (context === 'unassigned') {
+         const index = unassignedWorkers.findIndex(x => x.id === oldId);
+         if(index !== -1) unassignedWorkers.splice(index, 1);
+       } else {
+         const index = cardsData[cIdx].tasks[tIdx].workerList.findIndex(x => x.id === oldId);
+         if(index !== -1) cardsData[cIdx].tasks[tIdx].workerList.splice(index, 1);
+       }
+       syncToFirebase();
+       renderCards();
+       renderDrawer();
+       renderDBTable();
+       return;
+    } else {
+       // Si l'utilisateur refuse la suppression, on annule sa frappe
+       if (inputEl) inputEl.value = w[field];
+       return;
     }
   }
 
@@ -1043,7 +1054,6 @@ function editWorker(oldId, field, newVal, context, cIdx, tIdx, inputEl) {
 function deleteWorkerFromDB(wId, context, cIdx, tIdx) {
   if(!confirm("Supprimer cet ouvrier DÉFINITIVEMENT de la base ?")) return;
   if (context === 'unassigned') {
-     // Utilisation de indexOf pour ne supprimer QUE l'élément précis même s'ils ont le même ID
      const index = unassignedWorkers.findIndex(x => x.id === wId);
      if(index !== -1) unassignedWorkers.splice(index, 1);
   } else {
