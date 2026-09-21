@@ -12,7 +12,7 @@
 
 <!-- Librairies externes -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -37,7 +37,7 @@
   .role-label { font-size: 11px; font-weight: 800; color: #475569; letter-spacing: 0.5px; }
   .role-select { font-size: 12px; font-weight: 700; border: none; background: transparent; outline: none; cursor: pointer; color: #0f172a; }
 
-  .btn { background: #2563eb; color: white; border: none; padding: 8px 12px; font-size: 12px; font-weight: 600; border-radius: 7px; cursor: pointer; transition: background 0.15s; display: inline-flex; align-items: center; justify-content: center; }
+  .btn { background: #2563eb; color: white; border: none; padding: 8px 12px; font-size: 12px; font-weight: 600; border-radius: 7px; cursor: pointer; transition: background 0.15s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
   .btn:hover { background: #1d4ed8; }
   .btn-outline { background: white; color: #334155; border: 1px solid #cbd5e1; }
   .btn-outline:hover { background: #f1f5f9; color: #0f172a; }
@@ -119,12 +119,11 @@
   .manager-name { color: #64748b; outline: none; border-bottom: 1px dotted #cbd5e1; min-width: 60px; display: inline-block; cursor: text; text-transform: uppercase; font-weight: 700; }
   .manager-name:empty:before { content: "NOM N+1"; color: #94a3b8; }
   
-  .sup-name { font-size: 13px; font-weight: 800; color: #0f172a; outline: none; width: 100%; display: block; }
+  .sup-name { font-size: 13px; font-weight: 800; color: #0f172a; outline: none; width: 100%; display: block; margin-top: 2px; }
   
   .ts-badge-container { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; align-items: center; }
   .ts-badge { font-size: 10px; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 1px 4px; color: #475569; display: inline-flex; align-items: center; gap: 4px; }
   
-  /* MODIFICATION: Case TS plus grande et plus visible */
   .ts-badge span { outline: none; min-width: 50px; display: inline-block; color: #2563eb; background: #e0e7ff; padding: 2px 6px; border-radius: 4px; text-align: center; border: 1px dashed #bfdbfe; transition: 0.15s; }
   .ts-badge span:focus { background: #dbeafe; border-style: solid; }
   .ts-badge span:empty:before { content: attr(data-placeholder); color: #94a3b8; }
@@ -169,9 +168,6 @@
   .btn-add-task { background: transparent; border: 1px dashed #cbd5e1; color: #64748b; font-size: 10px; font-weight: 600; padding: 4px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 2px; transition: 0.15s; }
   .btn-add-task:hover { background: #f1f5f9; color: #0f172a; }
 
-  .divider { width: 1px; height: 24px; background: #e2e8f0; margin: 0 4px; }
-
-  /* ZONE PANIER (Dropzone Ouvriers) */
   .card-worker-dropzone { 
     min-height: 40px; 
     border: 2px dashed #93c5fd; 
@@ -195,7 +191,7 @@
     margin-top: 4px; 
   }
 
-  /* WORKER PILLS AVEC LEURS COULEURS ORIGINELLES */
+  /* WORKER PILLS */
   .worker-pill { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #334155; transition: transform 0.1s, box-shadow 0.1s; user-select: none; margin: 2px; }
   .worker-pill:hover { transform: scale(1.05); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
   .worker-pill:active { cursor: grabbing; }
@@ -204,7 +200,8 @@
   .worker-pill.euroasia { border-color: #ddd6fe; background: #ede9fe; color: #7c3aed; }
   .worker-pill.other { border-color: #cbd5e1; background: #f1f5f9; color: #475569; }
   
-  .worker-pill.selected-pill {
+  /* CLASSE SORTABLE MULTI-DRAG ET SÉLECTION */
+  .worker-pill.sortable-selected, .worker-pill.selected-pill {
     border: 2px solid #2563eb !important;
     background: #eff6ff !important;
     color: #1d4ed8 !important;
@@ -219,7 +216,7 @@
   .org-managers-grid { display: flex; gap: 24px; align-items: flex-start; justify-content: center; flex-wrap: wrap; }
   .org-manager-col { display: flex; flex-direction: column; align-items: center; background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); min-width: 280px; position: relative; }
   .org-manager-name { font-size: 15px; font-weight: 800; color: #0f172a; margin-bottom: 4px; text-align: center; text-transform: uppercase; }
-  .org-manager-total { font-size: 11px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 4px 10px; border-radius: 12px; margin-bottom: 16px; }
+  .org-manager-total { font-size: 11px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 2px 8px; border-radius: 12px; margin-bottom: 16px; }
   .org-sups-list { display: flex; flex-direction: column; gap: 12px; width: 100%; border-top: 2px solid #f1f5f9; padding-top: 16px; }
   .org-sup-card { background: #ffffff; border: 1px solid #cbd5e1; border-left-width: 5px; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
   .org-sup-name { font-size: 14px; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
@@ -242,9 +239,15 @@
   .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(2px); display: none; align-items: center; justify-content: center; z-index: 2000; }
   .modal-box { background: white; padding: 24px; border-radius: 16px; width: 420px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 16px; max-height: 90vh; overflow-y: auto; }
   .modal-box.large { width: 600px; }
+  .modal-box.xl { width: 850px; max-width: 90vw; }
   .modal-title { font-size: 18px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
   .modal-select { padding: 10px 12px; font-size: 13px; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; width: 100%; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+
+  /* TABLEAU BASE GLOBALE */
+  .db-input { padding: 6px; font-size: 11px; font-weight: 600; border: 1px solid transparent; border-radius: 4px; width: 100%; background: transparent; transition: 0.15s; }
+  .db-input:hover { border-color: #cbd5e1; }
+  .db-input:focus { border-color: #2563eb; background: white; outline: none; }
 
   /* BOUTON FLOTTANT DEPLACEMENT MASSE */
   #fab-move { display:none; position:fixed; bottom:90px; right:30px; background:#2563eb; color:white; padding:16px 24px; border-radius:30px; box-shadow:0 10px 25px rgba(37,99,235,0.4); cursor:pointer; font-weight:800; font-size:15px; z-index:1500; align-items:center; gap:10px; transition: transform 0.2s; }
@@ -261,25 +264,40 @@
   .guide-content h2 { font-size: 15px; color: #0f172a; margin-top: 16px; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
   .guide-content ul { padding-left: 20px; margin-bottom: 12px; }
   .guide-content li { margin-bottom: 4px; }
-  .guide-content strong { color: #0f172a; }
 
-  /* STYLE D'IMPRESSION TIMESHEET */
-  #timesheet-print-zone { display: none; }
+  /* STYLE D'IMPRESSION TIMESHEET & DB */
+  #timesheet-print-zone, #db-print-zone { display: none; }
   @media print {
     @page { size: landscape; margin: 10mm; }
     body { padding: 0; background: white; margin: 0; }
-    body:not(.print-mode-ts) .top-bar, body:not(.print-mode-ts) .btn-add-task, body:not(.print-mode-ts) .btn-remove-card, body:not(.print-mode-ts) #error-banner, body:not(.print-mode-ts) .filter-bar, body:not(.print-mode-ts) .btn-delete-task, body:not(.print-mode-ts) .drawer, body:not(.print-mode-ts) .modal-overlay, body:not(.print-mode-ts) .ts-checkbox, body:not(.print-mode-ts) .ts-btn-config { display: none !important; }
-    body.print-mode-ts #fab-move, body.print-mode-ts #fab-drawer { display: none !important; }
-    body:not(.print-mode-ts) .cards-grid { border: none !important; background: transparent !important; padding: 0 !important; gap: 8px; }
-    body:not(.print-mode-ts) .category-section { break-inside: avoid; display: block !important; }
-    body:not(.print-mode-ts) .card { break-inside: avoid; box-shadow: none !important; border: 1px solid #cbd5e1; }
-    body:not(.print-mode-ts) .count-comparator, body:not(.print-mode-ts) .source-select, body:not(.print-mode-ts) .cat-select, body:not(.print-mode-ts) .payroll-input, body:not(.print-mode-ts) .ts-select { border: none; background: transparent; color: #0f172a !important; -webkit-appearance: none; }
-    body:not(.print-mode-ts) .task-desc { border: none; padding: 0; }
-    body:not(.print-mode-ts) .task-foreman span { border: none; }
-    body:not(.print-mode-ts) #orgchart-view { display: block !important; padding: 0; overflow: visible; }
-    body:not(.print-mode-ts) .org-manager-col { break-inside: avoid; border: 1px solid #94a3b8; }
+    body:not(.print-mode-ts):not(.print-mode-db) .top-bar, 
+    body:not(.print-mode-ts):not(.print-mode-db) .btn-add-task, 
+    body:not(.print-mode-ts):not(.print-mode-db) .btn-remove-card, 
+    body:not(.print-mode-ts):not(.print-mode-db) #error-banner, 
+    body:not(.print-mode-ts):not(.print-mode-db) .filter-bar, 
+    body:not(.print-mode-ts):not(.print-mode-db) .btn-delete-task, 
+    body:not(.print-mode-ts):not(.print-mode-db) .drawer, 
+    body:not(.print-mode-ts):not(.print-mode-db) .modal-overlay, 
+    body:not(.print-mode-ts):not(.print-mode-db) .ts-checkbox, 
+    body:not(.print-mode-ts):not(.print-mode-db) .ts-btn-config, 
+    body:not(.print-mode-ts):not(.print-mode-db) #fab-move, 
+    body:not(.print-mode-ts):not(.print-mode-db) #fab-drawer { display: none !important; }
     
-    body.print-mode-ts .top-bar, body.print-mode-ts .dashboard-container, body.print-mode-ts #orgchart-view, body.print-mode-ts #workers-drawer, body.print-mode-ts .modal-overlay { display: none !important; }
+    body:not(.print-mode-ts):not(.print-mode-db) .cards-grid { border: none !important; background: transparent !important; padding: 0 !important; gap: 8px; }
+    body:not(.print-mode-ts):not(.print-mode-db) .category-section { break-inside: avoid; display: block !important; }
+    body:not(.print-mode-ts):not(.print-mode-db) .card { break-inside: avoid; box-shadow: none !important; border: 1px solid #cbd5e1; }
+    body:not(.print-mode-ts):not(.print-mode-db) .count-comparator, 
+    body:not(.print-mode-ts):not(.print-mode-db) .source-select, 
+    body:not(.print-mode-ts):not(.print-mode-db) .cat-select, 
+    body:not(.print-mode-ts):not(.print-mode-db) .payroll-input, 
+    body:not(.print-mode-ts):not(.print-mode-db) .ts-select { border: none; background: transparent; color: #0f172a !important; -webkit-appearance: none; }
+    body:not(.print-mode-ts):not(.print-mode-db) .task-desc { border: none; padding: 0; }
+    body:not(.print-mode-ts):not(.print-mode-db) .task-foreman span { border: none; }
+    body:not(.print-mode-ts):not(.print-mode-db) #orgchart-view { display: block !important; padding: 0; overflow: visible; }
+    body:not(.print-mode-ts):not(.print-mode-db) .org-manager-col { break-inside: avoid; border: 1px solid #94a3b8; }
+    
+    /* PRINT TS */
+    body.print-mode-ts .top-bar, body.print-mode-ts .dashboard-container, body.print-mode-ts #orgchart-view, body.print-mode-ts #workers-drawer, body.print-mode-ts .modal-overlay, body.print-mode-ts #fab-move, body.print-mode-ts #fab-drawer { display: none !important; }
     body.print-mode-ts #timesheet-print-zone { display: block !important; width: 100%; }
 
     .ts-page { page-break-after: always; font-family: Arial, sans-serif; color: #000; width: 100%; position: relative; }
@@ -291,6 +309,13 @@
     .ts-task-col { min-width: 80px; text-align: center !important; }
     .ts-signatures { display: flex; justify-content: space-between; margin-top: 30px; font-size: 14px; font-weight: bold; }
     .ts-sign-box { border-top: 1px solid #000; width: 30%; text-align: center; padding-top: 10px; }
+
+    /* PRINT DB */
+    body.print-mode-db .top-bar, body.print-mode-db .dashboard-container, body.print-mode-db #orgchart-view, body.print-mode-db #workers-drawer, body.print-mode-db .modal-overlay, body.print-mode-db #fab-move, body.print-mode-db #fab-drawer { display: none !important; }
+    body.print-mode-db #db-print-zone { display: block !important; width: 100%; }
+    .db-print-table { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 12px; }
+    .db-print-table th, .db-print-table td { border: 1px solid #000; padding: 6px; text-align: left; }
+    .db-print-table th { background-color: #f1f5f9; font-weight: bold; }
   }
 </style>
 </head>
@@ -305,6 +330,39 @@
 
 <div id="fab-drawer" onclick="toggleDrawer()">
   👷 Base Ouvriers <span id="fab-drawer-count">0</span>
+</div>
+
+<!-- MODAL BASE GLOBALE ÉDITABLE -->
+<div id="db-modal" class="modal-overlay">
+  <div class="modal-box xl" style="height: 85vh;">
+    <div class="modal-title">🗃️ Base de Données Globale (Éditeur)</div>
+    <div style="display:flex; justify-content: space-between; margin-bottom: 10px; align-items:center;">
+       <span style="font-size:12px; color:#64748b;">Modifiez les champs directement. Toute modification est sauvegardée automatiquement.</span>
+       <div style="display:flex; gap:8px;">
+          <button class="btn btn-outline" onclick="exportWorkersExcel()">💾 Exporter Excel</button>
+          <button class="btn btn-outline" onclick="printDB()">🖨️ Imprimer</button>
+       </div>
+    </div>
+    <div style="overflow-y:auto; flex-grow:1; border:1px solid #cbd5e1; border-radius:8px;">
+       <table class="payroll-table" style="width:100%; text-align:left;">
+         <thead style="background:#f1f5f9; position:sticky; top:0; z-index:10;">
+           <tr>
+             <th style="padding:8px 12px; border-bottom:2px solid #cbd5e1;">ID</th>
+             <th style="padding:8px 12px; border-bottom:2px solid #cbd5e1;">Nom Complet</th>
+             <th style="padding:8px 12px; border-bottom:2px solid #cbd5e1;">Entreprise</th>
+             <th style="padding:8px 12px; border-bottom:2px solid #cbd5e1;">Statut / Assignation</th>
+             <th style="padding:8px 12px; border-bottom:2px solid #cbd5e1; width:50px;">Action</th>
+           </tr>
+         </thead>
+         <tbody id="db-table-body">
+           <!-- Généré en JS -->
+         </tbody>
+       </table>
+    </div>
+    <div class="modal-actions">
+       <button class="btn btn-black" onclick="closeDBModal()">Fermer</button>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL GUIDE -->
@@ -324,7 +382,7 @@
       <ul>
         <li>Click the floating <strong>👷 Base Ouvriers</strong> button at the bottom right.</li>
         <li>Look at the <strong>"Ouvriers Non Assignés"</strong> box. If there are names here, they are not on any Timesheet.</li>
-        <li>Click on one or several worker names (they will turn blue), then click the floating button "Déplacer" to assign them to a Supervisor's Timesheet.</li>
+        <li>Click on several workers (or drag them simultaneously) to assign them directly into the Supervisor's box.</li>
       </ul>
 
       <h2>Step 3: Check for Red Warnings ⚠️</h2>
@@ -416,6 +474,7 @@
   </div>
 
   <div style="background:#f1f5f9; padding:10px; border-radius:8px; display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+    <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase;">Création Manuelle</div>
     <input type="text" id="new-w-id" placeholder="ID / N° (ex: W-123)" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;">
     <input type="text" id="new-w-name" placeholder="Nom Complet" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;">
     <select id="new-w-comp" class="dynamic-comp-select" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;"></select>
@@ -423,13 +482,13 @@
   </div>
 
   <h4 style="font-size:13px; font-weight:800; margin-top:12px; padding-bottom:8px; border-bottom:1px solid #e2e8f0;">Ouvriers Non Assignés</h4>
-  <div id="unassigned-dropzone" style="flex-grow:1; border:2px dashed #cbd5e1; border-radius:8px; padding:8px; display:flex; flex-wrap:wrap; align-content:flex-start; background:#f8fafc; overflow-y:auto; gap:6px;"></div>
+  <div id="unassigned-dropzone" style="flex-grow:1; border:2px dashed #cbd5e1; border-radius:8px; padding:8px; display:flex; flex-wrap:wrap; align-content:flex-start; background:#f8fafc; overflow-y:auto; gap:4px;"></div>
 </div>
 
 <!-- TOP BAR -->
 <div class="top-bar">
   <div class="top-bar-title">
-    <h1>Riviera Tower Supervision and Workers Organisation Chart</h1>
+    <h1>Riviera Tower <span class="subtitle">| Supervision and Workers Organisation Chart</span></h1>
     <div class="sync-status">
       <span class="sync-dot" id="sync-dot"></span>
       <span id="sync-text">Connexion...</span>
@@ -452,20 +511,20 @@
     <button id="btn-toggle-view" class="btn btn-outline" onclick="toggleView()">🗺️ Organigramme</button>
     <div class="divider"></div>
 
+    <button class="btn btn-outline" onclick="openDBModal()" title="Éditer la base de données de tous les ouvriers">🗃️ Base Globale</button>
+    <button class="btn btn-outline" id="btn-add-sup" onclick="addNewSupervisor()">+ Ajout Timesheet</button>
     <button class="btn btn-black" id="btn-print-ts" onclick="openPrintModal()">📄 Imprimer TS</button>
-    <button class="btn btn-outline" onclick="window.print()">🖨️ PDF Vue</button>
     
     <!-- Bouton Paramètres (Cache les outils techniques) -->
     <button class="btn btn-icon" id="btn-settings-menu" onclick="toggleAdminMenu()" title="Outils avancés">⚙️</button>
     
     <div id="admin-dropdown">
-      <span style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase;">Construction</span>
-      <button class="btn btn-outline" style="width:100%; justify-content:left;" id="btn-add-sup" onclick="addNewSupervisor()">+ Ajout Superviseur</button>
+      <span style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase;">Configuration</span>
       <button class="btn btn-outline" style="width:100%; justify-content:left;" onclick="openCompaniesModal()">🏢 Gérer Entreprises</button>
       <hr style="border:0; border-top:1px solid #e2e8f0; margin:4px 0;">
       <span style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase;">Données</span>
       <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display:none" onchange="importExcelFile(event)">
-      <button class="btn btn-outline" style="width:100%; justify-content:left;" id="btn-import" onclick="document.getElementById('excel-file-input').click()">📥 Import Pointages</button>
+      <button class="btn btn-outline" style="width:100%; justify-content:left;" id="btn-import" onclick="document.getElementById('excel-file-input').click()" title="ZÉRO SUPPRESSION : Ajoute les nouveaux ouvriers pointés sans effacer les assignations manuelles.">📥 Import Pointages</button>
       <button class="btn btn-outline" style="width:100%; justify-content:left;" onclick="exportBackup()">💾 Sauvegarder (JSON)</button>
       <input type="file" id="backup-file-input" accept=".json" style="display:none" onchange="importBackup(event)">
       <button class="btn btn-outline" style="width:100%; justify-content:left;" onclick="document.getElementById('backup-file-input').click()">📂 Restaurer (JSON)</button>
@@ -522,8 +581,9 @@
 <!-- VUE ORGANIGRAMME -->
 <div id="orgchart-view"></div>
 
-<!-- ZONE D'IMPRESSION CACHÉE POUR LES TIMESHEETS -->
+<!-- ZONES D'IMPRESSION CACHÉES -->
 <div id="timesheet-print-zone"></div>
+<div id="db-print-zone"></div>
 
 <script>
 window.onerror = function(msg, url, line) {
@@ -533,12 +593,11 @@ window.onerror = function(msg, url, line) {
   return false;
 };
 
-// Menu Admin
+// Menus
 function toggleAdminMenu() {
   const menu = document.getElementById('admin-dropdown');
   menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
 }
-
 function openGuideModal() { document.getElementById('guide-modal').style.display = 'flex'; }
 function closeGuideModal() { document.getElementById('guide-modal').style.display = 'none'; }
 
@@ -640,7 +699,7 @@ let siteCompanies = ['SKYBUILDING', 'DSS', 'EUROASIA', 'OTHER'];
 let db = null, docRef = null, isSaving = false, currentFilter = 'all';
 
 const DEFAULT_DATA = [
-  { name: "NOUVEAU SUPERVISEUR", manager: "", category: "civil", timesheetNo: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "Activité à définir", foreman: "", source: "SKYBUILDING", workers: "", workerList: [] }] }
+  { name: "NOUVELLE TIMESHEET", manager: "", category: "civil", timesheetNo: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "Activité à définir", foreman: "", source: "SKYBUILDING", workers: "", workerList: [] }] }
 ];
 
 try {
@@ -656,6 +715,39 @@ try {
   } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 } catch(e) { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 
+// --- FONCTION UTILITAIRE : VÉRIFICATION DOUBLONS ---
+function findWorkerDuplicate(id, name, excludeId = null) {
+  const norm = str => String(str || '').trim().toUpperCase();
+  const searchId = norm(id);
+  const searchName = norm(name);
+
+  for (const w of unassignedWorkers) {
+    if (excludeId && norm(w.id) === norm(excludeId)) continue;
+    if (searchId && norm(w.id) === searchId) {
+      return { found: true, location: 'dans la Base (Non assigné)', worker: w };
+    }
+    if (searchName && norm(w.name) === searchName) {
+      return { found: true, location: 'dans la Base (Non assigné)', worker: w };
+    }
+  }
+
+  for (const card of cardsData) {
+    for (const t of (card.tasks || [])) {
+      for (const w of (t.workerList || [])) {
+        if (excludeId && norm(w.id) === norm(excludeId)) continue;
+        if (searchId && norm(w.id) === searchId) {
+          return { found: true, location: `sur l'équipe de ${card.name}`, worker: w };
+        }
+        if (searchName && norm(w.name) === searchName) {
+          return { found: true, location: `sur l'équipe de ${card.name}`, worker: w };
+        }
+      }
+    }
+  }
+
+  return { found: false };
+}
+
 // --- 1. INITIALISATION DE L'INTERFACE ---
 function initLayout() {
   document.getElementById('role-selector').value = currentRole;
@@ -663,11 +755,17 @@ function initLayout() {
   const filterBar = document.getElementById('filter-bar');
   filterBar.innerHTML = `
     <button class="filter-btn active" id="filter-all" onclick="setFilter('all')">TOUT AFFICHER</button>
+    <button class="filter-btn" id="filter-alpha" onclick="setFilter('alpha')" style="border-left: 4px solid #2563eb; font-weight:800;">🔤 ALPHABÉTIQUE (A-Z)</button>
     ${CATEGORY_INFO.map(cat => `<button class="filter-btn" id="filter-${cat.id}" onclick="setFilter('${cat.id}')" style="border-left: 4px solid ${cat.color};">${cat.name}</button>`).join('')}
   `;
 
   const board = document.getElementById('categories-board');
-  board.innerHTML = CATEGORY_INFO.map(cat => `
+  board.innerHTML = `
+    <div class="category-section" id="section-alpha" style="display:none;">
+      <h2 class="category-title" style="color: #2563eb; border-bottom: 2px solid #2563eb;">TOUTES LES TIMESHEETS (ORDRE ALPHABÉTIQUE A-Z)</h2>
+      <div class="cards-grid" id="grid-alpha" data-category="alpha"></div>
+    </div>
+  ` + CATEGORY_INFO.map(cat => `
     <div class="category-section" id="section-${cat.id}">
       <h2 class="category-title" style="color: ${cat.color}; border-bottom: 2px solid ${cat.color};">${cat.name}</h2>
       <div class="cards-grid" id="grid-${cat.id}" data-category="${cat.id}"></div>
@@ -687,10 +785,23 @@ function setFilter(catId) {
   currentFilter = catId;
   document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
   document.getElementById(`filter-${catId}`).classList.add('active');
-  CATEGORY_INFO.forEach(cat => {
-    const section = document.getElementById(`section-${cat.id}`);
-    if (section) section.style.display = (catId === 'all' || catId === cat.id) ? 'block' : 'none';
-  });
+
+  const alphaSection = document.getElementById('section-alpha');
+  if (catId === 'alpha') {
+    if (alphaSection) alphaSection.style.display = 'block';
+    CATEGORY_INFO.forEach(cat => {
+      const section = document.getElementById(`section-${cat.id}`);
+      if (section) section.style.display = 'none';
+    });
+    renderCards();
+  } else {
+    if (alphaSection) alphaSection.style.display = 'none';
+    CATEGORY_INFO.forEach(cat => {
+      const section = document.getElementById(`section-${cat.id}`);
+      if (section) section.style.display = (catId === 'all' || catId === cat.id) ? 'block' : 'none';
+    });
+    renderCards();
+  }
 }
 
 initLayout();
@@ -731,6 +842,7 @@ setTimeout(() => {
         renderCards();
         if (currentView === 'orgchart') renderOrgChart();
         renderDrawer();
+        if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
         updateFab(); 
       } else { syncToFirebase(); }
       document.getElementById("sync-dot").style.background = "#16a34a";
@@ -772,6 +884,125 @@ function handleCheck(cIdx, isChecked) {
   else selectedForPrint.delete(cIdx);
 }
 
+// --- BASE DE DONNÉES GLOBALE (ÉDITEUR & IMPRESSION/EXCEL) ---
+function openDBModal() {
+  if (currentRole === 'viewer' || currentRole === 'cfo') return;
+  renderDBTable();
+  document.getElementById('db-modal').style.display = 'flex';
+}
+
+function closeDBModal() {
+  document.getElementById('db-modal').style.display = 'none';
+}
+
+function renderDBTable() {
+  const tbody = document.getElementById('db-table-body');
+  let html = '';
+  
+  const addRow = (w, context, cIdx, tIdx, supName) => {
+     const isUnassigned = context === 'unassigned';
+     html += `<tr>
+        <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9;"><input type="text" class="db-input" value="${w.id}" onchange="editWorker('${w.id}', 'id', this.value, '${context}', ${cIdx}, ${tIdx}, this)"></td>
+        <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9;"><input type="text" class="db-input" value="${w.name}" onchange="editWorker('${w.id}', 'name', this.value, '${context}', ${cIdx}, ${tIdx}, this)"></td>
+        <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9;">
+          <select class="db-input" onchange="editWorker('${w.id}', 'company', this.value, '${context}', ${cIdx}, ${tIdx}, this)">
+            ${siteCompanies.map(c => `<option value="${c}" ${w.company===c?'selected':''}>${c}</option>`).join('')}
+          </select>
+        </td>
+        <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9; font-size:11px; color:#64748b;">
+          ${isUnassigned ? '<span style="color:#f59e0b; font-weight:700;">En attente</span>' : `Assigné : <b>${supName}</b>`}
+        </td>
+        <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9;">
+           <button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5; padding:2px 8px;" onclick="deleteWorkerFromDB('${w.id}', '${context}', ${cIdx}, ${tIdx})">&times;</button>
+        </td>
+     </tr>`;
+  };
+  
+  unassignedWorkers.forEach(w => addRow(w, 'unassigned', -1, -1, ''));
+  cardsData.forEach((c, cIdx) => {
+     c.tasks.forEach((t, tIdx) => {
+        t.workerList.forEach(w => addRow(w, 'assigned', cIdx, tIdx, c.name));
+     });
+  });
+  tbody.innerHTML = html;
+}
+
+function editWorker(oldId, field, newVal, context, cIdx, tIdx, inputEl) {
+  let w = context === 'unassigned' ? unassignedWorkers.find(x => x.id === oldId) : cardsData[cIdx].tasks[tIdx].workerList.find(x => x.id === oldId);
+  if (!w) return;
+
+  const testId = field === 'id' ? newVal : w.id;
+  const testName = field === 'name' ? newVal : w.name;
+
+  if (field === 'id' || field === 'name') {
+    const dup = findWorkerDuplicate(testId, testName, oldId);
+    if (dup.found) {
+      alert(`⚠️ Erreur Doublon : Un ouvrier correspondant existe déjà ${dup.location} (ID: ${dup.worker.id}, Nom: ${dup.worker.name}). Modification refusée.`);
+      if (inputEl) inputEl.value = w[field];
+      return;
+    }
+  }
+
+  w[field] = newVal.trim();
+  syncToFirebase();
+  renderCards();
+  renderDrawer();
+}
+
+function deleteWorkerFromDB(wId, context, cIdx, tIdx) {
+  if(!confirm("Supprimer cet ouvrier DÉFINITIVEMENT de la base ?")) return;
+  if (context === 'unassigned') {
+     unassignedWorkers = unassignedWorkers.filter(x => x.id !== wId);
+  } else {
+     cardsData[cIdx].tasks[tIdx].workerList = cardsData[cIdx].tasks[tIdx].workerList.filter(x => x.id !== wId);
+  }
+  syncToFirebase();
+  renderCards();
+  renderDrawer();
+  renderDBTable();
+}
+
+function exportWorkersExcel() {
+  let exportData = [];
+  unassignedWorkers.forEach(w => exportData.push({ "ID": w.id, "Nom Complet": w.name, "Entreprise": w.company, "Statut": "En attente (Non assigné)" }));
+  cardsData.forEach(c => {
+     c.tasks.forEach(t => {
+        t.workerList.forEach(w => {
+           exportData.push({ "ID": w.id, "Nom Complet": w.name, "Entreprise": w.company, "Statut": `Assigné à : ${c.name}` });
+        });
+     });
+  });
+  if(exportData.length === 0) { alert("La base est vide."); return; }
+  const ws = XLSX.utils.json_to_sheet(exportData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Base Ouvriers");
+  XLSX.writeFile(wb, `Database_Ouvriers_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+function printDB() {
+  let exportData = [];
+  unassignedWorkers.forEach(w => exportData.push({ id: w.id, name: w.name, comp: w.company, stat: "En attente (Non assigné)" }));
+  cardsData.forEach(c => {
+     c.tasks.forEach(t => {
+        t.workerList.forEach(w => { exportData.push({ id: w.id, name: w.name, comp: w.company, stat: `Assigné à : ${c.name}` }); });
+     });
+  });
+  
+  let html = `
+    <h1 style="text-align:center; font-family:Arial; margin-bottom:20px;">BASE DE DONNÉES GLOBALE DES OUVRIERS</h1>
+    <table class="db-print-table">
+      <thead><tr><th>ID</th><th>Nom Complet</th><th>Entreprise</th><th>Statut / Assignation</th></tr></thead>
+      <tbody>
+        ${exportData.map(w => `<tr><td>${w.id}</td><td>${w.name}</td><td>${w.comp}</td><td>${w.stat}</td></tr>`).join('')}
+      </tbody>
+    </table>
+  `;
+  document.getElementById('db-print-zone').innerHTML = html;
+  document.body.classList.add('print-mode-db');
+  window.print();
+  setTimeout(() => { document.body.classList.remove('print-mode-db'); }, 500);
+}
+
 // --- GESTION ENTREPRISES DYNAMIQUE ---
 function renderCompanySelects() {
   const opts = siteCompanies.map(c => `<option value="${c}">${c}</option>`).join('');
@@ -787,10 +1018,7 @@ function openCompaniesModal() {
   renderCompaniesList();
   document.getElementById('companies-modal').style.display = 'flex';
 }
-
-function closeCompaniesModal() {
-  document.getElementById('companies-modal').style.display = 'none';
-}
+function closeCompaniesModal() { document.getElementById('companies-modal').style.display = 'none'; }
 
 function renderCompaniesList() {
   const list = document.getElementById('companies-list');
@@ -853,18 +1081,38 @@ function renderPayrollTable() {
   document.getElementById('payroll-table-body').innerHTML = html;
 }
 
-// --- AFFICHAGE CARTES ---
+// --- AFFICHAGE CARTES (AVEC SUPPORT DU TRI ALPHABÉTIQUE) ---
 function renderCards() {
   try {
+    const alphaGrid = document.getElementById('grid-alpha');
+    if (alphaGrid) alphaGrid.innerHTML = "";
+
     CATEGORY_INFO.forEach(cat => {
       const grid = document.getElementById(`grid-${cat.id}`);
       if(grid) grid.innerHTML = "";
     });
 
-    cardsData.forEach((card, cIdx) => {
+    // Liste des cartes avec leur index original pour la manipulation
+    let displayList = cardsData.map((card, cIdx) => ({ card, cIdx }));
+
+    if (currentFilter === 'alpha') {
+      displayList.sort((a, b) => {
+        let nameA = (a.card.name || '').trim().toUpperCase();
+        let nameB = (b.card.name || '').trim().toUpperCase();
+        return nameA.localeCompare(nameB);
+      });
+    }
+
+    displayList.forEach(({ card, cIdx }) => {
       if(!card.tasks) card.tasks = [];
       const catId = card.category || 'trades';
-      const grid = document.getElementById(`grid-${catId}`) || document.getElementById('grid-trades');
+      
+      let targetGrid;
+      if (currentFilter === 'alpha') {
+        targetGrid = document.getElementById('grid-alpha');
+      } else {
+        targetGrid = document.getElementById(`grid-${catId}`) || document.getElementById('grid-trades');
+      }
       
       const cardEl = document.createElement("div");
       cardEl.className = `card cat-${catId}`;
@@ -912,7 +1160,7 @@ function renderCards() {
         else if(w.company === 'DSS') colorClass = 'dss';
         else if(w.company === 'EUROASIA') colorClass = 'euroasia';
         
-        return `<div class="worker-pill ${colorClass}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="${cIdx}" data-tidx="${tIdx}" onclick="toggleWorkerSelection(this)">
+        return `<div class="worker-pill ${colorClass}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="${cIdx}" data-tidx="${tIdx}">
           ${w.id} - ${w.name}
         </div>`;
       })).join('');
@@ -980,7 +1228,7 @@ function renderCards() {
           </div>
         </div>
       `;
-      grid.appendChild(cardEl);
+      if (targetGrid) targetGrid.appendChild(cardEl);
     });
 
     recalculateTotals();
@@ -1066,8 +1314,13 @@ function initWorkerSortables() {
 
   document.querySelectorAll('.card-worker-dropzone, #unassigned-dropzone').forEach(el => {
     const s = new Sortable(el, {
-      group: 'workers-pool', animation: 150,
-      onStart: function() { document.querySelectorAll('.worker-pill.selected-pill').forEach(p => p.classList.remove('selected-pill')); updateFab(); },
+      group: 'workers-pool',
+      animation: 150,
+      multiDrag: true,
+      selectedClass: 'selected-pill',
+      fallbackTolerance: 3,
+      onSelect: function() { updateFab(); },
+      onDeselect: function() { updateFab(); },
       onEnd: function(evt) { handleWorkerDrop(evt); }
     });
     workerSortables.push(s);
@@ -1076,42 +1329,57 @@ function initWorkerSortables() {
 
 function handleWorkerDrop(evt) {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  if (evt.from === evt.to) return;
-  const item = evt.item, wId = item.dataset.wid, wName = item.dataset.wname, wComp = item.dataset.wcomp;
-  const workerObj = { id: wId, name: wName, company: wComp };
-
-  if (evt.from.id === 'unassigned-dropzone') {
-    unassignedWorkers = unassignedWorkers.filter(w => w.id !== wId);
-  } else {
-    const fromCIdx = parseInt(evt.from.dataset.cidx);
-    const oldTIdx = parseInt(item.dataset.tidx);
-    if (cardsData[fromCIdx] && cardsData[fromCIdx].tasks[oldTIdx]) {
-      let t = cardsData[fromCIdx].tasks[oldTIdx];
-      t.workerList = t.workerList.filter(w => w.id !== wId);
-    }
+  if (evt.from === evt.to) {
+     updateFab();
+     return;
   }
+
+  const movedItems = (evt.items && evt.items.length > 0) ? evt.items : [evt.item];
+  const workersToMove = [];
+
+  movedItems.forEach(item => {
+    const wId = item.dataset.wid;
+    const wName = item.dataset.wname;
+    const wComp = item.dataset.wcomp;
+    workersToMove.push({ id: wId, name: wName, company: wComp });
+
+    if (evt.from.id === 'unassigned-dropzone') {
+      unassignedWorkers = unassignedWorkers.filter(w => w.id !== wId);
+    } else {
+      const fromCIdx = parseInt(evt.from.dataset.cidx);
+      const oldTIdx = parseInt(item.dataset.tidx);
+      if (cardsData[fromCIdx] && cardsData[fromCIdx].tasks[oldTIdx]) {
+        let t = cardsData[fromCIdx].tasks[oldTIdx];
+        t.workerList = t.workerList.filter(w => w.id !== wId);
+      }
+    }
+  });
 
   if (evt.to.id === 'unassigned-dropzone') {
-    unassignedWorkers.push(workerObj);
+    workersToMove.forEach(workerObj => {
+      if (!unassignedWorkers.find(w => w.id === workerObj.id)) {
+        unassignedWorkers.push(workerObj);
+      }
+    });
   } else {
     const toCIdx = parseInt(evt.to.dataset.cidx);
-    let targetTaskIdx = cardsData[toCIdx].tasks.findIndex(t => t.source === wComp);
-    if (targetTaskIdx === -1) {
-      cardsData[toCIdx].tasks.push({ desc: 'Affectation manuelle', source: wComp, workers: "", workerList: [] });
-      targetTaskIdx = cardsData[toCIdx].tasks.length - 1;
-    }
-    let t = cardsData[toCIdx].tasks[targetTaskIdx];
-    if (!t.workerList) t.workerList = [];
-    t.workerList.push(workerObj);
+    workersToMove.forEach(workerObj => {
+      let targetTaskIdx = cardsData[toCIdx].tasks.findIndex(t => t.source === workerObj.company);
+      if (targetTaskIdx === -1) {
+        cardsData[toCIdx].tasks.push({ desc: 'Affectation manuelle', source: workerObj.company, workers: "", workerList: [] });
+        targetTaskIdx = cardsData[toCIdx].tasks.length - 1;
+      }
+      let t = cardsData[toCIdx].tasks[targetTaskIdx];
+      if (!t.workerList) t.workerList = [];
+      t.workerList.push(workerObj);
+    });
   }
-  renderCards(); renderDrawer(); syncToFirebase();
-}
 
-// MULTI-SELECTION CLIC
-function toggleWorkerSelection(el) {
-  if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  el.classList.toggle('selected-pill');
+  recalculateTotals();
+  renderCards();
+  renderDrawer();
   updateFab();
+  syncToFirebase();
 }
 
 function updateFab() {
@@ -1203,12 +1471,11 @@ function renderDrawer() {
     else if(w.company === 'DSS') colorClass = 'dss';
     else if(w.company === 'EUROASIA') colorClass = 'euroasia';
     
-    return `<div class="worker-pill ${colorClass}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="unassigned" data-tidx="unassigned" onclick="toggleWorkerSelection(this)">
+    return `<div class="worker-pill ${colorClass}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="unassigned" data-tidx="unassigned">
       ${w.id} - ${w.name}
     </div>`;
   }).join('');
 
-  // Met à jour le compteur sur le bouton flottant "Base Ouvriers"
   const fabDrawerCount = document.getElementById('fab-drawer-count');
   if (fabDrawerCount) fabDrawerCount.innerText = unassignedWorkers.length;
 }
@@ -1218,15 +1485,32 @@ function addManualWorker() {
   const idInput = document.getElementById('new-w-id');
   const nameInput = document.getElementById('new-w-name');
   const comp = document.getElementById('new-w-comp').value;
+  
   const id = idInput.value.trim() || "W-" + Math.floor(Math.random()*10000);
-  const name = nameInput.value.trim() || "Ouvrier Manuel";
+  const name = nameInput.value.trim();
+
+  if (!name) {
+    alert("Veuillez saisir au moins le Nom de l'ouvrier.");
+    return;
+  }
+
+  const dup = findWorkerDuplicate(id, name);
+  if (dup.found) {
+    alert(`⚠️ DOUBLON DÉTECTÉ !\n\nL'ouvrier "${name}" (ID: ${id}) existe déjà ${dup.location}.\n\nNom existant : ${dup.worker.name}\nID existant : ${dup.worker.id}\nEntreprise : ${dup.worker.company}\n\nAjout annulé.`);
+    return;
+  }
+
   unassignedWorkers.push({ id, name, company: comp });
   idInput.value = ""; nameInput.value = "";
-  renderDrawer(); syncToFirebase();
+  renderDrawer(); 
+  if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
+  syncToFirebase();
 }
 
 function reorderCardsBasedOnDOM() {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
+  if (currentFilter === 'alpha') return; // Ne réorganise pas en DB si on est en mode tri A-Z
+
   const newCardsData = [];
   CATEGORY_INFO.forEach(cat => {
     const grid = document.getElementById(`grid-${cat.id}`);
@@ -1290,12 +1574,34 @@ function removeTask(cIdx, tIdx) {
   if(currentView==='orgchart') renderOrgChart(); 
 }
 
-function addNewSupervisor() { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData.unshift({ name: "NOUVEAU SUPERVISEUR", manager: "", category: "trades", timesheetNo: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "", foreman: "", source: siteCompanies[0], workers: "", workerList: [] }] }); renderCards(); syncToFirebase(); }
+// MODIFIÉ : Ajout Timesheet en tête (category: civil + unshift + scroll en haut)
+function addNewSupervisor() { 
+  if (currentRole === 'viewer' || currentRole === 'cfo') return; 
+  cardsData.unshift({ 
+    name: "NOUVELLE TIMESHEET", 
+    manager: "", 
+    category: "civil", // Tout premier lot (Civil Works)
+    timesheetNo: "", 
+    shiftType: "Shift 1", 
+    shiftHours: "07:00 - 15:00", 
+    printTasks: [], 
+    tasks: [{ desc: "", foreman: "", source: siteCompanies[0], workers: "", workerList: [] }] 
+  }); 
+  
+  // Si un filtre autre que "all", "alpha" ou "civil" est actif, on repasse sur "all" pour voir la carte
+  if (!['all', 'alpha', 'civil'].includes(currentFilter)) {
+    setFilter('all');
+  } else {
+    renderCards();
+  }
+  
+  syncToFirebase(); 
+  window.scrollTo({ top: 0, behavior: 'smooth' }); // Remonte instantanément en haut de page
+}
 
 function removeSupervisor(cIdx) { 
   if (currentRole === 'viewer' || currentRole === 'cfo') return; 
   if (confirm(`Supprimer ${cardsData[cIdx].name} ?`)) { 
-      
       cardsData[cIdx].tasks.forEach(t => {
           if (t.workerList) {
               t.workerList.forEach(w => {
@@ -1478,7 +1784,7 @@ function executePrint() {
     if (!card) return;
 
     let taskHeaders = card.printTasks !== undefined ? [...card.printTasks] : card.tasks.map(t => (t.foreman ? `[${t.foreman}] ` : '') + t.desc).filter(d => d.trim() !== "");
-    taskHeaders.push('', ''); // Les 2 colonnes vierges garanties
+    taskHeaders.push('', ''); 
 
     let taskThs = taskHeaders.map(th => `<th class="ts-task-col">${th || '&nbsp;'}</th>`).join('');
 
@@ -1617,7 +1923,7 @@ function importBackup(event) {
   reader.readAsText(file);
 }
 
-// --- IMPORTATION EXCEL GLOBALE (POINTAGE) ---
+// --- IMPORTATION EXCEL GLOBALE POINTAGE (ZÉRO SUPPRESSION) ---
 function importExcelFile(event) {
   if (currentRole === 'viewer' || currentRole === 'cfo') return; 
   const file = event.target.files[0];
@@ -1632,12 +1938,6 @@ function importExcelFile(event) {
 
       workbook.SheetNames.forEach(sheetName => {
         if (!sheetName) return;
-        const upperSheet = String(sheetName).trim().toUpperCase();
-        let companySource = "OTHER";
-        if (upperSheet.includes("LOAN") || upperSheet.includes("SKY")) companySource = "SKYBUILDING";
-        else if (upperSheet.includes("DSS")) companySource = "DSS";
-        else if (upperSheet.includes("EURO")) companySource = "EUROASIA";
-
         const worksheet = workbook.Sheets[sheetName];
         if (!worksheet) return;
         const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
@@ -1716,26 +2016,24 @@ function importExcelFile(event) {
       let missingNamesArr = [];
       cardsData.forEach((c, idx) => {
         if (!matchedIndices.has(idx)) {
-          missingNamesArr.push(c.name + (c.timesheetNo ? ` (TS: ${c.timesheetNo})` : ''));
+           missingNamesArr.push(c.name + (c.timesheetNo ? ` (TS: ${c.timesheetNo})` : ''));
         }
       });
 
       let keepMissing = true;
       if (missingNamesArr.length > 0) {
-        keepMissing = confirm("⚠️ ATTENTION : Les équipes absentes de l'Excel :\n\n" + missingNamesArr.join("\n") + "\n\n• [OK] : Conserver\n• [Annuler] : Supprimer");
+        keepMissing = confirm("⚠️ ATTENTION : Les équipes suivantes sont absentes de l'Excel :\n\n" + missingNamesArr.join("\n") + "\n\n• [OK] : Conserver l'existant (Recommandé)\n• [Annuler] : Supprimer les cartes absentes");
       }
 
       let nextCardsData = [];
       cardsData.forEach((c, idx) => {
-        if (matchedIndices.has(idx)) {
-          c.tasks.forEach(t => { t.workers = ""; t.workerList = []; });
+        if (matchedIndices.has(idx) || keepMissing) {
           nextCardsData.push(c);
-        } else {
-          if (keepMissing) nextCardsData.push(c);
         }
       });
       cardsData = nextCardsData;
 
+      // FUSION DES DONNÉES
       Object.keys(importedSupervisors).forEach(supName => {
         const supData = importedSupervisors[supName];
         let existingCard = cardsData.find(c => {
@@ -1748,11 +2046,22 @@ function importExcelFile(event) {
         const newTaskList = Object.values(supData.tasks);
 
         if (existingCard) {
-          existingCard.timesheetNo = supData.timesheetNo || existingCard.timesheetNo;
+          if(!existingCard.timesheetNo && supData.timesheetNo) {
+             existingCard.timesheetNo = supData.timesheetNo;
+          }
+          
           newTaskList.forEach(newT => {
             let matchTask = existingCard.tasks.find(t => t.source === newT.source && t.desc === newT.desc);
-            if (matchTask) { matchTask.workers = newT.workers; matchTask.workerList = newT.workerList; } 
-            else { existingCard.tasks.push(newT); }
+            if (matchTask) { 
+               newT.workerList.forEach(importedW => {
+                  let exists = matchTask.workerList.find(w => w.id === importedW.id || w.name.toUpperCase() === importedW.name.toUpperCase());
+                  if(!exists) {
+                     matchTask.workerList.push(importedW);
+                  }
+               });
+            } else { 
+               existingCard.tasks.push(newT); 
+            }
           });
         } else {
           let cat = "trades"; let sUp = supName.toUpperCase();
@@ -1771,7 +2080,7 @@ function importExcelFile(event) {
       renderPayrollTable();
       renderCards(); 
       syncToFirebase();
-      alert(`Import réussi : ${totalImportedWorkers} ouvriers liés !`);
+      alert(`Import Fusionné avec succès : ${totalImportedWorkers} ouvriers traités. (Vos assignations manuelles précédentes n'ont pas été supprimées)`);
 
     } catch (err) { alert("Erreur technique : " + err.message); }
     event.target.value = "";
@@ -1779,7 +2088,7 @@ function importExcelFile(event) {
   reader.readAsArrayBuffer(file);
 }
 
-// --- IMPORTATEUR DE LA BASE OUVRIERS ---
+// --- IMPORTATEUR DE LA BASE OUVRIERS (ZÉRO SUPPRESSION) ---
 function importWorkersDB(event) {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
   const file = event.target.files[0];
@@ -1842,12 +2151,12 @@ function importWorkersDB(event) {
           cardsData.forEach(c => {
             if (c.tasks) {
               c.tasks.forEach(t => {
-                if (t.workerList && t.workerList.find(w => w.id === workerId || w.name === workerName)) isAssigned = true;
+                if (t.workerList && t.workerList.find(w => w.id === workerId || w.name.toUpperCase() === workerName.toUpperCase())) isAssigned = true;
               });
             }
           });
           
-          let isUnassigned = unassignedWorkers.find(w => w.id === workerId || w.name === workerName);
+          let isUnassigned = unassignedWorkers.find(w => w.id === workerId || w.name.toUpperCase() === workerName.toUpperCase());
 
           if (!isAssigned && !isUnassigned) {
             unassignedWorkers.push({ id: workerId, name: workerName, company: workerComp });
@@ -1859,6 +2168,7 @@ function importWorkersDB(event) {
       renderCompanySelects();
       renderPayrollTable();
       renderDrawer(); 
+      if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
       syncToFirebase();
       if (newWorkersCount > 0) alert(`Succès : ${newWorkersCount} nouveaux ouvriers ajoutés à la base !`);
       else alert("Aucun nouvel ouvrier ajouté (Ils sont peut-être déjà tous dans la base ou assignés).");
