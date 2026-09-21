@@ -327,7 +327,6 @@
 <div id="error-banner"></div>
 
 <!-- BOUTONS FLOTTANTS -->
-<!-- SOLUTION 1: On capture les clics tactiles et souris AVANT que Sortable n'efface la sélection -->
 <div id="fab-move" onpointerdown="handleFabClick(event)" onmousedown="handleFabClick(event)">
   ➡️ Déplacer <span id="fab-count">0</span> ouvrier(s)
 </div>
@@ -344,7 +343,7 @@
        <span style="font-size:12px; color:#64748b;">Modifiez les champs directement. Toute modification est sauvegardée.</span>
        
        <div style="display:flex; gap:8px;">
-          <!-- SOLUTION 2: Le bouton de nettoyage automatique des doublons -->
+          <!-- NOUVEAU: Le bouton magique de nettoyage des doublons -->
           <button class="btn btn-warning" onclick="cleanDuplicates()" title="Supprime automatiquement les doublons (garde l'ouvrier assigné en priorité)">🧹 Nettoyer Doublons</button>
           <button class="btn btn-outline" onclick="exportWorkersExcel()">💾 Exporter Excel</button>
           <button class="btn btn-outline" onclick="printDB()">🖨️ Imprimer</button>
@@ -728,32 +727,24 @@ try {
   } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 } catch(e) { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 
-// --- FONCTION UTILITAIRE : VÉRIFICATION DOUBLONS ---
-function findWorkerDuplicate(id, name, excludeId = null) {
+// --- FONCTION UTILITAIRE : VÉRIFICATION DOUBLONS (MODIFIÉE POUR EDIT) ---
+function findWorkerDuplicate(searchId, searchName, excludeId = null) {
   const norm = str => String(str || '').trim().toUpperCase();
-  const searchId = norm(id);
-  const searchName = norm(name);
+  const sId = searchId ? norm(searchId) : null;
+  const sName = searchName ? norm(searchName) : null;
 
   for (const w of unassignedWorkers) {
     if (excludeId && norm(w.id) === norm(excludeId)) continue;
-    if (searchId && norm(w.id) === searchId) {
-      return { found: true, location: 'dans la Base (Non assigné)', worker: w };
-    }
-    if (searchName && norm(w.name) === searchName) {
-      return { found: true, location: 'dans la Base (Non assigné)', worker: w };
-    }
+    if (sId && norm(w.id) === sId) return { found: true, location: 'dans la Base (Non assigné)', worker: w };
+    if (sName && norm(w.name) === sName) return { found: true, location: 'dans la Base (Non assigné)', worker: w };
   }
 
   for (const card of cardsData) {
     for (const t of (card.tasks || [])) {
       for (const w of (t.workerList || [])) {
         if (excludeId && norm(w.id) === norm(excludeId)) continue;
-        if (searchId && norm(w.id) === searchId) {
-          return { found: true, location: `sur l'équipe de ${card.name}`, worker: w };
-        }
-        if (searchName && norm(w.name) === searchName) {
-          return { found: true, location: `sur l'équipe de ${card.name}`, worker: w };
-        }
+        if (sId && norm(w.id) === sId) return { found: true, location: `sur l'équipe de ${card.name}`, worker: w };
+        if (sName && norm(w.name) === sName) return { found: true, location: `sur l'équipe de ${card.name}`, worker: w };
       }
     }
   }
@@ -909,13 +900,13 @@ window.cleanDuplicates = function() {
 
   const isDup = (w) => {
       const normId = String(w.id || '').trim().toUpperCase();
-      const normName = String(w.name || '').trim().toUpperCase();
+      // On retire les espaces multiples pour une comparaison stricte
+      const normName = String(w.name || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase().replace(/\s+/g, ' ');
       
       if ((normId !== '' && seenIds.has(normId)) || (normName !== '' && seenNames.has(normName))) {
           return true; // C'est un doublon
       }
       
-      // On l'ajoute à la liste des vus
       if (normId !== '') seenIds.add(normId);
       if (normName !== '') seenNames.add(normName);
       return false; // Pas un doublon, on le garde
@@ -935,7 +926,7 @@ window.cleanDuplicates = function() {
       }
   });
 
-  // 2. On scanne ensuite la base des non assignés (Basse priorité, ils seront effacés en 1er si trouvés)
+  // 2. On scanne ensuite la base des non assignés (Basse priorité)
   unassignedWorkers = unassignedWorkers.filter(w => {
       if (isDup(w)) { removedCount++; return false; }
       return true;
@@ -1018,18 +1009,27 @@ function renderDBTable() {
   if(currentQuery) filterDBTable(currentQuery);
 }
 
+// CORRECTION DU BLOCAGE DES DOUBLONS LORS DE L'ÉDITION
 function editWorker(oldId, field, newVal, context, cIdx, tIdx, inputEl) {
   let w = context === 'unassigned' ? unassignedWorkers.find(x => x.id === oldId) : cardsData[cIdx].tasks[tIdx].workerList.find(x => x.id === oldId);
   if (!w) return;
 
-  const testId = field === 'id' ? newVal : w.id;
-  const testName = field === 'name' ? newVal : w.name;
-
-  if (field === 'id' || field === 'name') {
-    const dup = findWorkerDuplicate(testId, testName, oldId);
+  // Si on modifie l'ID, on vérifie uniquement s'il y a un conflit sur le NOUVEL ID
+  if (field === 'id') {
+    const dup = findWorkerDuplicate(newVal.trim(), null, oldId);
     if (dup.found) {
-      alert(`⚠️ Erreur Doublon : Un ouvrier correspondant existe déjà ${dup.location} (ID: ${dup.worker.id}, Nom: ${dup.worker.name}). Modification refusée. Vous pouvez utiliser le bouton 'Nettoyer Doublons' en haut.`);
-      if (inputEl) inputEl.value = w[field];
+      alert(`⚠️ Erreur Doublon : L'ID ${newVal} est déjà utilisé ${dup.location}.`);
+      if (inputEl) inputEl.value = w.id;
+      return;
+    }
+  }
+  
+  // Si on modifie le Nom, on vérifie uniquement s'il y a un conflit sur le NOUVEAU NOM
+  if (field === 'name') {
+    const dup = findWorkerDuplicate(null, newVal.trim(), oldId);
+    if (dup.found) {
+      alert(`⚠️ Erreur Doublon : Le nom ${newVal} est déjà utilisé ${dup.location}. Vous pouvez le supprimer avec la croix rouge à droite.`);
+      if (inputEl) inputEl.value = w.name;
       return;
     }
   }
@@ -1043,9 +1043,12 @@ function editWorker(oldId, field, newVal, context, cIdx, tIdx, inputEl) {
 function deleteWorkerFromDB(wId, context, cIdx, tIdx) {
   if(!confirm("Supprimer cet ouvrier DÉFINITIVEMENT de la base ?")) return;
   if (context === 'unassigned') {
-     unassignedWorkers = unassignedWorkers.filter(x => x.id !== wId);
+     // Utilisation de indexOf pour ne supprimer QUE l'élément précis même s'ils ont le même ID
+     const index = unassignedWorkers.findIndex(x => x.id === wId);
+     if(index !== -1) unassignedWorkers.splice(index, 1);
   } else {
-     cardsData[cIdx].tasks[tIdx].workerList = cardsData[cIdx].tasks[tIdx].workerList.filter(x => x.id !== wId);
+     const index = cardsData[cIdx].tasks[tIdx].workerList.findIndex(x => x.id === wId);
+     if(index !== -1) cardsData[cIdx].tasks[tIdx].workerList.splice(index, 1);
   }
   syncToFirebase();
   renderCards();
@@ -1495,7 +1498,6 @@ function updateFab() {
   }
 }
 
-// NOUVELLE FONCTION ROBOUSTE POUR LE BOUTON FLOTTANT
 window.handleFabClick = function(event) {
   if (event) {
     event.preventDefault();
