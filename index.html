@@ -20,84 +20,88 @@
 
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, sans-serif; }
-  body { background: #f1f5f9; padding: 20px 30px; color: #0f172a; overflow-x: hidden; }
+  body { background: #f8fafc; padding: 20px; color: #0f172a; overflow-x: hidden; }
 
-  #error-banner { display: none; background: #fef2f2; color: #991b1b; padding: 12px; margin: 0 auto 16px auto; max-width: 1600px; border: 1px solid #f87171; border-radius: 8px; font-weight: 600; }
+  #error-banner { display: none; background: #fef2f2; color: #991b1b; padding: 12px; margin: 0 auto 16px auto; max-width: 1540px; border: 1px solid #f87171; border-radius: 8px; font-weight: 600; }
 
-  /* TOP BAR MODERNE */
-  .top-bar { max-width: 1600px; margin: 0 auto 24px auto; display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 16px 24px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-  .top-bar-title h1 { font-size: 18px; font-weight: 800; margin:0; }
+  /* TOP BAR ORIGINALE */
+  .top-bar { max-width: 1540px; margin: 0 auto 16px auto; display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 14px 20px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.04); }
+  .top-bar-title h1 { font-size: 18px; font-weight: 800; }
   .top-bar-title span.subtitle { color: #94a3b8; font-weight: 500; }
-  .sync-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #16a34a; margin-top: 4px; }
-  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; }
+  .sync-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #64748b; margin-top: 2px; }
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; }
 
-  .actions-group { display: flex; gap: 12px; align-items: center; position: relative; }
+  .actions-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; position: relative; }
   
-  .role-container { display: flex; align-items: center; gap: 6px; background: #f8fafc; padding: 6px 12px; border-radius: 6px; border: 1px solid #cbd5e1; }
-  .role-label { font-size: 12px; font-weight: 700; color: #475569; }
-  .role-select { font-size: 12px; font-weight: 700; border: none; background: transparent; outline: none; cursor: pointer; color: #2563eb; }
+  .role-container { display: flex; align-items: center; gap: 6px; background: #f1f5f9; padding: 6px 10px; border-radius: 8px; border: 1px solid #cbd5e1; margin-right: 10px; }
+  .role-label { font-size: 11px; font-weight: 800; color: #475569; letter-spacing: 0.5px; }
+  .role-select { font-size: 12px; font-weight: 700; border: none; background: transparent; outline: none; cursor: pointer; color: #0f172a; }
 
-  .btn { border: none; padding: 8px 16px; font-size: 13px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn { background: #2563eb; color: white; border: none; padding: 8px 12px; font-size: 12px; font-weight: 600; border-radius: 7px; cursor: pointer; transition: background 0.15s; display: inline-flex; align-items: center; justify-content: center; }
+  .btn:hover { background: #1d4ed8; }
   .btn-outline { background: white; color: #334155; border: 1px solid #cbd5e1; }
-  .btn-outline:hover { background: #f8fafc; color: #0f172a; }
-  .btn-success { background: #059669; color: white; }
+  .btn-outline:hover { background: #f1f5f9; color: #0f172a; }
+  .btn-success { background: #059669; }
   .btn-success:hover { background: #047857; }
+  .btn-warning { background: #f59e0b; }
+  .btn-warning:hover { background: #d97706; }
   .btn-purple { background: #7c3aed; color: white; }
   .btn-purple:hover { background: #6d28d9; }
   .btn-black { background: #0f172a; color: white; }
   .btn-black:hover { background: #334155; }
   .btn-blue { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
   .btn-blue:hover { background: #bae6fd; }
-  .btn-danger { background: white; color: #dc2626; border: 1px solid #fca5a5; }
-  .btn-danger:hover { background: #fef2f2; }
-  .btn-icon { padding: 8px 12px; background: #e2e8f0; color: #334155; }
-  .btn-icon:hover { background: #cbd5e1; }
+  .btn-icon { padding: 8px 10px; background: #f1f5f9; color: #334155; }
+  .btn-icon:hover { background: #e2e8f0; }
 
   /* MENU ADMIN */
-  #admin-dropdown { display: none; position: absolute; top: 45px; right: 0; background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 12px; z-index: 100; min-width: 200px; flex-direction: column; gap: 8px; }
+  #admin-dropdown { display: none; position: absolute; top: 40px; right: 0; background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 12px; z-index: 100; min-width: 200px; flex-direction: column; gap: 8px; }
 
-  .dashboard-container { max-width: 1600px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+  .dashboard-container { max-width: 1540px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
 
-  .kpi-board { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
-  .kpi-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 16px; margin-bottom: 16px; }
-  .title-editable { font-size: 20px; font-weight: 800; color: #0f172a; outline: none; }
-  .total-badge-container { display: flex; align-items: center; gap: 12px; }
-  .total-label { font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; }
-  .total-number { background: #0f172a; color: white; font-size: 24px; font-weight: 800; padding: 6px 20px; border-radius: 30px; box-shadow: 0 4px 10px rgba(15,23,42,0.15); }
+  .kpi-board { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px 22px; box-shadow: 0 3px 6px rgba(0,0,0,0.03); }
+  .kpi-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 14px; }
+  .title-editable { font-size: 19px; font-weight: 800; color: #1e3a8a; outline: none; }
+  .total-badge-container { display: flex; align-items: center; gap: 10px; }
+  .total-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+  .total-number { background: #1e3a8a; color: white; font-size: 22px; font-weight: 800; padding: 4px 16px; border-radius: 30px; box-shadow: 0 4px 10px rgba(30,58,138,0.2); }
 
-  .summaries-row { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
-  .summary-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; }
-  .summary-title { font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 10px; }
+  .summaries-row { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; }
+  .summary-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; }
+  .summary-title { font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 8px; }
   
-  .pill-group { display: flex; flex-wrap: wrap; gap: 8px; }
-  .stat-pill { display: flex; align-items: center; gap: 6px; background: white; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+  .pill-group { display: flex; flex-wrap: wrap; gap: 6px; }
+  .stat-pill { display: flex; align-items: center; gap: 5px; background: white; border: 1px solid #e2e8f0; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
   .stat-pill .tag-color { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
   .stat-pill .count { font-weight: 800; color: #0f172a; margin-left: 2px; }
 
-  .payroll-table { width: 100%; border-collapse: collapse; font-size: 12px; font-weight: 600; }
-  .payroll-table th { text-align: left; color: #64748b; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; font-size: 11px; text-transform: uppercase; }
-  .payroll-table td { padding: 6px 0; border-bottom: 1px solid #f1f5f9; }
-  .payroll-input { width: 60px; font-size: 13px; font-weight: 800; text-align: center; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; color: #0f172a; }
+  .payroll-table { width: 100%; border-collapse: collapse; font-size: 11.5px; font-weight: 600; }
+  .payroll-table th { text-align: left; color: #64748b; padding-bottom: 4px; border-bottom: 1px solid #e2e8f0; }
+  .payroll-table td { padding: 5px 0; border-bottom: 1px solid #f1f5f9; }
+  .payroll-input { width: 56px; font-size: 12px; font-weight: 800; text-align: center; padding: 3px 4px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; color: #0f172a; }
   .payroll-input:focus { border-color: #2563eb; background: #eff6ff; }
-  .payroll-input:disabled { background: transparent; border: none; }
-  .diff-badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 800; display: inline-block; min-width: 36px; text-align: center; }
-  .diff-ok { background: #f1f5f9; color: #475569; }
-  .diff-warn { background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; }
+  .payroll-input:disabled { background: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; cursor: not-allowed; }
+  .diff-badge { padding: 3px 8px; border-radius: 12px; font-size: 10.5px; font-weight: 800; display: inline-block; min-width: 32px; text-align: center; }
+  .diff-ok { background: #dcfce7; color: #166534; }
+  .diff-warn { background: #fee2e2; color: #991b1b; }
 
   .filter-bar { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 8px; }
-  .filter-btn { padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; background: #ffffff; color: #64748b; border: 1px solid #cbd5e1; transition: 0.15s; }
-  .filter-btn:hover { background: #f8fafc; color: #0f172a; }
-  .filter-btn.active { background: #0f172a; color: white; border-color: #0f172a; }
+  .filter-btn { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; background: #ffffff; color: #64748b; border: 1px solid #cbd5e1; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+  .filter-btn:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
+  .filter-btn.active { background: #1e293b; color: white; border-color: #1e293b; }
 
-  .category-section { margin-top: 10px; margin-bottom: 24px; }
-  .category-title { font-size: 15px; font-weight: 800; padding-bottom: 8px; margin-bottom: 16px; text-transform: uppercase; }
+  .category-section { margin-top: 10px; margin-bottom: 20px; }
+  .category-title { font-size: 14px; font-weight: 800; padding-bottom: 6px; margin-bottom: 12px; text-transform: uppercase; }
+  .cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; min-height: 90px; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 10px; }
   
-  .cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; min-height: 100px; padding: 10px 0; }
+  .card { background: white; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; border-top: 4px solid #94a3b8; transition: transform 0.15s, box-shadow 0.15s; position: relative; }
+  .card:hover { box-shadow: 0 6px 12px rgba(0,0,0,0.08); }
   
-  /* CARTE SUPERVISEUR */
-  .card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; border-top: 4px solid #94a3b8; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.15s; position: relative; }
-  .card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); }
-  
+  .ts-checkbox { width: 16px; height: 16px; cursor: pointer; accent-color: #2563eb; }
+  .drag-handle { cursor: grab; }
+  .drag-handle:active { cursor: grabbing; }
+  .sortable-ghost { opacity: 0.3; background: #e2e8f0; border: 2px dashed #94a3b8; transform: scale(0.98); }
+
   .cat-civil { border-top-color: #ea580c !important; }
   .cat-trades { border-top-color: #2563eb !important; }
   .cat-facade { border-top-color: #0891b2 !important; }
@@ -106,82 +110,98 @@
   .cat-indirect { border-top-color: #475569 !important; }
   .cat-plant { border-top-color: #dc2626 !important; }
 
-  .card-header { padding: 16px 16px 12px 16px; border-bottom: 1px solid #f1f5f9; position: relative; cursor: grab; background: #ffffff; }
+  .card-header { padding: 8px 12px; background: #fafafa; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; cursor: grab; }
   .card-header:active { cursor: grabbing; }
   
-  .card-meta-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
-  .manager-name { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; outline: none; border-bottom: 1px dotted #cbd5e1; display: inline-block; cursor: text; }
-  .manager-name:empty:before { content: "AJOUTER MANAGER N+1"; color: #cbd5e1; }
-  
-  .sup-name { font-size: 16px; font-weight: 800; color: #0f172a; outline: none; width: 100%; display: block; margin-top: 2px; }
-  
-  .card-total-badge { font-size: 11px; font-weight: 800; padding: 4px 8px; border-radius: 20px; display: inline-flex; align-items: center; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; }
+  .cat-select { font-size: 10px; font-weight: 700; text-transform: uppercase; border: 1px solid #cbd5e1; border-radius: 5px; padding: 2px 4px; outline: none; cursor: pointer; }
+  .card-total-badge { font-size: 10.5px; font-weight: 800; background: #e0e7ff; color: #3730a3; padding: 2px 7px; border-radius: 10px; display:inline-flex; align-items:center; }
   .card-total-badge.error { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
 
-  .ts-badges-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
-  .ts-pill { background: #f1f5f9; color: #475569; font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; }
-  .ts-pill span, .ts-pill select { background: transparent; border: none; font-size: 11px; font-weight: 700; color: #2563eb; outline: none; cursor: pointer; padding: 0; }
-  .ts-pill span:empty:before { content: "---"; color: #94a3b8; }
+  .card-title-row { padding: 8px 12px 6px 12px; display: flex; justify-content: space-between; align-items: flex-start; }
   
-  .ts-btn-config { border: 1px solid #cbd5e1; background: white; color: #475569; padding: 2px 6px; font-size: 10px; font-weight: 700; border-radius: 4px; cursor: pointer; transition: 0.15s; }
+  .manager-field { font-size: 11px; font-weight: 600; color: #1e293b; display: flex; align-items: center; gap: 4px; margin-bottom: 2px; }
+  .manager-name { color: #64748b; outline: none; border-bottom: 1px dotted #cbd5e1; min-width: 60px; display: inline-block; cursor: text; text-transform: uppercase; font-weight: 700; }
+  .manager-name:empty:before { content: "NOM N+1"; color: #94a3b8; }
+  
+  .sup-name { font-size: 13px; font-weight: 800; color: #0f172a; outline: none; width: 100%; display: block; }
+  
+  .ts-badge-container { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; align-items: center; }
+  .ts-badge { font-size: 10px; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 1px 4px; color: #475569; display: inline-flex; align-items: center; gap: 3px; }
+  .ts-badge span { outline: none; min-width: 20px; display: inline-block; color: #2563eb; }
+  .ts-badge span:empty:before { content: attr(data-placeholder); color: #94a3b8; }
+  .ts-select { border: none; background: transparent; font-size: 10px; font-weight: 700; color: #475569; outline: none; cursor: pointer; padding:0; }
+
+  .ts-btn-config { border: 1px solid #cbd5e1; background: white; color: #475569; padding: 1px 4px; font-size: 10px; font-weight: 700; border-radius: 4px; cursor: pointer; transition: 0.15s; }
   .ts-btn-config:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
 
-  .btn-remove-card { position: absolute; top: 12px; right: 12px; background: none; border: none; color: #cbd5e1; cursor: pointer; font-size: 18px; font-weight: bold; margin-top: -2px; }
+  .btn-remove-card { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: -2px; }
   .btn-remove-card:hover { color: #dc2626; }
 
-  .card-body { padding: 16px; flex-grow: 1; display: flex; flex-direction: column; gap: 12px; background: #fdfdfd; }
+  .card-body { padding: 4px 12px 10px 12px; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; }
   
-  .task-item { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+  .task-item { background: #f8fafc; border: 1px solid #edf2f7; border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
   
-  .task-foreman { font-size: 10px; font-weight: 700; color: #059669; display: flex; align-items: center; gap: 4px; text-transform: uppercase; }
+  .task-foreman { font-size: 9.5px; font-weight: 700; color: #059669; display: flex; align-items: center; gap: 4px; text-transform: uppercase; margin-bottom: 2px; }
   .task-foreman span { color: #059669; outline: none; border-bottom: 1px dotted #a7f3d0; display: inline-block; cursor: text; min-width: 80px; }
   .task-foreman span:empty:before { content: "+ NOM DU FOREMAN"; color: #a7f3d0; }
 
-  .task-desc { font-size: 12px; font-weight: 600; color: #1e293b; outline: none; line-height: 1.4; min-height: 20px; }
-  .task-desc:focus { background: #eff6ff; border-radius: 4px; padding: 2px; margin: -2px; }
+  .task-desc { font-size: 11px; font-weight: 600; color: #1e293b; outline: none; line-height: 1.35; background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 4px; padding: 4px 6px; min-height: 24px; }
+  .task-desc:focus { border-style: solid; border-color: #2563eb; background: #eff6ff; }
 
-  .task-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+  .task-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 3px; }
   
-  .source-select { appearance: none; background: #f1f5f9; color: #0f172a; font-size: 10px; font-weight: 800; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; outline: none; }
-  .source-select:disabled { cursor: not-allowed; opacity: 0.7; }
+  .source-select { font-size: 10px; font-weight: 700; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 4px; outline: none; cursor: pointer; appearance: none; }
+  .source-select.skybuilding { background: #e0f2fe; color: #0284c7; }
+  .source-select.dss { background: #fef3c7; color: #d97706; }
+  .source-select.euroasia { background: #ede9fe; color: #7c3aed; }
+  .source-select.other { background: #f1f5f9; color: #64748b; }
+  .source-select:disabled { background: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; cursor: not-allowed; }
 
-  .count-comparator { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #64748b; }
-  .count-comparator.error { color: #dc2626; }
-  .count-comparator input { width: 36px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 4px; font-size: 12px; font-weight: 800; text-align: center; color: inherit; background: white; outline: none; }
+  .count-comparator { display: flex; align-items: center; gap: 4px; border: 1px solid; border-radius: 4px; padding: 2px 4px; background: white; font-weight: 800; font-size: 11px; }
+  .count-comparator.diff-warn { border-color: #fca5a5; background: #fef2f2; color: #dc2626; }
+  .count-comparator.diff-ok { border-color: #cbd5e1; background: #ffffff; color: #475569; }
+  .count-comparator input { width: 30px; border: none; background: transparent; font-size: 11px; font-weight: 800; text-align: center; color: inherit; padding: 0; outline: none; }
   .count-comparator input::placeholder { color: #94a3b8; font-weight: 600; }
-  .count-comparator.error input { background: #fef2f2; border-color: #fca5a5; }
+  .count-comparator.error input { background: #fef2f2; }
 
-  .btn-delete-task { cursor: pointer; color: #cbd5e1; font-size: 16px; font-weight: bold; margin-left: 4px; transition: 0.15s; }
+  .btn-delete-task { cursor: pointer; color: #cbd5e1; font-size: 14px; font-weight: bold; margin-left: 4px; transition: 0.15s; }
   .btn-delete-task:hover { color: #dc2626; }
 
-  .btn-add-task { background: transparent; border: 1px dashed #cbd5e1; color: #64748b; font-size: 11px; font-weight: 600; padding: 8px; border-radius: 6px; cursor: pointer; width: 100%; transition: 0.15s; }
-  .btn-add-task:hover { background: #f8fafc; color: #0f172a; border-color: #94a3b8; }
+  .btn-add-task { background: transparent; border: 1px dashed #cbd5e1; color: #64748b; font-size: 10px; font-weight: 600; padding: 4px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 2px; transition: 0.15s; }
+  .btn-add-task:hover { background: #f1f5f9; color: #0f172a; }
 
-  /* ZONE PANIER */
+  /* ZONE PANIER (Dropzone Ouvriers) : LE RETOUR DE LA BORDURE ET DES MARGES EXACTES */
   .card-worker-dropzone { 
-    margin: 0 16px 16px 16px; 
-    padding: 16px; 
-    background: #f8fafc; 
+    min-height: 40px; 
     border: 2px dashed #93c5fd; 
-    border-radius: 8px;
-    min-height: 60px; 
+    border-radius: 6px; 
+    padding: 8px; 
+    background: #f8fafc; 
+    margin-top: 8px; 
     display: flex; 
     flex-wrap: wrap; 
-    gap: 8px; 
+    gap: 4px; 
     align-content: flex-start; 
+    transition: background 0.2s; 
   }
   .card-worker-dropzone:empty::before { 
     content: "📥 Glissez les ouvriers ici"; 
-    font-size: 11px; 
-    color: #64748b; 
+    font-size: 10px; 
+    color: #94a3b8; 
     font-weight: 600; 
     width: 100%; 
     text-align: center; 
     margin-top: 4px; 
   }
 
-  .worker-pill { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #334155; transition: transform 0.1s, box-shadow 0.1s; user-select: none; }
-  .worker-pill:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+  /* WORKER PILLS AVEC LEURS COULEURS ORIGINELLES */
+  .worker-pill { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #334155; transition: transform 0.1s, box-shadow 0.1s; user-select: none; margin: 2px; }
+  .worker-pill:hover { transform: scale(1.05); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  .worker-pill:active { cursor: grabbing; }
+  .worker-pill.skybuilding { border-color: #7dd3fc; background: #e0f2fe; color: #0284c7; }
+  .worker-pill.dss { border-color: #fde68a; background: #fef3c7; color: #d97706; }
+  .worker-pill.euroasia { border-color: #ddd6fe; background: #ede9fe; color: #7c3aed; }
+  .worker-pill.other { border-color: #cbd5e1; background: #f1f5f9; color: #475569; }
   
   .worker-pill.selected-pill {
     border: 2px solid #2563eb !important;
@@ -194,11 +214,11 @@
   /* VUE ORGANIGRAMME */
   #orgchart-view { display: none; padding: 20px 0; overflow-x: auto; min-height: 60vh; }
   .org-level-top { text-align: center; margin-bottom: 40px; }
-  .org-level-top span { background: #0f172a; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 800; font-size: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+  .org-level-top span { background: #1e293b; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 800; font-size: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
   .org-managers-grid { display: flex; gap: 24px; align-items: flex-start; justify-content: center; flex-wrap: wrap; }
   .org-manager-col { display: flex; flex-direction: column; align-items: center; background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); min-width: 280px; position: relative; }
   .org-manager-name { font-size: 15px; font-weight: 800; color: #0f172a; margin-bottom: 4px; text-align: center; text-transform: uppercase; }
-  .org-manager-total { font-size: 11px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 4px 10px; border-radius: 12px; margin-bottom: 16px; }
+  .org-manager-total { font-size: 11px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 2px 8px; border-radius: 12px; margin-bottom: 16px; }
   .org-sups-list { display: flex; flex-direction: column; gap: 12px; width: 100%; border-top: 2px solid #f1f5f9; padding-top: 16px; }
   .org-sup-card { background: #ffffff; border: 1px solid #cbd5e1; border-left-width: 5px; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
   .org-sup-name { font-size: 14px; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
@@ -225,7 +245,7 @@
   .modal-select { padding: 10px 12px; font-size: 13px; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; width: 100%; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 
-  /* FLOATING ACTION BUTTON */
+  /* FLOATING ACTION BUTTON (Déplacement de masse) */
   #fab-move { display:none; position:fixed; bottom:30px; right:30px; background:#2563eb; color:white; padding:16px 24px; border-radius:30px; box-shadow:0 10px 25px rgba(37,99,235,0.4); cursor:pointer; font-weight:800; font-size:15px; z-index:1500; align-items:center; gap:10px; transition: transform 0.2s; }
   #fab-move:hover { transform: scale(1.05); background:#1d4ed8; }
   #fab-count { background:white; color:#2563eb; padding:2px 8px; border-radius:12px; font-size:14px; }
@@ -346,7 +366,7 @@
 <div id="ts-tasks-modal" class="modal-overlay">
   <div class="modal-box">
     <div class="modal-title">⚙️ Colonnes de pointage</div>
-    <p style="font-size:12px; color:#64748b; margin-top:-8px;">Définissez les tâches qui apparaîtront en colonnes sur la feuille imprimée (non visible sur le Dashboard).</p>
+    <p style="font-size:12px; color:#64748b; margin-top:-8px;">Définissez les tâches qui apparaîtront en colonnes sur la feuille imprimée.</p>
     <div id="ts-tasks-list" style="display:flex; flex-direction:column; gap:8px; margin-top:8px; max-height: 250px; overflow-y:auto; padding-right:4px;"></div>
     <button class="btn btn-outline" style="margin-top:8px; justify-content:center;" onclick="addTsTaskInput()">+ Ajouter une colonne</button>
     <div class="modal-actions" style="margin-top:12px;">
@@ -375,21 +395,20 @@
 <!-- DRAWER: Base Ouvriers -->
 <div id="workers-drawer" class="drawer">
   <div class="drawer-header">
-    <h3 style="font-size:18px; font-weight:800; margin:0;">👷 Base Ouvriers</h3>
+    <h3 style="font-size:16px; font-weight:800; margin:0;">👷 Base Ouvriers</h3>
     <button class="btn-close-drawer" onclick="toggleDrawer()">&times;</button>
   </div>
   
   <div style="display: flex; gap: 8px; margin-top: 4px;">
     <input type="file" id="db-file-input" accept=".xlsx, .xls" style="display:none" onchange="importWorkersDB(event)">
-    <button class="btn btn-success" id="btn-import-db" style="width:100%; justify-content:center;" onclick="document.getElementById('db-file-input').click()">📥 Importer Excel Global</button>
+    <button class="btn btn-success" id="btn-import-db" style="font-size:11px; padding:6px 10px; width:100%;" onclick="document.getElementById('db-file-input').click()">📥 Importer Base Excel</button>
   </div>
 
-  <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:16px; border-radius:12px; display:flex; flex-direction:column; gap:8px; margin-top:8px;">
-    <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase;">Création Manuelle</div>
-    <input type="text" id="new-w-id" placeholder="ID / N° (ex: W-123)" style="padding:8px 10px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; outline:none;">
-    <input type="text" id="new-w-name" placeholder="Nom Complet" style="padding:8px 10px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; outline:none;">
-    <select id="new-w-comp" class="dynamic-comp-select" style="padding:8px 10px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; outline:none;"></select>
-    <button class="btn btn-outline" style="justify-content:center;" onclick="addManualWorker()">+ Ajouter</button>
+  <div style="background:#f1f5f9; padding:10px; border-radius:8px; display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+    <input type="text" id="new-w-id" placeholder="ID / N° (ex: W-123)" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;">
+    <input type="text" id="new-w-name" placeholder="Nom Complet" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;">
+    <select id="new-w-comp" class="dynamic-comp-select" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;"></select>
+    <button class="btn btn-outline" style="font-size:11px; padding:4px; justify-content:center;" onclick="addManualWorker()">+ Ajout Manuel</button>
   </div>
 
   <h4 style="font-size:13px; font-weight:800; margin-top:12px; padding-bottom:8px; border-bottom:1px solid #e2e8f0;">Ouvriers Non Assignés</h4>
@@ -410,7 +429,7 @@
     <button class="btn btn-blue" onclick="openGuideModal()">📖 Guide</button>
 
     <div class="role-container">
-      <span class="role-label">Profil:</span>
+      <span class="role-label">PROFIL :</span>
       <select id="role-selector" class="role-select" onchange="changeRole(this.value)">
         <option value="viewer">👁️ Lecteur</option>
         <option value="timekeeper">⏱️ Timekeeper</option>
@@ -451,10 +470,10 @@
     <div class="kpi-header">
       <div>
         <div class="title-editable" contenteditable="false" id="chart-title">RIVIERA TOWER SUPERVISION AND WORKERS ORGANISATION CHART</div>
-        <div class="title-editable" style="font-size: 12px; color: #64748b; font-weight: 600; margin-top: 4px;" contenteditable="false">WEEKS 37 / 38 &bull; REAL-TIME WORKFORCE ALLOCATION</div>
+        <div class="title-editable" style="font-size: 11px; color: #64748b; font-weight: 600; margin-top: 3px;" contenteditable="false">WEEKS 37 / 38 &bull; REAL-TIME WORKFORCE ALLOCATION</div>
       </div>
       <div class="total-badge-container">
-        <span class="total-label">Effectif Total Chantier</span>
+        <span class="total-label">Effectif Total Chantier :</span>
         <span class="total-number" id="grand-total">0</span>
       </div>
     </div>
@@ -472,13 +491,13 @@
       <div class="summary-box">
         <div class="summary-title">Effectifs par Lot de Travaux</div>
         <div class="pill-group">
-          <div class="stat-pill"><span class="tag-color" style="background:#ea580c;"></span><span style="color:#64748b;">CIVIL:</span><span class="count" id="cat-civil">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#2563eb;"></span><span style="color:#64748b;">TRADES:</span><span class="count" id="cat-trades">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#0891b2;"></span><span style="color:#64748b;">FAÇADE:</span><span class="count" id="cat-facade">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#8b5cf6;"></span><span style="color:#64748b;">LOGISTIC:</span><span class="count" id="cat-logistic">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#059669;"></span><span style="color:#64748b;">EXTERNAL:</span><span class="count" id="cat-external">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#475569;"></span><span style="color:#64748b;">INDIRECT:</span><span class="count" id="cat-indirect">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#dc2626;"></span><span style="color:#64748b;">PLANT:</span><span class="count" id="cat-plant">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#ea580c;"></span><span>CIVIL:</span><span class="count" id="cat-civil">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#2563eb;"></span><span>TRADES:</span><span class="count" id="cat-trades">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#0891b2;"></span><span>FAÇADE:</span><span class="count" id="cat-facade">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#8b5cf6;"></span><span>LOGISTIC:</span><span class="count" id="cat-logistic">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#059669;"></span><span>EXTERNAL:</span><span class="count" id="cat-external">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#475569;"></span><span>INDIRECT:</span><span class="count" id="cat-indirect">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#dc2626;"></span><span>PLANT:</span><span class="count" id="cat-plant">0</span></div>
         </div>
       </div>
     </div>
@@ -603,7 +622,6 @@ const CATEGORY_INFO = [
   { id: 'plant', name: 'PLANT & EQUIPMENT', color: '#dc2626' }
 ];
 
-// DONNÉES GLOBALES
 let cardsData = [];
 let unassignedWorkers = [];
 let payrollCounts = {};
@@ -880,8 +898,8 @@ function renderCards() {
       let workersHtml = card.tasks.flatMap((t, tIdx) => (t.workerList || []).map(w => {
         let colorClass = 'other';
         if(w.company === 'SKYBUILDING') colorClass = 'skybuilding';
-        if(w.company === 'DSS') colorClass = 'dss';
-        if(w.company === 'EUROASIA') colorClass = 'euroasia';
+        else if(w.company === 'DSS') colorClass = 'dss';
+        else if(w.company === 'EUROASIA') colorClass = 'euroasia';
         
         return `<div class="worker-pill ${colorClass}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="${cIdx}" data-tidx="${tIdx}" onclick="toggleWorkerSelection(this)">
           ${w.id} - ${w.name}
@@ -1126,6 +1144,7 @@ function confirmWorkerMove() {
       
       const workerObj = { id: wId, name: wName, company: wComp };
       
+      // Retirer l'ouvrier de son emplacement actuel
       if (cIdx === -1) { 
          unassignedWorkers = unassignedWorkers.filter(w => w.id !== wId); 
       } else {
@@ -1134,8 +1153,12 @@ function confirmWorkerMove() {
          }
       }
       
+      // Ajouter l'ouvrier dans son nouvel emplacement
       if (targetCIdx === -1) { 
-         unassignedWorkers.push(workerObj); 
+         // Empecher les doublons dans unassignedWorkers
+         if(!unassignedWorkers.find(w => w.id === wId)) {
+             unassignedWorkers.push(workerObj); 
+         }
       } else {
          let targetTaskIdx = cardsData[targetCIdx].tasks.findIndex(t => t.source === wComp);
          if (targetTaskIdx === -1) {
@@ -1148,7 +1171,8 @@ function confirmWorkerMove() {
   });
   
   closeWorkerModal(); 
-  updateFab(); 
+  document.getElementById('fab-move').style.display = 'none'; // Masquer le bouton proprement
+  recalculateTotals(); // Mettre à jour les compteurs avant le render
   renderCards(); 
   renderDrawer(); 
   syncToFirebase();
@@ -1161,8 +1185,8 @@ function renderDrawer() {
   dz.innerHTML = unassignedWorkers.map(w => {
     let colorClass = 'other';
     if(w.company === 'SKYBUILDING') colorClass = 'skybuilding';
-    if(w.company === 'DSS') colorClass = 'dss';
-    if(w.company === 'EUROASIA') colorClass = 'euroasia';
+    else if(w.company === 'DSS') colorClass = 'dss';
+    else if(w.company === 'EUROASIA') colorClass = 'euroasia';
     
     return `<div class="worker-pill ${colorClass}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="unassigned" data-tidx="unassigned" onclick="toggleWorkerSelection(this)">
       ${w.id} - ${w.name}
@@ -1209,7 +1233,6 @@ function updateTaskForeman(cIdx, tIdx, val) { if (currentRole === 'viewer' || cu
 function updateTaskDesc(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].desc = val.trim(); syncToFirebase(); }
 function updateTaskSource(cIdx, tIdx, val, el) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].source = val; recalculateTotals(); syncToFirebase(); }
 
-// MODIFIÉ : updateWorkerCount gère la case vide ""
 function updateWorkerCount(cIdx, tIdx, val) { 
   if (currentRole === 'viewer' || currentRole === 'cfo') return; 
   cardsData[cIdx].tasks[tIdx].workers = (val.trim() === "") ? "" : parseInt(val); 
@@ -1226,11 +1249,46 @@ function addTask(cIdx) {
   syncToFirebase(); 
 }
 
-function removeTask(cIdx, tIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks.splice(tIdx, 1); renderCards(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); }
+function removeTask(cIdx, tIdx) { 
+  if (currentRole === 'viewer' || currentRole === 'cfo') return; 
+  
+  // Renvoyer les ouvriers à la base avant de supprimer la ligne
+  const task = cardsData[cIdx].tasks[tIdx];
+  if (task && task.workerList) {
+      task.workerList.forEach(w => {
+          if (!unassignedWorkers.find(uw => uw.id === w.id)) unassignedWorkers.push(w);
+      });
+  }
+  
+  cardsData[cIdx].tasks.splice(tIdx, 1); 
+  renderCards(); 
+  renderDrawer();
+  syncToFirebase(); 
+  if(currentView==='orgchart') renderOrgChart(); 
+}
 
 function addNewSupervisor() { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData.unshift({ name: "NOUVEAU SUPERVISEUR", manager: "", category: "trades", timesheetNo: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "", foreman: "", source: siteCompanies[0], workers: "", workerList: [] }] }); renderCards(); syncToFirebase(); }
 
-function removeSupervisor(cIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; if (confirm(`Supprimer ${cardsData[cIdx].name} ?`)) { cardsData.splice(cIdx, 1); renderCards(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); } }
+function removeSupervisor(cIdx) { 
+  if (currentRole === 'viewer' || currentRole === 'cfo') return; 
+  if (confirm(`Supprimer ${cardsData[cIdx].name} ?`)) { 
+      
+      // Renvoyer tous les ouvriers de toutes les tâches à la base
+      cardsData[cIdx].tasks.forEach(t => {
+          if (t.workerList) {
+              t.workerList.forEach(w => {
+                  if (!unassignedWorkers.find(uw => uw.id === w.id)) unassignedWorkers.push(w);
+              });
+          }
+      });
+      
+      cardsData.splice(cIdx, 1); 
+      renderCards(); 
+      renderDrawer();
+      syncToFirebase(); 
+      if(currentView==='orgchart') renderOrgChart(); 
+  } 
+}
 
 function updatePayroll(company, val) {
   if (currentRole === 'viewer' || currentRole === 'timekeeper') return;
@@ -1398,7 +1456,7 @@ function executePrint() {
     if (!card) return;
 
     let taskHeaders = card.printTasks !== undefined ? [...card.printTasks] : card.tasks.map(t => (t.foreman ? `[${t.foreman}] ` : '') + t.desc).filter(d => d.trim() !== "");
-    taskHeaders.push('', ''); // Les 2 colonnes vierges garanties
+    taskHeaders.push('', ''); 
 
     let taskThs = taskHeaders.map(th => `<th class="ts-task-col">${th || '&nbsp;'}</th>`).join('');
 
@@ -1437,7 +1495,6 @@ function executePrint() {
 
     const totalPagesPerDay = Math.ceil(allRows.length / WORKERS_PER_PAGE);
 
-    // Boucle sur les 6 jours
     for (let d = 0; d < 6; d++) {
       let currentDate = new Date(baseDate);
       currentDate.setDate(currentDate.getDate() + d);
@@ -1510,6 +1567,32 @@ function exportBackup() {
   dlAnchorElem.setAttribute("href", dataStr);
   dlAnchorElem.setAttribute("download", `site_backup_${new Date().toISOString().split('T')[0]}.json`);
   document.body.appendChild(dlAnchorElem); dlAnchorElem.click(); dlAnchorElem.remove();
+}
+
+function importBackup(event) {
+  if (currentRole === 'viewer') return;
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (parsed.cardsData) {
+        cardsData = parsed.cardsData;
+        payrollCounts = parsed.payrollCounts || {};
+        unassignedWorkers = parsed.unassignedWorkers || [];
+        if (parsed.companies) siteCompanies = parsed.companies;
+        renderCompanySelects();
+        renderPayrollTable();
+        renderCards(); 
+        renderDrawer(); 
+        syncToFirebase();
+        alert("Sauvegarde restaurée avec succès !");
+      } else { alert("Fichier invalide."); }
+    } catch (err) { alert("Erreur : " + err.message); }
+    event.target.value = "";
+  };
+  reader.readAsText(file);
 }
 
 // --- IMPORTATION EXCEL GLOBALE (POINTAGE) ---
