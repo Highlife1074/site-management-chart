@@ -1,38 +1,65 @@
-<!-- 
-==========================================
-MODIFICATIONS DANS : index.html
-==========================================
--->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Riviera Tower Supervision</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
 
-<!-- --- AVANT (Zone de tes filtres en haut de page) --- -->
-<select id="managerSelect" onchange="window.applyFilters()">
-    <!-- options -->
-</select>
-<select id="supervisorSelect" onchange="window.applyFilters()">
-    <!-- options -->
-</select>
+    <!-- ZONE DE CONTRÔLE (Filtres) -->
+    <div id="controls-section">
+        <!-- Attribut 'multiple' ajouté pour permettre la multi-sélection -->
+        <label>Manager :</label>
+        <select id="managerSelect" multiple onchange="window.applyFilters()">
+            <!-- Options générées dynamiquement -->
+        </select>
+        
+        <label>Superviseur :</label>
+        <select id="supervisorSelect" multiple onchange="window.applyFilters()">
+            <!-- Options générées dynamiquement -->
+        </select>
 
-<!-- --- APRÈS --- -->
-<!-- Ajout de l'attribut "multiple" pour permettre la multi-sélection -->
-<select id="managerSelect" multiple onchange="window.applyFilters()">
-    <!-- options -->
-</select>
-<select id="supervisorSelect" multiple onchange="window.applyFilters()">
-    <!-- options -->
-</select>
+        <button onclick="window.printDisplayedTimesheets()">🖨️ Sélectionner et Imprimer (Masse)</button>
+    </div>
 
-<!-- ========================================== -->
+    <!-- ZONE D'AFFICHAGE DES CARTES -->
+    <div id="cards-container">
+        <!-- 
+        EXEMPLE DE CARTE : Si tu génères ce HTML via JavaScript dans renderCards(), 
+        intègre cette structure avec les attributs window.handleCheck et window.printSingleTimesheet 
+        -->
+        <div class="card" data-category="civil">
+            <div class="card-header">
+                <h3>Nom_du_Superviseur</h3>
+                
+                <!-- CORRECTION BUG 1 : Appel explicite à window.handleCheck -->
+                <label>
+                    <input type="checkbox" value="Nom_du_Superviseur" onchange="window.handleCheck(this)"> 
+                    Sélectionner
+                </label>
+                
+                <!-- CORRECTION BUG 2 : Nouveau bouton d'impression directe (à masquer selon le rôle si besoin) -->
+                <button class="btn-print-single" onclick="window.printSingleTimesheet('Nom_du_Superviseur')">
+                    🖨️ Imprimer cette fiche
+                </button>
+            </div>
+            
+            <div class="tasks-container">
+                <!-- Sous-tâches (Drag & Drop SortableJS) -->
+                <div class="task">
+                    <h4>Chef_Equipe - Ferraillage (DSS)</h4>
+                    <ul class="worker-list">
+                        <li>Ouvrier 1 (DSS)</li>
+                        <li>Ouvrier 2 (DSS)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<!-- --- AVANT (Dans la structure de tes cartes, si tu les as en dur ou en template) --- -->
-<div class="card-header">
-    <h3>Nom du Superviseur</h3>
-</div>
-
-<!-- --- APRÈS --- -->
-<!-- Ajout du bouton d'impression (Si tu génères ce HTML via JavaScript dans renderCards, il faut ajouter ce bouton dans ta template JS avec ${card.name}) -->
-<div class="card-header">
-    <h3>Nom du Superviseur</h3>
-    <button class="print-single-btn" onclick="window.printSingleTimesheet('Nom du Superviseur')">
-        🖨️ Imprimer la fiche
-    </button>
-</div>
+    <!-- SCRIPTS -->
+    <!-- ... [Tes scripts externes : Firebase, SortableJS, SheetJS] -->
+    <script src="app.js"></script>
+</body>
+</html>
