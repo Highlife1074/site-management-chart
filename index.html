@@ -327,7 +327,7 @@
 <div id="error-banner"></div>
 
 <!-- BOUTONS FLOTTANTS -->
-<div id="fab-move" onclick="openMultiMoveModal(event)">
+<div id="fab-move" onmousedown="event.stopPropagation()" onclick="openMultiMoveModal(event)">
   ➡️ Déplacer <span id="fab-count">0</span> ouvrier(s)
 </div>
 
@@ -346,6 +346,12 @@
           <button class="btn btn-outline" onclick="printDB()">🖨️ Imprimer</button>
        </div>
     </div>
+    
+    <!-- NOUVEAU : BARRE DE RECHERCHE -->
+    <div style="margin-bottom: 10px;">
+        <input type="text" id="db-search-input" class="modal-select" placeholder="🔍 Rechercher un nom, ID ou entreprise..." oninput="filterDBTable(this.value)">
+    </div>
+
     <div style="overflow-y:auto; flex-grow:1; border:1px solid #cbd5e1; border-radius:8px;">
        <table class="payroll-table" style="width:100%; text-align:left;">
          <thead style="background:#f1f5f9; position:sticky; top:0; z-index:10;">
@@ -887,15 +893,35 @@ function handleCheck(cIdx, isChecked) {
   else selectedForPrint.delete(cIdx);
 }
 
-// --- BASE DE DONNÉES GLOBALE ---
+// --- BASE DE DONNÉES GLOBALE & RECHERCHE ---
 function openDBModal() {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
+  document.getElementById('db-search-input').value = ""; // Reset recherche
   renderDBTable();
   document.getElementById('db-modal').style.display = 'flex';
 }
 
 function closeDBModal() {
   document.getElementById('db-modal').style.display = 'none';
+}
+
+// NOUVELLE FONCTION DE FILTRE
+function filterDBTable(query) {
+  const lowerQuery = query.toLowerCase();
+  const rows = document.querySelectorAll('#db-table-body tr');
+  
+  rows.forEach(row => {
+     // On cherche dans les inputs (value) ou dans le texte des spans/td
+     const idText = row.cells[0].querySelector('input').value.toLowerCase();
+     const nameText = row.cells[1].querySelector('input').value.toLowerCase();
+     const companyText = row.cells[2].querySelector('select').value.toLowerCase();
+     
+     if (idText.includes(lowerQuery) || nameText.includes(lowerQuery) || companyText.includes(lowerQuery)) {
+        row.style.display = '';
+     } else {
+        row.style.display = 'none';
+     }
+  });
 }
 
 function renderDBTable() {
@@ -928,6 +954,10 @@ function renderDBTable() {
      });
   });
   tbody.innerHTML = html;
+  
+  // Appliquer le filtre si l'input n'est pas vide suite à un rafraîchissement (Firebase par ex)
+  const currentQuery = document.getElementById('db-search-input').value;
+  if(currentQuery) filterDBTable(currentQuery);
 }
 
 function editWorker(oldId, field, newVal, context, cIdx, tIdx, inputEl) {
