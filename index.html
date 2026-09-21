@@ -54,6 +54,13 @@
   .btn-icon { padding: 8px 10px; background: #f1f5f9; color: #334155; }
   .btn-icon:hover { background: #e2e8f0; }
 
+  /* ONGLETS VUES */
+  .view-toggle-group { display: flex; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; }
+  .view-toggle-btn { background: white; color: #475569; border: none; padding: 6px 12px; font-size: 11px; font-weight: 700; cursor: pointer; border-right: 1px solid #cbd5e1; transition: 0.2s; outline: none;}
+  .view-toggle-btn:last-child { border-right: none; }
+  .view-toggle-btn:hover { background: #f1f5f9; }
+  .view-toggle-btn.active { background: #e0f2fe; color: #0284c7; font-weight: 800; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+
   /* MENU ADMIN */
   #admin-dropdown { display: none; position: absolute; top: 40px; right: 0; background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 12px; z-index: 100; min-width: 200px; flex-direction: column; gap: 8px; }
 
@@ -222,7 +229,7 @@
     box-shadow: 0 4px 10px rgba(37,99,235,0.2) !important;
   }
 
-  /* VUE ORGANIGRAMME */
+  /* VUE ORGANIGRAMME DETAILLE */
   #orgchart-view { display: none; padding: 20px 0; overflow-x: auto; min-height: 60vh; }
   .org-level-top { text-align: center; margin-bottom: 40px; }
   .org-level-top span { background: #1e293b; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 800; font-size: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
@@ -240,6 +247,24 @@
   .org-foreman-card::before { content: ""; position: absolute; left: -16px; top: 50%; width: 16px; height: 2px; background: #e2e8f0; }
   .org-foreman-name { font-size: 11px; font-weight: 700; color: #334155; }
   .org-foreman-meta { font-size: 10px; font-weight: 800; color: #059669; background: #d1fae5; padding: 2px 8px; border-radius: 12px; }
+
+  /* VUE ARBRE (TREE) */
+  #orgchart-tree-view { display: none; padding: 20px 0; overflow-x: auto; min-height: 60vh; }
+  .tree-managers-grid { display: flex; flex-wrap: wrap; gap: 30px; justify-content: center; align-items: flex-start; }
+  .tree-manager-col { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); min-width: 320px; flex: 1; max-width: 400px; }
+  .tree-mgr-node { font-size: 16px; font-weight: 800; color: #0f172a; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+  .tree-mgr-total { font-size: 12px; background: #1e293b; color: white; padding: 3px 8px; border-radius: 12px; }
+  .tree-sups-container { display: flex; flex-direction: column; gap: 24px; }
+  .tree-sup-container { position: relative; }
+  .tree-sup-node { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.02); z-index: 2; position: relative; }
+  .tree-sup-name { font-size: 14px; font-weight: 800; color: #1e3a8a; text-transform: uppercase; }
+  .tree-sup-total { font-size: 12px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 3px 10px; border-radius: 12px; border: 1px solid #bfdbfe; }
+  .tree-ts-container { display: flex; flex-direction: column; gap: 10px; padding-left: 25px; margin-top: 10px; position: relative; }
+  .tree-ts-container::before { content: ''; position: absolute; left: 12px; top: -10px; bottom: 18px; width: 2px; background: #cbd5e1; z-index: 1; }
+  .tree-ts-node { background: white; border: 1px solid #e2e8f0; border-top-width: 4px; border-radius: 6px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 2; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+  .tree-ts-node::before { content: ''; position: absolute; left: -13px; top: 50%; width: 13px; height: 2px; background: #cbd5e1; }
+  .tree-ts-label { font-size: 12px; font-weight: 800; color: #334155; }
+  .tree-ts-count { font-size: 11px; font-weight: 800; color: #0f172a; background: #f1f5f9; padding: 3px 8px; border-radius: 6px; }
 
   /* DRAWER */
   .drawer { position: fixed; top: 0; right: -380px; width: 380px; height: 100vh; background: white; box-shadow: -4px 0 15px rgba(0,0,0,0.05); transition: right 0.3s ease; z-index: 1000; padding: 24px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; border-left: 1px solid #e2e8f0; }
@@ -306,11 +331,9 @@
     body:not(.print-mode-ts):not(.print-mode-db) .sup-name-select { border: none; background: transparent; color: #0f172a !important; -webkit-appearance: none; }
     body:not(.print-mode-ts):not(.print-mode-db) .task-desc { border: none; padding: 0; }
     body:not(.print-mode-ts):not(.print-mode-db) .task-foreman span { border: none; }
-    body:not(.print-mode-ts):not(.print-mode-db) #orgchart-view { display: block !important; padding: 0; overflow: visible; }
-    body:not(.print-mode-ts):not(.print-mode-db) .org-manager-col { break-inside: avoid; border: 1px solid #94a3b8; }
     
     /* PRINT TS */
-    body.print-mode-ts .top-bar, body.print-mode-ts .dashboard-container, body.print-mode-ts #orgchart-view, body.print-mode-ts #workers-drawer, body.print-mode-ts .modal-overlay, body.print-mode-ts #fab-move, body.print-mode-ts #fab-drawer, body.print-mode-ts #fab-print-container { display: none !important; }
+    body.print-mode-ts .top-bar, body.print-mode-ts .dashboard-container, body.print-mode-ts #orgchart-view, body.print-mode-ts #orgchart-tree-view, body.print-mode-ts #workers-drawer, body.print-mode-ts .modal-overlay, body.print-mode-ts #fab-move, body.print-mode-ts #fab-drawer, body.print-mode-ts #fab-print-container { display: none !important; }
     body.print-mode-ts #timesheet-print-zone { display: block !important; width: 100%; }
 
     .ts-page { page-break-after: always; font-family: Arial, sans-serif; color: #000; width: 100%; position: relative; }
@@ -328,7 +351,7 @@
     .ts-table td:last-child { border: 2px solid #000; }
 
     /* PRINT DB */
-    body.print-mode-db .top-bar, body.print-mode-db .dashboard-container, body.print-mode-db #orgchart-view, body.print-mode-db #workers-drawer, body.print-mode-db .modal-overlay, body.print-mode-db #fab-move, body.print-mode-db #fab-drawer, body.print-mode-db #fab-print-container { display: none !important; }
+    body.print-mode-db .top-bar, body.print-mode-db .dashboard-container, body.print-mode-db #orgchart-view, body.print-mode-db #orgchart-tree-view, body.print-mode-db #workers-drawer, body.print-mode-db .modal-overlay, body.print-mode-db #fab-move, body.print-mode-db #fab-drawer, body.print-mode-db #fab-print-container { display: none !important; }
     body.print-mode-db #db-print-zone { display: block !important; width: 100%; }
     .db-print-table { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 12px; }
     .db-print-table th, .db-print-table td { border: 1px solid #000; padding: 6px; text-align: left; }
@@ -389,7 +412,6 @@
            </tr>
          </thead>
          <tbody id="db-table-body">
-           <!-- Généré en JS -->
          </tbody>
        </table>
     </div>
@@ -405,35 +427,14 @@
     <div class="modal-title">📖 Timesheet Management Guide</div>
     <div class="guide-content">
       <p>Welcome! Your primary goal as the Timekeeper is to make sure every worker is assigned to the correct supervisor, all numbers match, and the official Timesheets are printed and ready every Friday afternoon for the upcoming week.</p>
-      
       <h2>Step 1: Log in to Your Profile</h2>
-      <ul>
-        <li>In the top right corner, find the <strong>Profil</strong> drop-down menu.</li>
-        <li>Select <strong>⏱️ Timekeeper</strong> and enter your password. This unlocks your ability to move workers and print documents.</li>
-      </ul>
-
+      <ul><li>In the top right corner, find the <strong>Profil</strong> drop-down menu.</li><li>Select <strong>⏱️ Timekeeper</strong> and enter your password. This unlocks your ability to move workers and print documents.</li></ul>
       <h2>Step 2: Clear the "Unassigned" List</h2>
-      <ul>
-        <li>Click the floating <strong>👷 Base Ouvriers</strong> button at the bottom right.</li>
-        <li>Look at the <strong>"Ouvriers Non Assignés"</strong> box. If there are names here, they are not on any Timesheet.</li>
-        <li>Click on several workers (or drag them simultaneously) to assign them directly into the Supervisor's box.</li>
-      </ul>
-
+      <ul><li>Click the floating <strong>👷 Base Ouvriers</strong> button at the bottom right.</li><li>Look at the <strong>"Ouvriers Non Assignés"</strong> box. If there are names here, they are not on any Timesheet.</li><li>Click on several workers (or drag them simultaneously) to assign them directly into the Supervisor's box.</li></ul>
       <h2>Step 3: Check for Red Warnings ⚠️</h2>
-      <ul>
-        <li>On every task, there is a counter: <strong>👥 12 / 12</strong> (Actual names assigned / Manual planned number).</li>
-        <li>If a box is <strong>RED</strong>, you have a mismatch (too many people, or not enough).</li>
-        <li>Find the missing workers and assign them into the correct box.</li>
-        <li><strong>If you cannot fix it:</strong> Alert the <strong>Cost Control Team</strong> immediately so they can investigate.</li>
-      </ul>
-
+      <ul><li>On every task, there is a counter: <strong>👥 12 / 12</strong> (Actual names assigned / Manual planned number).</li><li>If a box is <strong>RED</strong>, you have a mismatch (too many people, or not enough).</li><li>Find the missing workers and assign them into the correct box.</li><li><strong>If you cannot fix it:</strong> Alert the <strong>Cost Control Team</strong> immediately so they can investigate.</li></ul>
       <h2>Step 4: The Friday Printing Routine</h2>
-      <ul>
-        <li>Check the small <strong>square box (☑)</strong> for every Supervisor who needs a Timesheet.</li>
-        <li>Click the black <strong>📄 Imprimer TS</strong> button.</li>
-        <li>Select the date of the <strong>next Monday</strong>.</li>
-        <li>The system will automatically generate 6 pages per team (Monday to Saturday), properly paginated (max 15 workers per page), with signature blocks on every page.</li>
-      </ul>
+      <ul><li>Check the small <strong>square box (☑)</strong> for every Supervisor who needs a Timesheet.</li><li>Click the black <strong>📄 Imprimer TS</strong> button.</li><li>Select the date of the <strong>next Monday</strong>.</li><li>The system will automatically generate 6 pages per team (Monday to Saturday), properly paginated (max 15 workers per page), with signature blocks on every page.</li></ul>
     </div>
     <div class="modal-actions">
       <button class="btn btn-black" onclick="window.closeGuideModal()">J'ai compris</button>
@@ -542,7 +543,13 @@
       </select>
     </div>
 
-    <button id="btn-toggle-view" class="btn btn-outline" onclick="window.toggleView()">🗺️ Organigramme</button>
+    <!-- NOUVEAUX ONGLETS -->
+    <div class="view-toggle-group">
+        <button id="btn-view-dash" class="view-toggle-btn active" onclick="window.switchView('dashboard')">📊 Cartes</button>
+        <button id="btn-view-org" class="view-toggle-btn" onclick="window.switchView('orgchart')">🗺️ Détails</button>
+        <button id="btn-view-tree" class="view-toggle-btn" onclick="window.switchView('tree')">🌳 Arbre</button>
+    </div>
+
     <div class="divider"></div>
 
     <button class="btn btn-outline" onclick="window.openDBModal()" title="Éditer la base de données de tous les ouvriers">🗃️ Base Globale</button>
@@ -643,8 +650,9 @@
 
 </div>
 
-<!-- VUE ORGANIGRAMME -->
+<!-- VUES ORGANIGRAMMES -->
 <div id="orgchart-view"></div>
+<div id="orgchart-tree-view"></div>
 
 <!-- ZONES D'IMPRESSION CACHÉES -->
 <div id="timesheet-print-zone"></div>
@@ -774,20 +782,29 @@ window.checkVisibleTS = function() {
     window.updatePrintButtons();
 };
 
-window.toggleView = function() {
-  if (currentView === 'dashboard') {
-    currentView = 'orgchart';
-    document.getElementById('dashboard-view').style.display = 'none';
-    document.getElementById('orgchart-view').style.display = 'block';
-    document.getElementById('btn-toggle-view').innerHTML = '📊 Tableau de bord';
-    window.renderOrgChart();
-  } else {
-    currentView = 'dashboard';
-    document.getElementById('dashboard-view').style.display = 'flex';
-    document.getElementById('orgchart-view').style.display = 'none';
-    document.getElementById('btn-toggle-view').innerHTML = '🗺️ Organigramme';
-  }
-}
+window.switchView = function(viewName) {
+    currentView = viewName;
+    
+    document.getElementById('dashboard-view').style.display = viewName === 'dashboard' ? 'flex' : 'none';
+    document.getElementById('orgchart-view').style.display = viewName === 'orgchart' ? 'block' : 'none';
+    document.getElementById('orgchart-tree-view').style.display = viewName === 'tree' ? 'block' : 'none';
+    
+    document.getElementById('btn-view-dash').classList.toggle('active', viewName === 'dashboard');
+    document.getElementById('btn-view-org').classList.toggle('active', viewName === 'orgchart');
+    document.getElementById('btn-view-tree').classList.toggle('active', viewName === 'tree');
+    
+    window.refreshActiveView();
+};
+
+window.refreshActiveView = function() {
+    if (currentView === 'dashboard') {
+        renderCards();
+    } else if (currentView === 'orgchart') {
+        window.renderOrgChart();
+    } else if (currentView === 'tree') {
+        window.renderOrgChartTree();
+    }
+};
 
 window.toggleDrawer = function() { document.getElementById('workers-drawer').classList.toggle('open'); }
 
@@ -957,7 +974,6 @@ window.setFilter = function(catId) {
   renderCards();
 }
 
-// CORRECTION SORTABLEJS : FILTER POUR NE PAS BLOQUER LA CASE À COCHER
 function initLayout() {
   document.getElementById('role-selector').value = currentRole;
 
@@ -987,7 +1003,7 @@ function initLayout() {
       handle: '.drag-handle', 
       animation: 150, 
       ghostClass: 'sortable-ghost',
-      filter: "input, select, button, .ts-checkbox", // Laisse les clics passer
+      filter: "input, select, button, .ts-checkbox, .ts-btn-config, .cat-select", // BOUCLIER POUR NE PAS BLOQUER LES CLICS DANS LE HEADER
       preventOnFilter: false,
       onEnd: function (evt) { window.reorderCardsBasedOnDOM(); }
     });
@@ -1033,8 +1049,7 @@ setTimeout(() => {
         
         renderCompanySelects();
         renderPayrollTable();
-        renderCards();
-        if (currentView === 'orgchart') window.renderOrgChart();
+        window.refreshActiveView();
         renderDrawer();
         if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
         window.updateFab(); 
@@ -1117,7 +1132,7 @@ window.cleanDuplicates = function() {
   if (removedCount > 0) {
       alert(`✅ Nettoyage terminé : ${removedCount} doublon(s) supprimé(s).`);
       window.recalculateTotals();
-      renderCards();
+      window.refreshActiveView();
       renderDrawer();
       if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
       window.syncToFirebase();
@@ -1215,7 +1230,7 @@ window.editWorker = function(oldId, field, newVal, context, cIdx, tIdx, inputEl)
          if(index !== -1) cardsData[cIdx].tasks[tIdx].workerList.splice(index, 1);
        }
        window.syncToFirebase();
-       renderCards();
+       window.refreshActiveView();
        renderDrawer();
        renderDBTable();
        return;
@@ -1227,7 +1242,7 @@ window.editWorker = function(oldId, field, newVal, context, cIdx, tIdx, inputEl)
 
   w[field] = newVal.trim();
   window.syncToFirebase();
-  renderCards();
+  window.refreshActiveView();
   renderDrawer();
 }
 
@@ -1241,7 +1256,7 @@ window.deleteWorkerFromDB = function(wId, context, cIdx, tIdx) {
      if(index !== -1) cardsData[cIdx].tasks[tIdx].workerList.splice(index, 1);
   }
   window.syncToFirebase();
-  renderCards();
+  window.refreshActiveView();
   renderDrawer();
   renderDBTable();
 }
@@ -1324,7 +1339,7 @@ window.addCompany = function() {
      renderCompaniesList();
      renderCompanySelects();
      renderPayrollTable();
-     renderCards();
+     window.refreshActiveView();
      window.syncToFirebase();
   }
 }
@@ -1335,7 +1350,7 @@ window.removeCompany = function(comp) {
      renderCompaniesList();
      renderCompanySelects();
      renderPayrollTable();
-     renderCards();
+     window.refreshActiveView();
      window.syncToFirebase();
   }
 }
@@ -1349,7 +1364,8 @@ function renderPayrollTable() {
   </tr>`;
   
   siteCompanies.forEach(comp => {
-    const compId = comp.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const safeComp = comp ? String(comp) : 'OTHER';
+    const compId = safeComp.toLowerCase().replace(/[^a-z0-9]/g, '');
     let color = '#94a3b8';
     if(comp === 'SKYBUILDING') color = '#0284c7';
     if(comp === 'DSS') color = '#d97706';
@@ -1365,7 +1381,7 @@ function renderPayrollTable() {
   document.getElementById('payroll-table-body').innerHTML = html;
 }
 
-// --- AFFICHAGE CARTES ---
+// --- AFFICHAGE CARTES (MULTI-FILTRES) ---
 function renderCards() {
   try {
     updateFilterDropdowns(); 
@@ -1456,13 +1472,13 @@ function renderCards() {
           </div>
           <div class="task-desc" contenteditable="true" onblur="window.updateTaskDesc(${cIdx}, ${tIdx}, this.innerText)">${t.desc || ''}</div>
           <div class="task-controls">
-            <select class="source-select" style="background:#f1f5f9; color:#0f172a;" onclick="event.stopPropagation()" onchange="window.updateTaskSource(${cIdx}, ${tIdx}, this.value, this)">
+            <select class="source-select" style="background:#f1f5f9; color:#0f172a;" onchange="window.updateTaskSource(${cIdx}, ${tIdx}, this.value, this)">
               ${companyOpts}
             </select>
             <div style="display:flex; align-items:center; gap:6px;">
               <div class="count-comparator ${compClass}" title="${compTitle}">
                 <span style="margin-right:2px; font-weight:700;">👥 ${linkedCount}</span> /
-                <input type="number" min="0" class="worker-count-input" placeholder="${linkedCount}" value="${hasManualOverride ? manualCount : ''}" onclick="event.stopPropagation()" oninput="window.updateWorkerCount(${cIdx}, ${tIdx}, this.value)" />
+                <input type="number" min="0" class="worker-count-input" placeholder="${linkedCount}" value="${hasManualOverride ? manualCount : ''}" oninput="window.updateWorkerCount(${cIdx}, ${tIdx}, this.value)" />
               </div>
               <span class="btn-delete-task" title="Supprimer cette ligne" onclick="window.removeTask(${cIdx}, ${tIdx})">&times;</span>
             </div>
@@ -1491,7 +1507,7 @@ function renderCards() {
       const mismatchIcon = cardHasDiff ? `<span title="Alerte: ${cardLinkedSum} nommés vs ${cardEffectiveSum} saisis" style="color:#dc2626; margin-right:4px;">⚠️</span>` : '';
 
       let supSelectHtml = `
-        <select class="sup-name-select" onclick="event.stopPropagation()" onchange="window.handleSupChange(${cIdx}, this)">
+        <select class="sup-name-select" onchange="window.handleSupChange(${cIdx}, this)">
           <option value="" disabled hidden ${!card.name || card.name === 'Inconnu' || card.name === 'NOUVELLE TIMESHEET' ? 'selected' : ''}>Choisir Superviseur...</option>
           ${siteSupervisors.map(s => `<option value="${s}" ${card.name === s ? 'selected' : ''}>${s}</option>`).join('')}
           <option value="__NEW__" style="font-weight:bold; color:#2563eb;">+ Ajouter un nouveau...</option>
@@ -1501,8 +1517,8 @@ function renderCards() {
       cardEl.innerHTML = `
         <div class="card-header drag-handle" title="Glisser pour déplacer">
           <div style="display:flex; align-items:center; gap:8px;">
-            <input type="checkbox" class="ts-checkbox" title="Sélectionner pour impression TS" onclick="event.stopPropagation()" onchange="window.handleCheck(${cIdx}, this.checked)" ${isChecked}>
-            <select class="cat-select" onclick="event.stopPropagation()" onchange="window.changeCategory(${cIdx}, this.value)">
+            <input type="checkbox" class="ts-checkbox" title="Sélectionner pour impression TS" onchange="window.handleCheck(${cIdx}, this.checked)" ${isChecked}>
+            <select class="cat-select" onchange="window.changeCategory(${cIdx}, this.value)">
               <option value="civil" ${catId==='civil'?'selected':''}>Civil</option>
               <option value="trades" ${catId==='trades'?'selected':''}>Trades</option>
               <option value="facade" ${catId==='facade'?'selected':''}>Façade</option>
@@ -1526,7 +1542,7 @@ function renderCards() {
               <div class="ts-badge" title="Numéro Timesheet">N°: <span contenteditable="true" data-placeholder="N°..." onblur="window.updateTimesheetNo(${cIdx}, this.innerText)">${card.timesheetNo || ''}</span></div>
               <div class="ts-badge" title="Nom de la Timesheet">Nom: <span contenteditable="true" data-placeholder="Nom TS..." onblur="window.updateTimesheetName(${cIdx}, this.innerText)">${card.timesheetName || ''}</span></div>
               <div class="ts-badge">
-                <select class="ts-select" onclick="event.stopPropagation()" onchange="window.updateShiftType(${cIdx}, this.value)">
+                <select class="ts-select" onchange="window.updateShiftType(${cIdx}, this.value)">
                   <option value="Shift 1" ${sType==='Shift 1'?'selected':''}>Shift 1</option>
                   <option value="Shift 2" ${sType==='Shift 2'?'selected':''}>Shift 2</option>
                   <option value="Night" ${sType==='Night'?'selected':''}>Night</option>
@@ -1574,18 +1590,17 @@ window.handleSupChange = function(cIdx, selectEl) {
         cardsData[cIdx].name = val;
     }
     window.syncToFirebase();
-    renderCards();
-    if(currentView === 'orgchart') window.renderOrgChart();
+    window.refreshActiveView();
 }
 
 window.updateTimesheetName = function(cIdx, val) { 
   if (currentRole === 'viewer' || currentRole === 'cfo') return; 
   cardsData[cIdx].timesheetName = val.trim(); 
   window.syncToFirebase(); 
-  if(currentView === 'orgchart') window.renderOrgChart(); 
+  if(currentView === 'orgchart' || currentView === 'tree') window.refreshActiveView(); 
 }
 
-// ORGANIGRAMME MODIFIÉ : AFFICHAGE CLAIR DU N° ET NOM DE LA TIMESHEET
+// --- VUE 2 : ORGANIGRAMME DETAILLE ---
 window.renderOrgChart = function() {
   const container = document.getElementById('orgchart-view');
   const groups = {};
@@ -1664,6 +1679,84 @@ window.renderOrgChart = function() {
   container.innerHTML = html;
 }
 
+// --- VUE 3 : ARBORESCENCE SIMPLIFIÉE ---
+window.renderOrgChartTree = function() {
+  const container = document.getElementById('orgchart-tree-view');
+  const groups = {}; 
+
+  cardsData.forEach(c => {
+     let mgr = (c.manager && c.manager.trim() !== '') ? c.manager.trim().toUpperCase() : 'SANS RESPONSABLE';
+     let sup = (c.name && c.name.trim() !== '') ? c.name.trim().toUpperCase() : 'INCONNU';
+
+     if(!groups[mgr]) groups[mgr] = {};
+     if(!groups[mgr][sup]) groups[mgr][sup] = [];
+
+     let cardWorkers = 0;
+     if (c.tasks) {
+         c.tasks.forEach(t => {
+             const linked = t.workerList ? t.workerList.length : 0;
+             const hasM = t.workers !== undefined && t.workers !== null && t.workers !== "";
+             const manual = hasM ? parseInt(t.workers) : linked;
+             cardWorkers += Math.max(manual, linked);
+         });
+     }
+
+     let tsNo = c.timesheetNo && c.timesheetNo.trim() !== '' ? c.timesheetNo.trim() : '';
+     let tsName = c.timesheetName && c.timesheetName.trim() !== '' ? c.timesheetName.trim() : '';
+     let tsLabel = [tsNo, tsName].filter(x => x).join(' - ') || 'TS Non définie';
+
+     groups[mgr][sup].push({
+         label: tsLabel,
+         workers: cardWorkers,
+         cat: c.category
+     });
+  });
+
+  let html = `<div class="org-level-top"><span>ARBORESCENCE DES ÉQUIPES</span></div><div class="tree-managers-grid">`;
+
+  Object.keys(groups).sort().forEach(mgr => {
+     let supsHtml = '';
+     let mgrTotal = 0;
+
+     Object.keys(groups[mgr]).sort().forEach(sup => {
+         let tsHtml = '';
+         let supTotal = 0;
+
+         groups[mgr][sup].forEach(ts => {
+             supTotal += ts.workers;
+             const catColor = CATEGORY_INFO.find(cat => cat.id === ts.cat)?.color || '#94a3b8';
+
+             tsHtml += `
+             <div class="tree-ts-node" style="border-left-color: ${catColor}">
+                <div class="tree-ts-label">📄 ${ts.label}</div>
+                <div class="tree-ts-count">${ts.workers} wkrs</div>
+             </div>`;
+         });
+         mgrTotal += supTotal;
+
+         supsHtml += `
+         <div class="tree-sup-container">
+             <div class="tree-sup-node">
+                 <div class="tree-sup-name">👷‍♂️ ${sup}</div>
+                 <div class="tree-sup-total">${supTotal} wkrs</div>
+             </div>
+             <div class="tree-ts-container">
+                 ${tsHtml}
+             </div>
+         </div>`;
+     });
+
+     html += `
+     <div class="tree-manager-col">
+        <div class="tree-mgr-node">👔 ${mgr} <span class="tree-mgr-total">${mgrTotal} wkrs</span></div>
+        <div class="tree-sups-container">${supsHtml}</div>
+     </div>`;
+  });
+
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
 // --- GESTION DU MULTI-SELECT ET DRAG DROP ---
 function initWorkerSortables() {
   workerSortables.forEach(s => s.destroy());
@@ -1725,8 +1818,8 @@ window.handleWorkerDrop = function(evt) {
   }
 
   window.recalculateTotals();
-  renderCards();
-  renderDrawer();
+  window.refreshActiveView();
+  window.renderDrawer();
   window.updateFab();
   window.syncToFirebase();
 }
@@ -1825,7 +1918,7 @@ window.confirmWorkerMove = function() {
   window.closeWorkerModal(); 
   document.getElementById('fab-move').style.display = 'none';
   window.recalculateTotals(); 
-  renderCards(); 
+  window.refreshActiveView(); 
   window.renderDrawer(); 
   window.syncToFirebase();
 }
@@ -1896,17 +1989,17 @@ window.reorderCardsBasedOnDOM = function() {
   renderCards(); window.syncToFirebase();
 }
 
-window.updateManager = function(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].manager = val.trim(); window.syncToFirebase(); if(currentView==='orgchart') window.renderOrgChart(); }
+window.updateManager = function(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].manager = val.trim(); window.syncToFirebase(); if(currentView !== 'dashboard') window.refreshActiveView(); }
 window.updateShiftType = function(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].shiftType = val; window.syncToFirebase(); }
 window.updateShiftHours = function(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].shiftHours = val.trim(); window.syncToFirebase(); }
-window.updateTaskForeman = function(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].foreman = val.trim(); window.syncToFirebase(); if(currentView==='orgchart') window.renderOrgChart(); }
+window.updateTaskForeman = function(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].foreman = val.trim(); window.syncToFirebase(); if(currentView !== 'dashboard') window.refreshActiveView(); }
 window.updateTaskDesc = function(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].desc = val.trim(); window.syncToFirebase(); }
 window.updateTaskSource = function(cIdx, tIdx, val, el) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].source = val; window.recalculateTotals(); window.syncToFirebase(); }
 
 window.updateWorkerCount = function(cIdx, tIdx, val) { 
   if (currentRole === 'viewer' || currentRole === 'cfo') return; 
   cardsData[cIdx].tasks[tIdx].workers = (val.trim() === "") ? "" : parseInt(val); 
-  renderCards(); window.syncToFirebase(); if(currentView==='orgchart') window.renderOrgChart(); 
+  renderCards(); window.syncToFirebase(); if(currentView !== 'dashboard') window.refreshActiveView(); 
 }
 
 window.changeCategory = function(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].category = val; renderCards(); window.syncToFirebase(); }
@@ -1933,7 +2026,7 @@ window.removeTask = function(cIdx, tIdx) {
   renderCards(); 
   window.renderDrawer();
   window.syncToFirebase(); 
-  if(currentView==='orgchart') window.renderOrgChart(); 
+  if(currentView !== 'dashboard') window.refreshActiveView(); 
 }
 
 window.addNewSupervisor = function() { 
@@ -1975,7 +2068,7 @@ window.removeSupervisor = function(cIdx) {
       renderCards(); 
       window.renderDrawer();
       window.syncToFirebase(); 
-      if(currentView==='orgchart') window.renderOrgChart(); 
+      if(currentView !== 'dashboard') window.refreshActiveView(); 
   } 
 }
 
@@ -2007,13 +2100,14 @@ window.recalculateTotals = function() {
         cardLinkedSum += lCount;
         if(hasM && lCount !== eCount) cardHasDiff = true;
 
-        if (compTotals[t.source] !== undefined) {
-           compTotals[t.source] += eCount;
+        let safeSource = t.source ? String(t.source) : siteCompanies[0];
+        if (compTotals[safeSource] !== undefined) {
+           compTotals[safeSource] += eCount;
         } else {
-           if (!siteCompanies.includes(t.source)) {
-              siteCompanies.push(t.source);
+           if (!siteCompanies.includes(safeSource)) {
+              siteCompanies.push(safeSource);
            }
-           compTotals[t.source] = eCount;
+           compTotals[safeSource] = eCount;
         }
       });
     }
@@ -2040,7 +2134,8 @@ window.recalculateTotals = function() {
   document.getElementById("cat-plant").innerText = cats.plant;
 
   siteCompanies.forEach(comp => {
-     const compId = comp.toLowerCase().replace(/[^a-z0-9]/g, '');
+     const safeComp = comp ? String(comp) : 'OTHER';
+     const compId = safeComp.toLowerCase().replace(/[^a-z0-9]/g, '');
      const tsTotal = compTotals[comp] || 0;
      const elTotal = document.getElementById(`total-${compId}`);
      if (elTotal) elTotal.innerText = tsTotal;
