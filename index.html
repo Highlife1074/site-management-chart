@@ -1682,7 +1682,118 @@ window.updatePayroll = function(company, val) {
   payrollCounts[company] = parseInt(val) || 0;
   window.recalculateTotals(); window.syncToFirebase();
 }
+// ==========================================
+// 5.5 FONCTIONS D'INITIALISATION ET UI (MANQUANTES)
+// ==========================================
 
+window.initLayout = function() {
+  const board = document.getElementById('categories-board');
+  if (!board) return;
+  
+  let html = `<div id="alpha-section" class="category-section" style="display:none;">
+             <div class="category-title">🔤 VUE ALPHABÉTIQUE (TOUS)</div>
+             <div class="cards-grid" id="grid-alpha"></div>
+           </div>`;
+
+  CATEGORY_INFO.forEach(cat => {
+    html += `<div id="section-${cat.id}" class="category-section">
+               <div class="category-title" style="color: ${cat.color};">${cat.name}</div>
+               <div class="cards-grid" id="grid-${cat.id}"></div>
+             </div>`;
+  });
+  board.innerHTML = html;
+
+  const filterBar = document.getElementById('filter-bar');
+  if(filterBar) {
+     let fHtml = `<button class="filter-btn active" id="filter-all" onclick="window.setFilter('all')">Tout Afficher</button>
+                  <button class="filter-btn" id="filter-alpha" onclick="window.setFilter('alpha')">🔤 Tri Alphabétique</button>`;
+     CATEGORY_INFO.forEach(cat => {
+        fHtml += `<button class="filter-btn" id="filter-${cat.id}" onclick="window.setFilter('${cat.id}')">${cat.name}</button>`;
+     });
+     filterBar.innerHTML = fHtml;
+  }
+}
+
+window.setFilter = function(filterId) {
+   currentFilterCat = filterId;
+   document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+   const activeBtn = document.getElementById(`filter-${filterId}`);
+   if(activeBtn) activeBtn.classList.add('active');
+
+   document.querySelectorAll('.category-section').forEach(sec => {
+      if (filterId === 'all') {
+         sec.style.display = sec.id === 'alpha-section' ? 'none' : 'block';
+      } else if (filterId === 'alpha') {
+         sec.style.display = sec.id === 'alpha-section' ? 'block' : 'none';
+      } else {
+         sec.style.display = sec.id === `section-${filterId}` ? 'block' : 'none';
+      }
+   });
+   window.renderCards();
+}
+
+window.switchView = function(view) {
+    currentView = view;
+    document.querySelectorAll('.view-toggle-btn').forEach(btn => btn.classList.remove('active'));
+    
+    document.getElementById('dashboard-view').style.display = view === 'dashboard' ? 'flex' : 'none';
+    document.getElementById('orgchart-view').style.display = view === 'orgchart' ? 'block' : 'none';
+    document.getElementById('orgchart-tree-view').style.display = view === 'tree' ? 'block' : 'none';
+    
+    if (view === 'dashboard') {
+        document.getElementById('btn-view-dash').classList.add('active');
+        window.renderCards();
+    } else if (view === 'orgchart') {
+        document.getElementById('btn-view-org').classList.add('active');
+        window.renderOrgChart();
+    } else if (view === 'tree') {
+        document.getElementById('btn-view-tree').classList.add('active');
+        window.renderOrgChartTree();
+    }
+};
+
+window.changeRole = function(newRole) {
+    if (newRole !== 'viewer') {
+        const pwd = prompt(`Entrez le mot de passe pour le rôle : ${newRole}`);
+        if (pwd !== PASSWORDS[newRole]) {
+            alert('Mot de passe incorrect.');
+            document.getElementById('role-selector').value = currentRole;
+            return;
+        }
+    }
+    currentRole = newRole;
+    localStorage.setItem('app_role', currentRole);
+    window.applyRolePermissions();
+    window.renderCards();
+    window.renderDrawer();
+};
+
+window.toggleDrawer = function() {
+    const drawer = document.getElementById('workers-drawer');
+    if(drawer) drawer.classList.toggle('open');
+};
+
+// Fonctions Modals basiques pour éviter les erreurs de clic
+window.openGuideModal = function() { document.getElementById('guide-modal').style.display = 'flex'; }
+window.closeGuideModal = function() { document.getElementById('guide-modal').style.display = 'none'; }
+window.openDBModal = function() { document.getElementById('db-modal').style.display = 'flex'; window.renderDBTable(); }
+window.closeDBModal = function() { document.getElementById('db-modal').style.display = 'none'; }
+window.toggleAdminMenu = function() { 
+    const menu = document.getElementById('admin-dropdown');
+    menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex'; 
+}
+window.openPrintModal = function() { document.getElementById('print-modal').style.display = 'flex'; }
+window.closePrintModal = function() { document.getElementById('print-modal').style.display = 'none'; }
+window.handleCheck = function(cIdx, isChecked) {
+    if(isChecked) selectedForPrint.add(cIdx);
+    else selectedForPrint.delete(cIdx);
+    window.updatePrintButtons();
+}
+window.uncheckAllTS = function() {
+    selectedForPrint.clear();
+    document.querySelectorAll('.ts-checkbox').forEach(cb => cb.checked = false);
+    window.updatePrintButtons();
+}
 // ==========================================
 // 6. INITIALISATION PRINCIPALE DU SCRIPT
 // ==========================================
