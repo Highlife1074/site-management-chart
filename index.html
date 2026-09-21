@@ -20,81 +20,84 @@
 
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, sans-serif; }
-  body { background: #f8fafc; padding: 20px; color: #0f172a; overflow-x: hidden; }
+  body { background: #f1f5f9; padding: 20px 30px; color: #0f172a; overflow-x: hidden; }
 
-  #error-banner { display: none; background: #fef2f2; color: #991b1b; padding: 12px; margin: 0 auto 16px auto; max-width: 1540px; border: 1px solid #f87171; border-radius: 8px; font-weight: 600; }
+  #error-banner { display: none; background: #fef2f2; color: #991b1b; padding: 12px; margin: 0 auto 16px auto; max-width: 1600px; border: 1px solid #f87171; border-radius: 8px; font-weight: 600; }
 
-  .top-bar { max-width: 1540px; margin: 0 auto 16px auto; display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 14px 20px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.04); }
-  .top-bar-title h1 { font-size: 18px; font-weight: 800; }
-  .sync-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #64748b; margin-top: 2px; }
-  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; }
+  /* TOP BAR MODERNE */
+  .top-bar { max-width: 1600px; margin: 0 auto 24px auto; display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 16px 24px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .top-bar-title h1 { font-size: 18px; font-weight: 800; margin:0; }
+  .top-bar-title span.subtitle { color: #94a3b8; font-weight: 500; }
+  .sync-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #16a34a; margin-top: 4px; }
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; }
 
-  .actions-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .actions-group { display: flex; gap: 12px; align-items: center; position: relative; }
   
-  .role-container { display: flex; align-items: center; gap: 6px; background: #f1f5f9; padding: 6px 10px; border-radius: 8px; border: 1px solid #cbd5e1; margin-right: 10px; }
-  .role-label { font-size: 11px; font-weight: 800; color: #475569; letter-spacing: 0.5px; }
-  .role-select { font-size: 12px; font-weight: 700; border: none; background: transparent; outline: none; cursor: pointer; color: #0f172a; }
+  .role-container { display: flex; align-items: center; gap: 6px; background: #f8fafc; padding: 6px 12px; border-radius: 6px; border: 1px solid #cbd5e1; }
+  .role-label { font-size: 12px; font-weight: 700; color: #475569; }
+  .role-select { font-size: 12px; font-weight: 700; border: none; background: transparent; outline: none; cursor: pointer; color: #2563eb; }
 
-  .btn { background: #2563eb; color: white; border: none; padding: 8px 12px; font-size: 12px; font-weight: 600; border-radius: 7px; cursor: pointer; transition: background 0.15s; }
-  .btn:hover { background: #1d4ed8; }
+  .btn { border: none; padding: 8px 16px; font-size: 13px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 6px; }
   .btn-outline { background: white; color: #334155; border: 1px solid #cbd5e1; }
-  .btn-outline:hover { background: #f1f5f9; color: #0f172a; }
-  .btn-success { background: #059669; }
+  .btn-outline:hover { background: #f8fafc; color: #0f172a; }
+  .btn-success { background: #059669; color: white; }
   .btn-success:hover { background: #047857; }
-  .btn-warning { background: #f59e0b; }
-  .btn-warning:hover { background: #d97706; }
   .btn-purple { background: #7c3aed; color: white; }
   .btn-purple:hover { background: #6d28d9; }
   .btn-black { background: #0f172a; color: white; }
   .btn-black:hover { background: #334155; }
   .btn-blue { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
   .btn-blue:hover { background: #bae6fd; }
+  .btn-danger { background: white; color: #dc2626; border: 1px solid #fca5a5; }
+  .btn-danger:hover { background: #fef2f2; }
+  .btn-icon { padding: 8px 12px; background: #e2e8f0; color: #334155; }
+  .btn-icon:hover { background: #cbd5e1; }
 
-  .dashboard-container { max-width: 1540px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+  /* MENU ADMIN */
+  #admin-dropdown { display: none; position: absolute; top: 45px; right: 0; background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 12px; z-index: 100; min-width: 200px; flex-direction: column; gap: 8px; }
 
-  .kpi-board { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px 22px; box-shadow: 0 3px 6px rgba(0,0,0,0.03); }
-  .kpi-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 14px; }
-  .title-editable { font-size: 19px; font-weight: 800; color: #1e3a8a; outline: none; }
-  .total-badge-container { display: flex; align-items: center; gap: 10px; }
-  .total-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; }
-  .total-number { background: #1e3a8a; color: white; font-size: 22px; font-weight: 800; padding: 4px 16px; border-radius: 30px; box-shadow: 0 4px 10px rgba(30,58,138,0.2); }
+  .dashboard-container { max-width: 1600px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
 
-  .summaries-row { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; }
-  .summary-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; }
-  .summary-title { font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 8px; }
+  .kpi-board { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+  .kpi-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 16px; margin-bottom: 16px; }
+  .title-editable { font-size: 20px; font-weight: 800; color: #0f172a; outline: none; }
+  .total-badge-container { display: flex; align-items: center; gap: 12px; }
+  .total-label { font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+  .total-number { background: #0f172a; color: white; font-size: 24px; font-weight: 800; padding: 6px 20px; border-radius: 30px; box-shadow: 0 4px 10px rgba(15,23,42,0.15); }
+
+  .summaries-row { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
+  .summary-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; }
+  .summary-title { font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 10px; }
   
-  .pill-group { display: flex; flex-wrap: wrap; gap: 6px; }
-  .stat-pill { display: flex; align-items: center; gap: 5px; background: white; border: 1px solid #e2e8f0; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .pill-group { display: flex; flex-wrap: wrap; gap: 8px; }
+  .stat-pill { display: flex; align-items: center; gap: 6px; background: white; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
   .stat-pill .tag-color { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
   .stat-pill .count { font-weight: 800; color: #0f172a; margin-left: 2px; }
 
-  .payroll-table { width: 100%; border-collapse: collapse; font-size: 11.5px; font-weight: 600; }
-  .payroll-table th { text-align: left; color: #64748b; padding-bottom: 4px; border-bottom: 1px solid #e2e8f0; }
-  .payroll-table td { padding: 5px 0; border-bottom: 1px solid #f1f5f9; }
-  .payroll-input { width: 56px; font-size: 12px; font-weight: 800; text-align: center; padding: 3px 4px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; color: #0f172a; }
+  .payroll-table { width: 100%; border-collapse: collapse; font-size: 12px; font-weight: 600; }
+  .payroll-table th { text-align: left; color: #64748b; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; font-size: 11px; text-transform: uppercase; }
+  .payroll-table td { padding: 6px 0; border-bottom: 1px solid #f1f5f9; }
+  .payroll-input { width: 60px; font-size: 13px; font-weight: 800; text-align: center; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; color: #0f172a; }
   .payroll-input:focus { border-color: #2563eb; background: #eff6ff; }
-  .payroll-input:disabled { background: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; cursor: not-allowed; }
-  .diff-badge { padding: 3px 8px; border-radius: 12px; font-size: 10.5px; font-weight: 800; display: inline-block; min-width: 32px; text-align: center; }
-  .diff-ok { background: #dcfce7; color: #166534; }
-  .diff-warn { background: #fee2e2; color: #991b1b; }
+  .payroll-input:disabled { background: transparent; border: none; }
+  .diff-badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 800; display: inline-block; min-width: 36px; text-align: center; }
+  .diff-ok { background: #f1f5f9; color: #475569; }
+  .diff-warn { background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; }
 
   .filter-bar { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 8px; }
-  .filter-btn { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; background: #ffffff; color: #64748b; border: 1px solid #cbd5e1; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
-  .filter-btn:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
-  .filter-btn.active { background: #1e293b; color: white; border-color: #1e293b; }
+  .filter-btn { padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; background: #ffffff; color: #64748b; border: 1px solid #cbd5e1; transition: 0.15s; }
+  .filter-btn:hover { background: #f8fafc; color: #0f172a; }
+  .filter-btn.active { background: #0f172a; color: white; border-color: #0f172a; }
 
-  .category-section { margin-top: 10px; margin-bottom: 20px; }
-  .category-title { font-size: 14px; font-weight: 800; padding-bottom: 6px; margin-bottom: 12px; text-transform: uppercase; }
-  .cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; min-height: 90px; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 10px; }
+  .category-section { margin-top: 10px; margin-bottom: 24px; }
+  .category-title { font-size: 15px; font-weight: 800; padding-bottom: 8px; margin-bottom: 16px; text-transform: uppercase; }
   
-  .card { background: white; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; border-top: 4px solid #94a3b8; transition: transform 0.15s, box-shadow 0.15s; position: relative; }
-  .card:hover { box-shadow: 0 6px 12px rgba(0,0,0,0.08); }
+  .cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; min-height: 100px; padding: 10px 0; }
   
-  .ts-checkbox { width: 16px; height: 16px; cursor: pointer; accent-color: #2563eb; }
-  .drag-handle { cursor: grab; }
-  .drag-handle:active { cursor: grabbing; }
-  .sortable-ghost { opacity: 0.3; background: #e2e8f0; border: 2px dashed #94a3b8; transform: scale(0.98); }
-
+  /* CARTE SUPERVISEUR */
+  .card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; border-top: 4px solid #94a3b8; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.15s; position: relative; }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); }
+  
   .cat-civil { border-top-color: #ea580c !important; }
   .cat-trades { border-top-color: #2563eb !important; }
   .cat-facade { border-top-color: #0891b2 !important; }
@@ -103,142 +106,143 @@
   .cat-indirect { border-top-color: #475569 !important; }
   .cat-plant { border-top-color: #dc2626 !important; }
 
-  .card-header { padding: 8px 12px; background: #fafafa; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
-  .cat-select { font-size: 10px; font-weight: 700; text-transform: uppercase; border: 1px solid #cbd5e1; border-radius: 5px; padding: 2px 4px; outline: none; cursor: pointer; }
-  .card-total-badge { font-size: 10.5px; font-weight: 800; background: #e0e7ff; color: #3730a3; padding: 2px 7px; border-radius: 10px; display:inline-flex; align-items:center; }
+  .card-header { padding: 16px 16px 12px 16px; border-bottom: 1px solid #f1f5f9; position: relative; cursor: grab; background: #ffffff; }
+  .card-header:active { cursor: grabbing; }
+  
+  .card-meta-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .manager-name { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; outline: none; border-bottom: 1px dotted #cbd5e1; display: inline-block; cursor: text; }
+  .manager-name:empty:before { content: "AJOUTER MANAGER N+1"; color: #cbd5e1; }
+  
+  .sup-name { font-size: 16px; font-weight: 800; color: #0f172a; outline: none; width: 100%; display: block; margin-top: 2px; }
+  
+  .card-total-badge { font-size: 11px; font-weight: 800; padding: 4px 8px; border-radius: 20px; display: inline-flex; align-items: center; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; }
   .card-total-badge.error { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
 
-  .card-title-row { padding: 8px 12px 6px 12px; display: flex; justify-content: space-between; align-items: flex-start; }
-  .sup-name { font-size: 13px; font-weight: 800; outline: none; width: 100%; color: #0f172a; margin-top: 2px; }
+  .ts-badges-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .ts-pill { background: #f1f5f9; color: #475569; font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; }
+  .ts-pill span, .ts-pill select { background: transparent; border: none; font-size: 11px; font-weight: 700; color: #2563eb; outline: none; cursor: pointer; padding: 0; }
+  .ts-pill span:empty:before { content: "---"; color: #94a3b8; }
   
-  .manager-field { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; display: flex; align-items: center; gap: 4px; }
-  .manager-name { color: #0284c7; outline: none; border-bottom: 1px dotted #cbd5e1; min-width: 60px; display: inline-block; cursor: text; }
-  .manager-name:empty:before { content: "Nom N+1"; color: #94a3b8; }
-
-  .ts-badge-container { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; align-items: center; }
-  .ts-badge { font-size: 10px; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 1px 4px; color: #475569; display: inline-flex; align-items: center; gap: 3px; }
-  .ts-badge span { outline: none; min-width: 20px; display: inline-block; color: #2563eb; }
-  .ts-badge span:empty:before { content: attr(data-placeholder); color: #94a3b8; }
-  .ts-select { border: none; background: transparent; font-size: 10px; font-weight: 700; color: #475569; outline: none; cursor: pointer; }
-
-  .ts-btn-config { border: 1px solid #cbd5e1; background: white; color: #475569; padding: 1px 6px; font-size: 10px; font-weight: 700; border-radius: 4px; cursor: pointer; transition: 0.15s; }
+  .ts-btn-config { border: 1px solid #cbd5e1; background: white; color: #475569; padding: 2px 6px; font-size: 10px; font-weight: 700; border-radius: 4px; cursor: pointer; transition: 0.15s; }
   .ts-btn-config:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
 
-  .btn-remove-card { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: -2px; }
+  .btn-remove-card { position: absolute; top: 12px; right: 12px; background: none; border: none; color: #cbd5e1; cursor: pointer; font-size: 18px; font-weight: bold; margin-top: -2px; }
   .btn-remove-card:hover { color: #dc2626; }
 
-  .card-body { padding: 4px 12px 10px 12px; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; }
-  .task-item { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+  .card-body { padding: 16px; flex-grow: 1; display: flex; flex-direction: column; gap: 12px; background: #fdfdfd; }
   
-  .task-foreman { font-size: 9.5px; font-weight: 700; color: #64748b; margin-bottom: 2px; display: flex; align-items: center; gap: 4px; text-transform: uppercase; }
+  .task-item { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+  
+  .task-foreman { font-size: 10px; font-weight: 700; color: #059669; display: flex; align-items: center; gap: 4px; text-transform: uppercase; }
   .task-foreman span { color: #059669; outline: none; border-bottom: 1px dotted #a7f3d0; display: inline-block; cursor: text; min-width: 80px; }
   .task-foreman span:empty:before { content: "+ NOM DU FOREMAN"; color: #a7f3d0; }
 
-  .task-desc { font-size: 11px; font-weight: 600; color: #1e293b; outline: none; line-height: 1.35; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 4px; padding: 4px 6px; min-height: 24px; }
-  .task-desc:focus { border-style: solid; border-color: #2563eb; background: #eff6ff; }
+  .task-desc { font-size: 12px; font-weight: 600; color: #1e293b; outline: none; line-height: 1.4; min-height: 20px; }
+  .task-desc:focus { background: #eff6ff; border-radius: 4px; padding: 2px; margin: -2px; }
 
-  .task-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 3px; }
+  .task-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
   
-  .source-select { font-size: 10px; font-weight: 700; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 4px; outline: none; cursor: pointer; }
-  .source-select.skybuilding { color: #0284c7; }
-  .source-select.dss { color: #d97706; }
-  .source-select.euroasia { color: #7c3aed; }
-  .source-select.other { color: #64748b; }
-  .source-select:disabled { background: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; cursor: not-allowed; }
+  .source-select { appearance: none; background: #f1f5f9; color: #0f172a; font-size: 10px; font-weight: 800; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; outline: none; }
+  .source-select:disabled { cursor: not-allowed; opacity: 0.7; }
 
-  .count-comparator { display: flex; align-items: center; gap: 4px; border: 1px solid; border-radius: 4px; padding: 2px 4px; background: white; font-weight: 800; font-size: 11px; }
-  .count-comparator.diff-warn { border-color: #fca5a5; background: #fef2f2; color: #dc2626; }
-  .count-comparator.diff-ok { border-color: #cbd5e1; background: #ffffff; color: #475569; }
-  .count-comparator input { width: 32px; border: none; background: transparent; font-size: 11px; font-weight: 800; text-align: center; color: inherit; padding: 0; outline: none; }
-  .count-comparator input:focus { border-bottom: 1px dashed currentColor; }
-  .count-comparator input:disabled { cursor: not-allowed; opacity: 0.8; }
+  .count-comparator { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #64748b; }
+  .count-comparator.error { color: #dc2626; }
+  .count-comparator input { width: 36px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 4px; font-size: 12px; font-weight: 800; text-align: center; color: inherit; background: white; outline: none; }
+  .count-comparator input::placeholder { color: #94a3b8; font-weight: 600; }
+  .count-comparator.error input { background: #fef2f2; border-color: #fca5a5; }
 
-  .btn-delete-task { cursor: pointer; color: #cbd5e1; font-size: 14px; font-weight: bold; margin-left: 4px; transition: 0.15s; }
+  .btn-delete-task { cursor: pointer; color: #cbd5e1; font-size: 16px; font-weight: bold; margin-left: 4px; transition: 0.15s; }
   .btn-delete-task:hover { color: #dc2626; }
 
-  .btn-add-task { background: transparent; border: 1px dashed #cbd5e1; color: #64748b; font-size: 10px; font-weight: 600; padding: 4px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 2px; }
-  .btn-add-task:hover { background: #f1f5f9; color: #0f172a; }
+  .btn-add-task { background: transparent; border: 1px dashed #cbd5e1; color: #64748b; font-size: 11px; font-weight: 600; padding: 8px; border-radius: 6px; cursor: pointer; width: 100%; transition: 0.15s; }
+  .btn-add-task:hover { background: #f8fafc; color: #0f172a; border-color: #94a3b8; }
 
-  .divider { width: 1px; height: 24px; background: #e2e8f0; margin: 0 4px; }
-
-  /* ZONE PANIER (Dropzone Ouvriers) */
+  /* ZONE PANIER */
   .card-worker-dropzone { 
-    min-height: 36px; 
-    border: 1px dashed #cbd5e1; 
-    border-radius: 6px; 
-    padding: 6px; 
+    margin: 0 16px 16px 16px; 
+    padding: 16px; 
     background: #f8fafc; 
-    margin-top: 8px; 
+    border: 2px dashed #93c5fd; 
+    border-radius: 8px;
+    min-height: 60px; 
     display: flex; 
     flex-wrap: wrap; 
-    gap: 4px;
+    gap: 8px; 
     align-content: flex-start; 
-    transition: background 0.2s; 
   }
   .card-worker-dropzone:empty::before { 
-    content: "Glissez ou cliquez pour assigner"; 
-    font-size: 10px; 
-    color: #94a3b8; 
+    content: "📥 Glissez les ouvriers ici"; 
+    font-size: 11px; 
+    color: #64748b; 
+    font-weight: 600; 
     width: 100%; 
     text-align: center; 
     margin-top: 4px; 
   }
 
-  .worker-pill { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #334155; margin: 2px; transition: transform 0.1s, box-shadow 0.1s; }
-  .worker-pill:hover { transform: scale(1.05); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-  .worker-pill:active { cursor: grabbing; }
-  .worker-pill.skybuilding { border-color: #7dd3fc; background: #e0f2fe; color: #0284c7; }
-  .worker-pill.dss { border-color: #fde68a; background: #fef3c7; color: #d97706; }
-  .worker-pill.euroasia { border-color: #ddd6fe; background: #ede9fe; color: #7c3aed; }
-  .worker-pill.other { border-color: #cbd5e1; background: #f1f5f9; color: #475569; }
-
-  /* DRAWER (Base Ouvriers) */
-  .drawer { position: fixed; top: 0; right: -360px; width: 360px; height: 100vh; background: white; box-shadow: -4px 0 15px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; padding: 20px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
-  .drawer.open { right: 0; }
-  .drawer-header { display: flex; justify-content: space-between; align-items: center; }
-  .btn-close-drawer { background: none; border: none; font-size: 26px; cursor: pointer; color: #64748b; line-height: 1; }
-  .btn-close-drawer:hover { color: #0f172a; }
-
-  /* MODALS */
-  .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.6); display: none; align-items: center; justify-content: center; z-index: 2000; }
-  .modal-box { background: white; padding: 20px; border-radius: 12px; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 12px; max-height: 90vh; overflow-y: auto; }
-  .modal-box.large { width: 600px; }
-  .modal-title { font-size: 15px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
-  .modal-select { padding: 8px; font-size: 13px; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; width: 100%; }
-  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
-
-  /* GUIDE FORMATTING */
-  .guide-content { font-size: 13px; line-height: 1.6; color: #334155; }
-  .guide-content h2 { font-size: 14px; color: #0f172a; margin-top: 16px; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
-  .guide-content ul { padding-left: 20px; margin-bottom: 12px; }
-  .guide-content li { margin-bottom: 4px; }
-  .guide-content strong { color: #0f172a; }
+  .worker-pill { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #334155; transition: transform 0.1s, box-shadow 0.1s; user-select: none; }
+  .worker-pill:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+  
+  .worker-pill.selected-pill {
+    border: 2px solid #2563eb !important;
+    background: #eff6ff !important;
+    color: #1d4ed8 !important;
+    transform: scale(1.05);
+    box-shadow: 0 4px 10px rgba(37,99,235,0.2) !important;
+  }
 
   /* VUE ORGANIGRAMME */
   #orgchart-view { display: none; padding: 20px 0; overflow-x: auto; min-height: 60vh; }
   .org-level-top { text-align: center; margin-bottom: 40px; }
-  .org-level-top span { background: #1e293b; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 800; font-size: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+  .org-level-top span { background: #0f172a; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 800; font-size: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
   .org-managers-grid { display: flex; gap: 24px; align-items: flex-start; justify-content: center; flex-wrap: wrap; }
   .org-manager-col { display: flex; flex-direction: column; align-items: center; background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); min-width: 280px; position: relative; }
   .org-manager-name { font-size: 15px; font-weight: 800; color: #0f172a; margin-bottom: 4px; text-align: center; text-transform: uppercase; }
-  .org-manager-total { font-size: 11px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 2px 8px; border-radius: 12px; margin-bottom: 16px; }
+  .org-manager-total { font-size: 11px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 4px 10px; border-radius: 12px; margin-bottom: 16px; }
   .org-sups-list { display: flex; flex-direction: column; gap: 12px; width: 100%; border-top: 2px solid #f1f5f9; padding-top: 16px; }
-  .org-sup-card { background: #ffffff; border: 1px solid #cbd5e1; border-left-width: 5px; border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-  .org-sup-name { font-size: 13px; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
-  .org-sup-meta { font-size: 10px; color: #64748b; display: flex; justify-content: space-between; font-weight: 600; }
-  .org-foremen-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; border-top: 1px dotted #cbd5e1; padding-top: 8px; padding-left: 8px; position: relative; }
-  .org-foremen-list::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 2px; background: #e2e8f0; }
-  .org-foreman-card { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 8px; position: relative; margin-left: 8px; }
-  .org-foreman-card::before { content: ""; position: absolute; left: -12px; top: 50%; width: 12px; height: 2px; background: #e2e8f0; }
+  .org-sup-card { background: #ffffff; border: 1px solid #cbd5e1; border-left-width: 5px; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+  .org-sup-name { font-size: 14px; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
+  .org-sup-meta { font-size: 11px; color: #64748b; display: flex; justify-content: space-between; font-weight: 600; }
+  .org-foremen-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; border-top: 1px dotted #cbd5e1; padding-top: 12px; padding-left: 12px; position: relative; }
+  .org-foremen-list::before { content: ""; position: absolute; left: 4px; top: 10px; bottom: 10px; width: 2px; background: #e2e8f0; }
+  .org-foreman-card { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 10px; position: relative; margin-left: 8px; }
+  .org-foreman-card::before { content: ""; position: absolute; left: -16px; top: 50%; width: 16px; height: 2px; background: #e2e8f0; }
   .org-foreman-name { font-size: 11px; font-weight: 700; color: #334155; }
-  .org-foreman-meta { font-size: 10px; font-weight: 800; color: #059669; background: #d1fae5; padding: 1px 6px; border-radius: 10px; }
+  .org-foreman-meta { font-size: 10px; font-weight: 800; color: #059669; background: #d1fae5; padding: 2px 8px; border-radius: 12px; }
+
+  /* DRAWER (Base Ouvriers) */
+  .drawer { position: fixed; top: 0; right: -380px; width: 380px; height: 100vh; background: white; box-shadow: -4px 0 15px rgba(0,0,0,0.05); transition: right 0.3s ease; z-index: 1000; padding: 24px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; border-left: 1px solid #e2e8f0; }
+  .drawer.open { right: 0; }
+  .drawer-header { display: flex; justify-content: space-between; align-items: center; }
+  .btn-close-drawer { background: #f1f5f9; border: none; font-size: 20px; cursor: pointer; color: #64748b; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.15s; }
+  .btn-close-drawer:hover { background: #e2e8f0; color: #0f172a; }
+
+  /* MODALS */
+  .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(2px); display: none; align-items: center; justify-content: center; z-index: 2000; }
+  .modal-box { background: white; padding: 24px; border-radius: 16px; width: 420px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 16px; max-height: 90vh; overflow-y: auto; }
+  .modal-box.large { width: 600px; }
+  .modal-title { font-size: 18px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
+  .modal-select { padding: 10px 12px; font-size: 13px; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; width: 100%; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+
+  /* FLOATING ACTION BUTTON */
+  #fab-move { display:none; position:fixed; bottom:30px; right:30px; background:#2563eb; color:white; padding:16px 24px; border-radius:30px; box-shadow:0 10px 25px rgba(37,99,235,0.4); cursor:pointer; font-weight:800; font-size:15px; z-index:1500; align-items:center; gap:10px; transition: transform 0.2s; }
+  #fab-move:hover { transform: scale(1.05); background:#1d4ed8; }
+  #fab-count { background:white; color:#2563eb; padding:2px 8px; border-radius:12px; font-size:14px; }
+
+  /* GUIDE FORMATTING */
+  .guide-content { font-size: 13px; line-height: 1.6; color: #334155; }
+  .guide-content h2 { font-size: 15px; color: #0f172a; margin-top: 16px; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
+  .guide-content ul { padding-left: 20px; margin-bottom: 12px; }
+  .guide-content li { margin-bottom: 4px; }
+  .guide-content strong { color: #0f172a; }
 
   /* STYLE D'IMPRESSION TIMESHEET */
   #timesheet-print-zone { display: none; }
   @media print {
     @page { size: landscape; margin: 10mm; }
     body { padding: 0; background: white; margin: 0; }
-    body:not(.print-mode-ts) .top-bar, body:not(.print-mode-ts) .btn-add-task, body:not(.print-mode-ts) .btn-remove-card, body:not(.print-mode-ts) #error-banner, body:not(.print-mode-ts) .filter-bar, body:not(.print-mode-ts) .btn-delete-task, body:not(.print-mode-ts) .drawer, body:not(.print-mode-ts) .modal-overlay, body:not(.print-mode-ts) .ts-checkbox, body:not(.print-mode-ts) .ts-btn-config { display: none !important; }
+    body:not(.print-mode-ts) .top-bar, body:not(.print-mode-ts) .btn-add-task, body:not(.print-mode-ts) .btn-remove-card, body:not(.print-mode-ts) #error-banner, body:not(.print-mode-ts) .filter-bar, body:not(.print-mode-ts) .btn-delete-task, body:not(.print-mode-ts) .drawer, body:not(.print-mode-ts) .modal-overlay, body:not(.print-mode-ts) .ts-checkbox, body:not(.print-mode-ts) .ts-btn-config, body:not(.print-mode-ts) #fab-move { display: none !important; }
     body:not(.print-mode-ts) .cards-grid { border: none !important; background: transparent !important; padding: 0 !important; gap: 8px; }
     body:not(.print-mode-ts) .category-section { break-inside: avoid; display: block !important; }
     body:not(.print-mode-ts) .card { break-inside: avoid; box-shadow: none !important; border: 1px solid #cbd5e1; }
@@ -267,6 +271,11 @@
 
 <div id="error-banner"></div>
 
+<!-- BOUTON FLOTTANT DEPLACEMENT MASSE -->
+<div id="fab-move" onclick="openMultiMoveModal()">
+  ➡️ Déplacer <span id="fab-count">0</span> ouvrier(s)
+</div>
+
 <!-- MODAL GUIDE -->
 <div id="guide-modal" class="modal-overlay">
   <div class="modal-box large">
@@ -284,14 +293,14 @@
       <ul>
         <li>Click the purple <strong>👷 Base Ouvriers</strong> button at the top.</li>
         <li>Look at the <strong>"Ouvriers Non Assignés"</strong> box. If there are names here, they are not on any Timesheet.</li>
-        <li>Drag and drop their name tag into the correct Supervisor's box, or click on their name to send them to the right team.</li>
+        <li>Click on one or several worker names (they will turn blue), then click the floating button "Déplacer" to assign them to a Supervisor's Timesheet.</li>
       </ul>
 
       <h2>Step 3: Check for Red Warnings ⚠️</h2>
       <ul>
         <li>On every task, there is a counter: <strong>👥 12 / 12</strong> (Actual names assigned / Manual planned number).</li>
         <li>If a box is <strong>RED</strong>, you have a mismatch (too many people, or not enough).</li>
-        <li>Find the missing workers and drag them into the correct box.</li>
+        <li>Find the missing workers and assign them into the correct box.</li>
         <li><strong>If you cannot fix it:</strong> Alert the <strong>Cost Control Team</strong> immediately so they can investigate.</li>
       </ul>
 
@@ -312,7 +321,7 @@
 <!-- MODALS OUVRIER & PRINT & CONFIG -->
 <div id="worker-modal" class="modal-overlay">
   <div class="modal-box">
-    <div class="modal-title">Déplacer l'ouvrier</div>
+    <div class="modal-title">Déplacement des ouvriers</div>
     <p style="font-size:13px; color:#64748b; margin-top:-8px;" id="modal-worker-name"></p>
     <select id="modal-sup-select" class="modal-select"></select>
     <div class="modal-actions">
@@ -347,38 +356,50 @@
   </div>
 </div>
 
+<!-- MODAL GESTION ENTREPRISES -->
+<div id="companies-modal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">🏢 Gérer les Entreprises</div>
+    <p style="font-size:12px; color:#64748b; margin-top:-8px;">Ajoutez de nouveaux sous-traitants pour les assigner aux tâches.</p>
+    <div style="display:flex; gap:8px;">
+       <input type="text" id="new-comp-input" class="modal-select" placeholder="Nom de l'entreprise...">
+       <button class="btn btn-black" onclick="addCompany()">Ajouter</button>
+    </div>
+    <div id="companies-list" style="margin-top:12px; display:flex; flex-direction:column; gap:8px; max-height:200px; overflow-y:auto;"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-outline" onclick="closeCompaniesModal()">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <!-- DRAWER: Base Ouvriers -->
 <div id="workers-drawer" class="drawer">
   <div class="drawer-header">
-    <h3 style="font-size:16px; font-weight:800; margin:0;">👷 Base Ouvriers</h3>
+    <h3 style="font-size:18px; font-weight:800; margin:0;">👷 Base Ouvriers</h3>
     <button class="btn-close-drawer" onclick="toggleDrawer()">&times;</button>
   </div>
   
   <div style="display: flex; gap: 8px; margin-top: 4px;">
     <input type="file" id="db-file-input" accept=".xlsx, .xls" style="display:none" onchange="importWorkersDB(event)">
-    <button class="btn btn-success" id="btn-import-db" style="font-size:11px; padding:6px 10px; width:100%;" onclick="document.getElementById('db-file-input').click()">📥 Importer Base Excel</button>
+    <button class="btn btn-success" id="btn-import-db" style="width:100%; justify-content:center;" onclick="document.getElementById('db-file-input').click()">📥 Importer Excel Global</button>
   </div>
 
-  <div style="background:#f1f5f9; padding:10px; border-radius:8px; display:flex; flex-direction:column; gap:6px; margin-top:8px;">
-    <input type="text" id="new-w-id" placeholder="ID / N° (ex: W-123)" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;">
-    <input type="text" id="new-w-name" placeholder="Nom Complet" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;">
-    <select id="new-w-comp" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;">
-      <option value="SKYBUILDING">SKYBUILDING</option>
-      <option value="DSS">DSS</option>
-      <option value="EUROASIA">EUROASIA</option>
-      <option value="OTHER">AUTRE</option>
-    </select>
-    <button class="btn btn-outline" style="font-size:11px; padding:4px; justify-content:center;" onclick="addManualWorker()">+ Ajout Manuel</button>
+  <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:16px; border-radius:12px; display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+    <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase;">Création Manuelle</div>
+    <input type="text" id="new-w-id" placeholder="ID / N° (ex: W-123)" style="padding:8px 10px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; outline:none;">
+    <input type="text" id="new-w-name" placeholder="Nom Complet" style="padding:8px 10px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; outline:none;">
+    <select id="new-w-comp" class="dynamic-comp-select" style="padding:8px 10px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; outline:none;"></select>
+    <button class="btn btn-outline" style="justify-content:center;" onclick="addManualWorker()">+ Ajouter</button>
   </div>
 
-  <h4 style="font-size:12px; margin-top:10px;">Ouvriers Non Assignés :</h4>
-  <div id="unassigned-dropzone" style="flex-grow:1; border:2px dashed #cbd5e1; border-radius:8px; padding:8px; display:flex; flex-wrap:wrap; align-content:flex-start; background:#f8fafc; overflow-y:auto; gap:4px;"></div>
+  <h4 style="font-size:13px; font-weight:800; margin-top:12px; padding-bottom:8px; border-bottom:1px solid #e2e8f0;">Ouvriers Non Assignés</h4>
+  <div id="unassigned-dropzone" style="flex-grow:1; border:2px dashed #cbd5e1; border-radius:12px; padding:12px; display:flex; flex-wrap:wrap; align-content:flex-start; background:#fdfdfd; overflow-y:auto; gap:6px;"></div>
 </div>
 
 <!-- TOP BAR -->
 <div class="top-bar">
   <div class="top-bar-title">
-    <h1>Riviera Tower Supervision and Workers Organisation Chart</h1>
+    <h1>Riviera Tower <span class="subtitle">| Supervision and Workers Organisation Chart</span></h1>
     <div class="sync-status">
       <span class="sync-dot" id="sync-dot"></span>
       <span id="sync-text">Connexion...</span>
@@ -389,7 +410,7 @@
     <button class="btn btn-blue" onclick="openGuideModal()">📖 Guide</button>
 
     <div class="role-container">
-      <span class="role-label">PROFIL :</span>
+      <span class="role-label">Profil:</span>
       <select id="role-selector" class="role-select" onchange="changeRole(this.value)">
         <option value="viewer">👁️ Lecteur</option>
         <option value="timekeeper">⏱️ Timekeeper</option>
@@ -401,20 +422,25 @@
     <button id="btn-toggle-view" class="btn btn-outline" onclick="toggleView()">🗺️ Organigramme</button>
     <div class="divider"></div>
 
-    <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display:none" onchange="importExcelFile(event)">
-    <button class="btn btn-success" id="btn-import" onclick="document.getElementById('excel-file-input').click()">📥 Importer Pointage</button>
-    <button class="btn btn-outline" id="btn-add-sup" onclick="addNewSupervisor()">+ Sup.</button>
-    
     <button class="btn btn-purple" id="btn-db-toggle" onclick="toggleDrawer()">👷 Base Ouvriers</button>
-    
-    <div class="divider"></div>
     <button class="btn btn-black" id="btn-print-ts" onclick="openPrintModal()">📄 Imprimer TS</button>
-    <button class="btn btn-outline" onclick="window.print()">🖨️ PDF Vue</button>
     
-    <div class="divider"></div>
-    <button class="btn btn-warning" onclick="exportBackup()" title="Sauvegarder">💾</button>
-    <input type="file" id="backup-file-input" accept=".json" style="display:none" onchange="importBackup(event)">
-    <button class="btn btn-outline" onclick="document.getElementById('backup-file-input').click()" title="Restaurer">📂</button>
+    <!-- Bouton Paramètres (Cache les outils techniques) -->
+    <button class="btn btn-icon" id="btn-settings-menu" onclick="toggleAdminMenu()" title="Outils avancés">⚙️</button>
+    
+    <div id="admin-dropdown">
+      <span style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase;">Construction</span>
+      <button class="btn btn-outline" style="width:100%; justify-content:left;" id="btn-add-sup" onclick="addNewSupervisor()">+ Ajout Superviseur</button>
+      <button class="btn btn-outline" style="width:100%; justify-content:left;" onclick="openCompaniesModal()">🏢 Gérer Entreprises</button>
+      <hr style="border:0; border-top:1px solid #e2e8f0; margin:4px 0;">
+      <span style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase;">Données</span>
+      <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display:none" onchange="importExcelFile(event)">
+      <button class="btn btn-outline" style="width:100%; justify-content:left;" id="btn-import" onclick="document.getElementById('excel-file-input').click()">📥 Import Pointages</button>
+      <button class="btn btn-outline" style="width:100%; justify-content:left;" onclick="exportBackup()">💾 Sauvegarder (JSON)</button>
+      <input type="file" id="backup-file-input" accept=".json" style="display:none" onchange="importBackup(event)">
+      <button class="btn btn-outline" style="width:100%; justify-content:left;" onclick="document.getElementById('backup-file-input').click()">📂 Restaurer (JSON)</button>
+    </div>
+
   </div>
 </div>
 
@@ -424,11 +450,11 @@
   <div class="kpi-board">
     <div class="kpi-header">
       <div>
-        <div class="title-editable" contenteditable="false" id="chart-title">SITE MANAGEMENT & SUPERVISORY CHART</div>
-        <div class="title-editable" style="font-size: 11px; color: #64748b; font-weight: 600; margin-top: 3px;" contenteditable="false">WEEKS 37 / 38 &bull; REAL-TIME WORKFORCE ALLOCATION</div>
+        <div class="title-editable" contenteditable="false" id="chart-title">RIVIERA TOWER SUPERVISION AND WORKERS ORGANISATION CHART</div>
+        <div class="title-editable" style="font-size: 12px; color: #64748b; font-weight: 600; margin-top: 4px;" contenteditable="false">WEEKS 37 / 38 &bull; REAL-TIME WORKFORCE ALLOCATION</div>
       </div>
       <div class="total-badge-container">
-        <span class="total-label">Effectif Total Chantier :</span>
+        <span class="total-label">Effectif Total Chantier</span>
         <span class="total-number" id="grand-total">0</span>
       </div>
     </div>
@@ -437,43 +463,22 @@
       <div class="summary-box">
         <div class="summary-title">Effectifs : Pointage (TS) vs Payroll HR</div>
         <table class="payroll-table">
-          <tr>
-            <th>Entreprise</th>
-            <th style="text-align:center;">TS Pointage</th>
-            <th style="text-align:center; color:#2563eb;">Payroll Officiel</th>
-            <th style="text-align:center;">Écart</th>
-          </tr>
-          <tr>
-            <td><span class="tag-color" style="background:#0284c7;"></span> SKYBUILDING</td>
-            <td style="text-align:center; font-weight:800;" id="total-sky">0</td>
-            <td style="text-align:center;"><input type="number" id="pr-skybuilding" class="payroll-input" value="0" disabled oninput="updatePayroll('SKYBUILDING', this.value)"></td>
-            <td style="text-align:center;"><span id="diff-skybuilding" class="diff-badge diff-ok">0</span></td>
-          </tr>
-          <tr>
-            <td><span class="tag-color" style="background:#d97706;"></span> DSS</td>
-            <td style="text-align:center; font-weight:800;" id="total-dss">0</td>
-            <td style="text-align:center;"><input type="number" id="pr-dss" class="payroll-input" value="0" disabled oninput="updatePayroll('DSS', this.value)"></td>
-            <td style="text-align:center;"><span id="diff-dss" class="diff-badge diff-ok">0</span></td>
-          </tr>
-          <tr>
-            <td><span class="tag-color" style="background:#7c3aed;"></span> EUROASIA</td>
-            <td style="text-align:center; font-weight:800;" id="total-euro">0</td>
-            <td style="text-align:center;"><input type="number" id="pr-euroasia" class="payroll-input" value="0" disabled oninput="updatePayroll('EUROASIA', this.value)"></td>
-            <td style="text-align:center;"><span id="diff-euroasia" class="diff-badge diff-ok">0</span></td>
-          </tr>
+          <tbody id="payroll-table-body">
+            <!-- Rendu dynamiquement -->
+          </tbody>
         </table>
       </div>
 
       <div class="summary-box">
         <div class="summary-title">Effectifs par Lot de Travaux</div>
         <div class="pill-group">
-          <div class="stat-pill"><span class="tag-color" style="background:#ea580c;"></span><span>CIVIL:</span><span class="count" id="cat-civil">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#2563eb;"></span><span>TRADES:</span><span class="count" id="cat-trades">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#0891b2;"></span><span>FAÇADE:</span><span class="count" id="cat-facade">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#8b5cf6;"></span><span>LOGISTIC:</span><span class="count" id="cat-logistic">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#059669;"></span><span>EXTERNAL:</span><span class="count" id="cat-external">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#475569;"></span><span>INDIRECT:</span><span class="count" id="cat-indirect">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#dc2626;"></span><span>PLANT:</span><span class="count" id="cat-plant">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#ea580c;"></span><span style="color:#64748b;">CIVIL:</span><span class="count" id="cat-civil">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#2563eb;"></span><span style="color:#64748b;">TRADES:</span><span class="count" id="cat-trades">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#0891b2;"></span><span style="color:#64748b;">FAÇADE:</span><span class="count" id="cat-facade">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#8b5cf6;"></span><span style="color:#64748b;">LOGISTIC:</span><span class="count" id="cat-logistic">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#059669;"></span><span style="color:#64748b;">EXTERNAL:</span><span class="count" id="cat-external">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#475569;"></span><span style="color:#64748b;">INDIRECT:</span><span class="count" id="cat-indirect">0</span></div>
+          <div class="stat-pill"><span class="tag-color" style="background:#dc2626;"></span><span style="color:#64748b;">PLANT:</span><span class="count" id="cat-plant">0</span></div>
         </div>
       </div>
     </div>
@@ -498,8 +503,22 @@ window.onerror = function(msg, url, line) {
   return false;
 };
 
+// Menu Admin
+function toggleAdminMenu() {
+  const menu = document.getElementById('admin-dropdown');
+  menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+}
+
 function openGuideModal() { document.getElementById('guide-modal').style.display = 'flex'; }
 function closeGuideModal() { document.getElementById('guide-modal').style.display = 'none'; }
+
+document.addEventListener('click', function(e) {
+  const btn = document.getElementById('btn-settings-menu');
+  const menu = document.getElementById('admin-dropdown');
+  if (btn && menu && !btn.contains(e.target) && !menu.contains(e.target)) {
+    menu.style.display = 'none';
+  }
+});
 
 // --- GESTION DES RÔLES / PROFILS ---
 const PASSWORDS = { viewer: '', timekeeper: 'timekeeper', cfo: 'cfo', admin: 'admin' };
@@ -507,7 +526,6 @@ let currentRole = localStorage.getItem('app_role') || 'viewer';
 let currentView = 'dashboard';
 let sortableInstances = [];
 let workerSortables = [];
-let currentMovingWorker = null;
 let selectedForPrint = new Set(); 
 let currentTsCardIdx = -1;
 
@@ -531,10 +549,9 @@ function applyRolePermissions() {
   const isCFO = currentRole === 'cfo';
   const isTK = currentRole === 'timekeeper';
 
-  document.getElementById('btn-import').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
-  document.getElementById('btn-import-db').style.display = isViewer || isCFO ? 'none' : 'inline-block';
-  document.getElementById('btn-add-sup').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
+  document.getElementById('btn-settings-menu').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
   document.getElementById('btn-db-toggle').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
+  document.getElementById('btn-print-ts').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
 
   document.querySelectorAll('.payroll-input').forEach(el => { el.disabled = isViewer || isTK; });
   
@@ -586,13 +603,15 @@ const CATEGORY_INFO = [
   { id: 'plant', name: 'PLANT & EQUIPMENT', color: '#dc2626' }
 ];
 
+// DONNÉES GLOBALES
 let cardsData = [];
 let unassignedWorkers = [];
-let payrollCounts = { SKYBUILDING: 0, DSS: 0, EUROASIA: 0, OTHER: 0 };
+let payrollCounts = {};
+let siteCompanies = ['SKYBUILDING', 'DSS', 'EUROASIA', 'OTHER'];
 let db = null, docRef = null, isSaving = false, currentFilter = 'all';
 
 const DEFAULT_DATA = [
-  { name: "NOUVEAU SUPERVISEUR", manager: "", category: "civil", timesheetNo: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "Activité à définir", foreman: "", source: "SKYBUILDING", workers: 0, workerList: [] }] }
+  { name: "NOUVEAU SUPERVISEUR", manager: "", category: "civil", timesheetNo: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "Activité à définir", foreman: "", source: "SKYBUILDING", workers: "", workerList: [] }] }
 ];
 
 try {
@@ -601,8 +620,9 @@ try {
     let parsed = JSON.parse(localSaved);
     if (parsed.cardsData && Array.isArray(parsed.cardsData)) { 
       cardsData = parsed.cardsData; 
-      payrollCounts = parsed.payrollCounts || payrollCounts;
+      payrollCounts = parsed.payrollCounts || {};
       unassignedWorkers = parsed.unassignedWorkers || [];
+      if (parsed.companies && Array.isArray(parsed.companies)) siteCompanies = parsed.companies;
     } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
   } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 } catch(e) { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
@@ -645,6 +665,8 @@ function setFilter(catId) {
 }
 
 initLayout();
+renderCompanySelects();
+renderPayrollTable();
 renderCards();
 renderDrawer();
 applyRolePermissions();
@@ -673,9 +695,14 @@ setTimeout(() => {
         if (data.cardsData) cardsData = data.cardsData;
         if (data.payrollCounts) payrollCounts = data.payrollCounts;
         if (data.unassignedWorkers) unassignedWorkers = data.unassignedWorkers;
+        if (data.companies) siteCompanies = data.companies;
+        
+        renderCompanySelects();
+        renderPayrollTable();
         renderCards();
         if (currentView === 'orgchart') renderOrgChart();
         renderDrawer();
+        updateFab(); 
       } else { syncToFirebase(); }
       document.getElementById("sync-dot").style.background = "#16a34a";
       document.getElementById("sync-text").innerText = "Connecté à Firebase";
@@ -692,13 +719,13 @@ setTimeout(() => {
 // --- 3. FONCTIONS CLÉS & SYNCHRONISATION ---
 function syncToFirebase() {
   if (currentRole === 'viewer') return; 
-  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers})); } catch(e){}
+  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies})); } catch(e){}
   if (!docRef) return;
   isSaving = true;
   document.getElementById("sync-text").innerText = "Enregistrement...";
 
   docRef.set({
-    cardsData, payrollCounts, unassignedWorkers,
+    cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   }, { merge: true }).then(() => {
     document.getElementById("sync-dot").style.background = "#16a34a";
@@ -716,6 +743,88 @@ function handleCheck(cIdx, isChecked) {
   else selectedForPrint.delete(cIdx);
 }
 
+// --- GESTION ENTREPRISES DYNAMIQUE ---
+function renderCompanySelects() {
+  const opts = siteCompanies.map(c => `<option value="${c}">${c}</option>`).join('');
+  document.querySelectorAll('.dynamic-comp-select').forEach(el => {
+    const currentVal = el.value;
+    el.innerHTML = opts;
+    if (siteCompanies.includes(currentVal)) el.value = currentVal;
+  });
+}
+
+function openCompaniesModal() {
+  if (currentRole === 'viewer' || currentRole === 'timekeeper') return;
+  renderCompaniesList();
+  document.getElementById('companies-modal').style.display = 'flex';
+}
+
+function closeCompaniesModal() {
+  document.getElementById('companies-modal').style.display = 'none';
+}
+
+function renderCompaniesList() {
+  const list = document.getElementById('companies-list');
+  list.innerHTML = siteCompanies.map(c => `
+    <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+      <span style="font-size:12px; font-weight:700;">${c}</span>
+      ${!['SKYBUILDING', 'DSS', 'EUROASIA', 'OTHER'].includes(c) 
+        ? `<button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5; padding:2px 6px;" onclick="removeCompany('${c}')">&times;</button>` 
+        : '<span style="font-size:10px; color:#94a3b8;">Défaut</span>'}
+    </div>
+  `).join('');
+}
+
+function addCompany() {
+  const val = document.getElementById('new-comp-input').value.trim().toUpperCase();
+  if (val && !siteCompanies.includes(val)) {
+     siteCompanies.push(val);
+     document.getElementById('new-comp-input').value = '';
+     renderCompaniesList();
+     renderCompanySelects();
+     renderPayrollTable();
+     renderCards();
+     syncToFirebase();
+  }
+}
+
+function removeCompany(comp) {
+  if (confirm(`Supprimer définitivement l'entreprise ${comp} ?`)) {
+     siteCompanies = siteCompanies.filter(c => c !== comp);
+     renderCompaniesList();
+     renderCompanySelects();
+     renderPayrollTable();
+     renderCards();
+     syncToFirebase();
+  }
+}
+
+function renderPayrollTable() {
+  let html = `<tr>
+    <th>Entreprise</th>
+    <th style="text-align:center;">TS Pointage</th>
+    <th style="text-align:center; color:#2563eb;">Payroll Officiel</th>
+    <th style="text-align:center;">Écart</th>
+  </tr>`;
+  
+  siteCompanies.forEach(comp => {
+    const compId = comp.toLowerCase().replace(/[^a-z0-9]/g, '');
+    let color = '#94a3b8';
+    if(comp === 'SKYBUILDING') color = '#0284c7';
+    if(comp === 'DSS') color = '#d97706';
+    if(comp === 'EUROASIA') color = '#7c3aed';
+    
+    html += `<tr>
+      <td><span class="tag-color" style="background:${color}; width:8px; height:8px; display:inline-block; border-radius:50%; margin-right:4px;"></span> ${comp}</td>
+      <td style="text-align:center; font-weight:800;" id="total-${compId}">0</td>
+      <td style="text-align:center;"><input type="number" id="pr-${compId}" class="payroll-input" value="${payrollCounts[comp] || 0}" oninput="updatePayroll('${comp}', this.value)" ${currentRole==='viewer' || currentRole==='timekeeper' ? 'disabled':''}></td>
+      <td style="text-align:center;"><span id="diff-${compId}" class="diff-badge diff-ok">0</span></td>
+    </tr>`;
+  });
+  document.getElementById('payroll-table-body').innerHTML = html;
+}
+
+// --- AFFICHAGE CARTES ---
 function renderCards() {
   try {
     CATEGORY_INFO.forEach(cat => {
@@ -734,10 +843,18 @@ function renderCards() {
       
       let tasksHtml = card.tasks.map((t, tIdx) => {
         const linkedCount = t.workerList ? t.workerList.length : 0;
-        const manualCount = parseInt(t.workers) || 0;
-        const isDiff = linkedCount !== manualCount;
+        const hasManualOverride = t.workers !== undefined && t.workers !== null && t.workers !== "";
+        const manualCount = hasManualOverride ? parseInt(t.workers) : linkedCount;
+        
+        const isDiff = hasManualOverride && (linkedCount !== manualCount);
         const compClass = isDiff ? 'diff-warn' : 'diff-ok';
-        const compTitle = isDiff ? `Alerte: ${linkedCount} noms assignés pour ${manualCount} ouvriers prévus` : `Effectifs équilibrés`;
+        
+        let compTitle = "Calcul automatique basé sur les noms";
+        if (hasManualOverride) {
+            compTitle = isDiff ? `Alerte: ${linkedCount} noms assignés pour ${manualCount} saisis` : `Effectifs équilibrés manuellement`;
+        }
+
+        const companyOpts = siteCompanies.map(comp => `<option value="${comp}" ${t.source === comp ? 'selected' : ''}>${comp}</option>`).join('');
 
         return `
         <div class="task-item">
@@ -746,16 +863,13 @@ function renderCards() {
           </div>
           <div class="task-desc" contenteditable="true" onblur="updateTaskDesc(${cIdx}, ${tIdx}, this.innerText)">${t.desc || ''}</div>
           <div class="task-controls">
-            <select class="source-select ${String(t.source||'').toLowerCase()}" onchange="updateTaskSource(${cIdx}, ${tIdx}, this.value, this)">
-              <option value="SKYBUILDING" ${t.source==='SKYBUILDING'?'selected':''}>SKYBUILDING</option>
-              <option value="DSS" ${t.source==='DSS'?'selected':''}>DSS</option>
-              <option value="EUROASIA" ${t.source==='EUROASIA'?'selected':''}>EUROASIA</option>
-              <option value="OTHER" ${t.source==='OTHER'?'selected':''}>AUTRE</option>
+            <select class="source-select" style="background:#f1f5f9; color:#0f172a;" onchange="updateTaskSource(${cIdx}, ${tIdx}, this.value, this)">
+              ${companyOpts}
             </select>
             <div style="display:flex; align-items:center; gap:6px;">
               <div class="count-comparator ${compClass}" title="${compTitle}">
                 <span style="margin-right:2px; font-weight:700;">👥 ${linkedCount}</span> /
-                <input type="number" min="0" class="worker-count-input" value="${manualCount}" oninput="updateWorkerCount(${cIdx}, ${tIdx}, this.value)" />
+                <input type="number" min="0" class="worker-count-input" placeholder="${linkedCount}" value="${hasManualOverride ? manualCount : ''}" oninput="updateWorkerCount(${cIdx}, ${tIdx}, this.value)" />
               </div>
               <span class="btn-delete-task" title="Supprimer cette ligne" onclick="removeTask(${cIdx}, ${tIdx})">&times;</span>
             </div>
@@ -763,23 +877,33 @@ function renderCards() {
         </div>
       `}).join('');
 
-      let workersHtml = card.tasks.flatMap((t, tIdx) => (t.workerList || []).map(w => `
-        <div class="worker-pill ${w.company.toLowerCase()}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="${cIdx}" data-tidx="${tIdx}" onclick="openWorkerModal(this)">
+      let workersHtml = card.tasks.flatMap((t, tIdx) => (t.workerList || []).map(w => {
+        let colorClass = 'other';
+        if(w.company === 'SKYBUILDING') colorClass = 'skybuilding';
+        if(w.company === 'DSS') colorClass = 'dss';
+        if(w.company === 'EUROASIA') colorClass = 'euroasia';
+        
+        return `<div class="worker-pill ${colorClass}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="${cIdx}" data-tidx="${tIdx}" onclick="toggleWorkerSelection(this)">
           ${w.id} - ${w.name}
-        </div>
-      `)).join('');
+        </div>`;
+      })).join('');
 
       const sType = card.shiftType || 'Shift 1';
       const sHours = card.shiftHours || '07:00 - 15:00';
       const isChecked = selectedForPrint.has(cIdx) ? 'checked' : '';
 
-      let cardManualSum = 0;
+      let cardEffectiveSum = 0;
       let cardLinkedSum = 0;
+      let cardHasDiff = false;
       card.tasks.forEach(t => {
-         cardManualSum += parseInt(t.workers) || 0;
-         cardLinkedSum += (t.workerList ? t.workerList.length : 0);
+         const lCount = t.workerList ? t.workerList.length : 0;
+         const hasM = t.workers !== undefined && t.workers !== null && t.workers !== "";
+         const eCount = hasM ? parseInt(t.workers) : lCount;
+         cardEffectiveSum += eCount;
+         cardLinkedSum += lCount;
+         if(hasM && lCount !== eCount) cardHasDiff = true;
       });
-      const mismatchIcon = cardManualSum !== cardLinkedSum ? `<span title="Alerte: ${cardLinkedSum} nommés vs ${cardManualSum} saisis" style="color:#dc2626; margin-right:4px;">⚠️</span>` : '';
+      const mismatchIcon = cardHasDiff ? `<span title="Alerte: ${cardLinkedSum} nommés vs ${cardEffectiveSum} saisis" style="color:#dc2626; margin-right:4px;">⚠️</span>` : '';
 
       cardEl.innerHTML = `
         <div class="card-header drag-handle" title="Glisser pour déplacer">
@@ -795,7 +919,7 @@ function renderCards() {
               <option value="plant" ${catId==='plant'?'selected':''}>Plant & Eq</option>
             </select>
           </div>
-          <span class="card-total-badge ${cardManualSum !== cardLinkedSum ? 'error' : ''}" id="card-total-${cIdx}">${mismatchIcon}${cardManualSum} Wkrs</span>
+          <span class="card-total-badge ${cardHasDiff ? 'error' : ''}" id="card-total-${cIdx}">${mismatchIcon}${cardEffectiveSum} Wkrs</span>
         </div>
         <div class="card-title-row">
           <div style="display:flex; flex-direction:column; gap:2px; width:100%;">
@@ -803,9 +927,9 @@ function renderCards() {
               Mgr: <span class="manager-name" contenteditable="true" onblur="updateManager(${cIdx}, this.innerText)">${card.manager || ''}</span>
             </div>
             <div class="sup-name" contenteditable="true" onblur="updateSupName(${cIdx}, this.innerText)">${card.name || 'Inconnu'}</div>
-            <div class="ts-badge-container">
-              <div class="ts-badge" title="Numéro Timesheet">TS: <span contenteditable="true" data-placeholder="---" onblur="updateTimesheetNo(${cIdx}, this.innerText)">${card.timesheetNo || ''}</span></div>
-              <div class="ts-badge">
+            <div class="ts-badges-row">
+              <div class="ts-pill" title="Numéro Timesheet">TS: <span contenteditable="true" data-placeholder="---" onblur="updateTimesheetNo(${cIdx}, this.innerText)">${card.timesheetNo || ''}</span></div>
+              <div class="ts-pill">
                 <select class="ts-select" onchange="updateShiftType(${cIdx}, this.value)">
                   <option value="Shift 1" ${sType==='Shift 1'?'selected':''}>Shift 1</option>
                   <option value="Shift 2" ${sType==='Shift 2'?'selected':''}>Shift 2</option>
@@ -818,12 +942,10 @@ function renderCards() {
           </div>
           <button class="btn-remove-card" onclick="removeSupervisor(${cIdx})">&times;</button>
         </div>
-
         <div class="card-body">
           ${tasksHtml}
           <button class="btn-add-task" onclick="addTask(${cIdx})">+ Ajouter Ligne</button>
           
-          <!-- LA ZONE OUVRIERS EST BIEN À L'INTÉRIEUR DU CARD-BODY -->
           <div class="card-worker-dropzone" data-cidx="${cIdx}">
             ${workersHtml}
           </div>
@@ -860,8 +982,9 @@ function renderOrgChart() {
         let directWkrs = 0;
 
         sup.tasks.forEach(t => { 
-          let manual = parseInt(t.workers)||0;
-          let linked = t.workerList ? t.workerList.length : 0;
+          const linked = t.workerList ? t.workerList.length : 0;
+          const hasM = t.workers !== undefined && t.workers !== null && t.workers !== "";
+          const manual = hasM ? parseInt(t.workers) : linked;
           let w = Math.max(manual, linked); 
           supWorkers += w; 
           mgrTotalWorkers += w;
@@ -901,6 +1024,7 @@ function renderOrgChart() {
   container.innerHTML = html;
 }
 
+// --- GESTION DU MULTI-SELECT ET DRAG DROP ---
 function initWorkerSortables() {
   workerSortables.forEach(s => s.destroy());
   workerSortables = [];
@@ -909,13 +1033,13 @@ function initWorkerSortables() {
   document.querySelectorAll('.card-worker-dropzone, #unassigned-dropzone').forEach(el => {
     const s = new Sortable(el, {
       group: 'workers-pool', animation: 150,
+      onStart: function() { document.querySelectorAll('.worker-pill.selected-pill').forEach(p => p.classList.remove('selected-pill')); updateFab(); },
       onEnd: function(evt) { handleWorkerDrop(evt); }
     });
     workerSortables.push(s);
   });
 }
 
-// DRAG & DROP OUVRIERS
 function handleWorkerDrop(evt) {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
   if (evt.from === evt.to) return;
@@ -939,7 +1063,7 @@ function handleWorkerDrop(evt) {
     const toCIdx = parseInt(evt.to.dataset.cidx);
     let targetTaskIdx = cardsData[toCIdx].tasks.findIndex(t => t.source === wComp);
     if (targetTaskIdx === -1) {
-      cardsData[toCIdx].tasks.push({ desc: 'Affectation manuelle', source: wComp, workers: 1, workerList: [] });
+      cardsData[toCIdx].tasks.push({ desc: 'Affectation manuelle', source: wComp, workers: "", workerList: [] });
       targetTaskIdx = cardsData[toCIdx].tasks.length - 1;
     }
     let t = cardsData[toCIdx].tasks[targetTaskIdx];
@@ -949,15 +1073,27 @@ function handleWorkerDrop(evt) {
   renderCards(); renderDrawer(); syncToFirebase();
 }
 
-// CLIC & ENVOI RAPIDE
-function openWorkerModal(el) {
+// MULTI-SELECTION CLIC
+function toggleWorkerSelection(el) {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  const wId = el.dataset.wid, wName = el.dataset.wname, wComp = el.dataset.wcomp;
-  const cIdx = el.dataset.cidx === "unassigned" ? -1 : parseInt(el.dataset.cidx);
-  const tIdx = el.dataset.tidx === "unassigned" ? -1 : parseInt(el.dataset.tidx);
-  
-  currentMovingWorker = { wId, wName, wComp, cIdx, tIdx };
-  document.getElementById('modal-worker-name').innerText = `${wName} (${wComp})`;
+  el.classList.toggle('selected-pill');
+  updateFab();
+}
+
+function updateFab() {
+  const selected = document.querySelectorAll('.worker-pill.selected-pill');
+  const fab = document.getElementById('fab-move');
+  if (selected.length > 0) {
+    fab.style.display = 'flex';
+    document.getElementById('fab-count').innerText = selected.length;
+  } else {
+    fab.style.display = 'none';
+  }
+}
+
+function openMultiMoveModal() {
+  const count = document.querySelectorAll('.worker-pill.selected-pill').length;
+  if (count === 0) return;
   
   let html = `<option value="-1">👷 Renvoyer à la Base (Non assigné)</option>`;
   cardsData.forEach((c, idx) => {
@@ -966,51 +1102,72 @@ function openWorkerModal(el) {
   });
   
   document.getElementById('modal-sup-select').innerHTML = html;
-  document.getElementById('modal-sup-select').value = cIdx;
+  document.getElementById('modal-worker-name').innerText = `Déplacement de ${count} ouvrier(s) sélectionné(s)`;
   document.getElementById('worker-modal').style.display = 'flex';
 }
 
-function closeWorkerModal() { document.getElementById('worker-modal').style.display = 'none'; currentMovingWorker = null; }
+function closeWorkerModal() { 
+  document.getElementById('worker-modal').style.display = 'none'; 
+}
 
 function confirmWorkerMove() {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  if (!currentMovingWorker) return;
   const targetCIdx = parseInt(document.getElementById('modal-sup-select').value);
-  const { wId, wName, wComp, cIdx, tIdx } = currentMovingWorker;
-  if (targetCIdx === cIdx) { closeWorkerModal(); return; }
+  const selectedPills = document.querySelectorAll('.worker-pill.selected-pill');
   
-  const workerObj = { id: wId, name: wName, company: wComp };
+  selectedPills.forEach(pill => {
+      const wId = pill.dataset.wid;
+      const wName = pill.dataset.wname;
+      const wComp = pill.dataset.wcomp;
+      const cIdx = pill.dataset.cidx === "unassigned" ? -1 : parseInt(pill.dataset.cidx);
+      const tIdx = pill.dataset.tidx === "unassigned" ? -1 : parseInt(pill.dataset.tidx);
+      
+      if (targetCIdx === cIdx) return; 
+      
+      const workerObj = { id: wId, name: wName, company: wComp };
+      
+      if (cIdx === -1) { 
+         unassignedWorkers = unassignedWorkers.filter(w => w.id !== wId); 
+      } else {
+         if (cardsData[cIdx] && cardsData[cIdx].tasks[tIdx]) {
+            cardsData[cIdx].tasks[tIdx].workerList = cardsData[cIdx].tasks[tIdx].workerList.filter(w => w.id !== wId);
+         }
+      }
+      
+      if (targetCIdx === -1) { 
+         unassignedWorkers.push(workerObj); 
+      } else {
+         let targetTaskIdx = cardsData[targetCIdx].tasks.findIndex(t => t.source === wComp);
+         if (targetTaskIdx === -1) {
+            cardsData[targetCIdx].tasks.push({ desc: 'Affectation de masse', source: wComp, workers: "", workerList: [] });
+            targetTaskIdx = cardsData[targetCIdx].tasks.length - 1;
+         }
+         if (!cardsData[targetCIdx].tasks[targetTaskIdx].workerList) cardsData[targetCIdx].tasks[targetTaskIdx].workerList = [];
+         cardsData[targetCIdx].tasks[targetTaskIdx].workerList.push(workerObj);
+      }
+  });
   
-  if (cIdx === -1) { unassignedWorkers = unassignedWorkers.filter(w => w.id !== wId); } 
-  else {
-     if (cardsData[cIdx] && cardsData[cIdx].tasks[tIdx]) {
-        let t = cardsData[cIdx].tasks[tIdx];
-        t.workerList = t.workerList.filter(w => w.id !== wId);
-     }
-  }
-  
-  if (targetCIdx === -1) { unassignedWorkers.push(workerObj); } 
-  else {
-     let targetTaskIdx = cardsData[targetCIdx].tasks.findIndex(t => t.source === wComp);
-     if (targetTaskIdx === -1) {
-        cardsData[targetCIdx].tasks.push({ desc: 'Affectation rapide', source: wComp, workers: 1, workerList: [] });
-        targetTaskIdx = cardsData[targetCIdx].tasks.length - 1;
-     }
-     let t = cardsData[targetCIdx].tasks[targetTaskIdx];
-     if (!t.workerList) t.workerList = [];
-     t.workerList.push(workerObj);
-  }
-  closeWorkerModal(); renderCards(); renderDrawer(); syncToFirebase();
+  closeWorkerModal(); 
+  updateFab(); 
+  renderCards(); 
+  renderDrawer(); 
+  syncToFirebase();
 }
 
 function renderDrawer() {
   const dz = document.getElementById('unassigned-dropzone');
   if (!dz) return;
-  dz.innerHTML = unassignedWorkers.map(w => `
-    <div class="worker-pill ${w.company.toLowerCase()}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="unassigned" data-tidx="unassigned" onclick="openWorkerModal(this)">
+  
+  dz.innerHTML = unassignedWorkers.map(w => {
+    let colorClass = 'other';
+    if(w.company === 'SKYBUILDING') colorClass = 'skybuilding';
+    if(w.company === 'DSS') colorClass = 'dss';
+    if(w.company === 'EUROASIA') colorClass = 'euroasia';
+    
+    return `<div class="worker-pill ${colorClass}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="unassigned" data-tidx="unassigned" onclick="toggleWorkerSelection(this)">
       ${w.id} - ${w.name}
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function addManualWorker() {
@@ -1050,18 +1207,29 @@ function updateShiftType(cIdx, val) { if (currentRole === 'viewer' || currentRol
 function updateShiftHours(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].shiftHours = val.trim(); syncToFirebase(); }
 function updateTaskForeman(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].foreman = val.trim(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); }
 function updateTaskDesc(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].desc = val.trim(); syncToFirebase(); }
-function updateTaskSource(cIdx, tIdx, val, el) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].source = val; el.className = `source-select ${val.toLowerCase()}`; recalculateTotals(); syncToFirebase(); }
-function updateWorkerCount(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].workers = parseInt(val) || 0; renderCards(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); }
+function updateTaskSource(cIdx, tIdx, val, el) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].source = val; recalculateTotals(); syncToFirebase(); }
+
+// MODIFIÉ : updateWorkerCount gère la case vide ""
+function updateWorkerCount(cIdx, tIdx, val) { 
+  if (currentRole === 'viewer' || currentRole === 'cfo') return; 
+  cardsData[cIdx].tasks[tIdx].workers = (val.trim() === "") ? "" : parseInt(val); 
+  renderCards(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); 
+}
+
 function changeCategory(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].category = val; renderCards(); syncToFirebase(); }
+
 function addTask(cIdx) { 
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); 
   if (currentRole === 'viewer' || currentRole === 'cfo') return; 
-  cardsData[cIdx].tasks.push({ desc: "", foreman: "", source: "SKYBUILDING", workers: 0, workerList: [] }); 
+  cardsData[cIdx].tasks.push({ desc: "", foreman: "", source: siteCompanies[0], workers: "", workerList: [] }); 
   renderCards(); 
   syncToFirebase(); 
 }
+
 function removeTask(cIdx, tIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks.splice(tIdx, 1); renderCards(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); }
-function addNewSupervisor() { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData.unshift({ name: "NOUVEAU SUPERVISEUR", manager: "", category: "trades", timesheetNo: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "", foreman: "", source: "SKYBUILDING", workers: 0, workerList: [] }] }); renderCards(); syncToFirebase(); }
+
+function addNewSupervisor() { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData.unshift({ name: "NOUVEAU SUPERVISEUR", manager: "", category: "trades", timesheetNo: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "", foreman: "", source: siteCompanies[0], workers: "", workerList: [] }] }); renderCards(); syncToFirebase(); }
+
 function removeSupervisor(cIdx) { if (currentRole === 'viewer' || currentRole === 'cfo') return; if (confirm(`Supprimer ${cardsData[cIdx].name} ?`)) { cardsData.splice(cIdx, 1); renderCards(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); } }
 
 function updatePayroll(company, val) {
@@ -1071,41 +1239,51 @@ function updatePayroll(company, val) {
 }
 
 function recalculateTotals() {
-  let grandTotal = 0, sky = 0, dss = 0, euro = 0, other = 0;
+  let grandTotal = 0;
+  let compTotals = {};
+  siteCompanies.forEach(c => compTotals[c] = 0);
   let cats = { civil: 0, trades: 0, facade: 0, logistic: 0, external: 0, indirect: 0, plant: 0 };
 
   cardsData.forEach((card, cIdx) => {
-    let cardSum = 0;
+    let cardEffectiveSum = 0;
+    let cardLinkedSum = 0;
+    let cardHasDiff = false;
+
     if(card.tasks) {
       card.tasks.forEach(t => {
-        let w = parseInt(t.workers) || 0;
-        cardSum += w; grandTotal += w;
-        if (t.source === "SKYBUILDING") sky += w;
-        else if (t.source === "DSS") dss += w;
-        else if (t.source === "EUROASIA") euro += w;
-        else other += w;
+        const lCount = t.workerList ? t.workerList.length : 0;
+        const hasM = t.workers !== undefined && t.workers !== null && t.workers !== "";
+        const eCount = hasM ? parseInt(t.workers) : lCount;
+        
+        cardEffectiveSum += eCount; 
+        grandTotal += eCount;
+        cardLinkedSum += lCount;
+        if(hasM && lCount !== eCount) cardHasDiff = true;
+
+        if (compTotals[t.source] !== undefined) {
+           compTotals[t.source] += eCount;
+        } else {
+           if (!siteCompanies.includes(t.source)) {
+              siteCompanies.push(t.source);
+           }
+           compTotals[t.source] = eCount;
+        }
       });
     }
     const b = document.getElementById(`card-total-${cIdx}`);
     if (b) {
-      const cardLinkedSum = card.tasks.reduce((acc, t) => acc + (t.workerList ? t.workerList.length : 0), 0);
-      const mismatchIcon = cardSum !== cardLinkedSum ? `<span title="Alerte: ${cardLinkedSum} nommés vs ${cardSum} saisis" style="color:#dc2626; margin-right:4px;">⚠️</span>` : '';
-      b.innerHTML = `${mismatchIcon}${cardSum} Wkrs`;
-      if(cardSum !== cardLinkedSum){
+      const mismatchIcon = cardHasDiff ? `<span title="Alerte: ${cardLinkedSum} nommés vs ${cardEffectiveSum} saisis" style="color:#dc2626; margin-right:4px;">⚠️</span>` : '';
+      b.innerHTML = `${mismatchIcon}${cardEffectiveSum} Wkrs`;
+      if(cardHasDiff){
         b.classList.add('error');
       } else {
         b.classList.remove('error');
       }
     }
-    if (cats.hasOwnProperty(card.category)) cats[card.category] += cardSum;
+    if (cats.hasOwnProperty(card.category)) cats[card.category] += cardEffectiveSum;
   });
 
   document.getElementById("grand-total").innerText = grandTotal;
-  document.getElementById("total-sky").innerText = sky;
-  document.getElementById("total-dss").innerText = dss;
-  document.getElementById("total-euro").innerText = euro;
-  document.getElementById("total-other").innerText = other;
-  
   document.getElementById("cat-civil").innerText = cats.civil;
   document.getElementById("cat-trades").innerText = cats.trades;
   document.getElementById("cat-facade").innerText = cats.facade;
@@ -1114,22 +1292,23 @@ function recalculateTotals() {
   document.getElementById("cat-indirect").innerText = cats.indirect;
   document.getElementById("cat-plant").innerText = cats.plant;
 
-  const updateDiff = (company, tsTotal) => {
-    const prTotal = payrollCounts[company] || 0;
-    const diff = tsTotal - prTotal;
-    const el = document.getElementById(`diff-${company.toLowerCase()}`);
-    const inputEl = document.getElementById(`pr-${company.toLowerCase()}`);
-    if (inputEl && document.activeElement !== inputEl) inputEl.value = prTotal;
-    if (el) {
-      el.innerText = diff > 0 ? `+${diff}` : diff;
-      el.className = `diff-badge ${diff === 0 ? 'diff-ok' : 'diff-warn'}`;
-    }
-  };
+  siteCompanies.forEach(comp => {
+     const compId = comp.toLowerCase().replace(/[^a-z0-9]/g, '');
+     const tsTotal = compTotals[comp] || 0;
+     const elTotal = document.getElementById(`total-${compId}`);
+     if (elTotal) elTotal.innerText = tsTotal;
 
-  updateDiff("SKYBUILDING", sky);
-  updateDiff("DSS", dss);
-  updateDiff("EUROASIA", euro);
-  updateDiff("OTHER", other);
+     const prTotal = payrollCounts[comp] || 0;
+     const diff = tsTotal - prTotal;
+     const elDiff = document.getElementById(`diff-${compId}`);
+     const inputEl = document.getElementById(`pr-${compId}`);
+     
+     if (inputEl && document.activeElement !== inputEl) inputEl.value = prTotal;
+     if (elDiff) {
+        elDiff.innerText = diff > 0 ? `+${diff}` : diff;
+        elDiff.className = `diff-badge ${diff === 0 ? 'diff-ok' : 'diff-warn'}`;
+     }
+  });
 
   applyRolePermissions();
 }
@@ -1227,8 +1406,9 @@ function executePrint() {
     let unnamedCount = 0;
 
     card.tasks.forEach(t => {
-      const manual = parseInt(t.workers) || 0;
       const linked = t.workerList ? t.workerList.length : 0;
+      const hasM = t.workers !== undefined && t.workers !== null && t.workers !== "";
+      const manual = hasM ? parseInt(t.workers) : linked;
       
       if (t.workerList && linked > 0) {
         t.workerList.forEach(w => workersMap.set(w.id, w));
@@ -1263,7 +1443,6 @@ function executePrint() {
       currentDate.setDate(currentDate.getDate() + d);
       let dayStr = `${daysNames[currentDate.getDay()]} ${currentDate.getDate().toString().padStart(2,'0')} ${monthsNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
 
-      // Boucle de pagination pour le jour donné
       for (let p = 0; p < totalPagesPerDay; p++) {
         let chunkRows = allRows.slice(p * WORKERS_PER_PAGE, (p + 1) * WORKERS_PER_PAGE).join('');
         let pageIndicator = totalPagesPerDay > 1 ? `<div style="text-align:right; font-size:11px; margin-top:-20px; margin-bottom:10px; color:#475569;">Page ${p + 1} / ${totalPagesPerDay}</div>` : '';
@@ -1326,7 +1505,7 @@ function executePrint() {
 }
 
 function exportBackup() {
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({cardsData, payrollCounts, unassignedWorkers}, null, 2));
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies}, null, 2));
   const dlAnchorElem = document.createElement('a');
   dlAnchorElem.setAttribute("href", dataStr);
   dlAnchorElem.setAttribute("download", `site_backup_${new Date().toISOString().split('T')[0]}.json`);
@@ -1369,13 +1548,14 @@ function importExcelFile(event) {
         if (headerRowIdx === -1) return;
 
         const headerRow = rawRows[headerRowIdx] || [];
-        let supCol = -1, scopeCol = -1, tsCol = -1, idCol = -1, workerCols = [];
+        let supCol = -1, scopeCol = -1, tsCol = -1, idCol = -1, compCol = -1, workerCols = [];
         for (let c = 0; c < headerRow.length; c++) {
           const colName = String(headerRow[c] || "").trim().toUpperCase();
           if (colName.includes("SUPERVISOR") && supCol === -1) supCol = c;
           if (colName.includes("SCOPE") && scopeCol === -1) scopeCol = c;
           if (colName.includes("TIMESHEET") && tsCol === -1) tsCol = c;
           if ((colName.includes("COMET") || colName === "NO." || colName === "ID") && idCol === -1) idCol = c;
+          if (colName.includes("COMPANY") || colName.includes("SUBCON")) compCol = c;
           if (colName.includes("NAME") || colName.includes("SURNAME")) workerCols.push(c);
         }
         if (supCol === -1) return;
@@ -1388,6 +1568,11 @@ function importExcelFile(event) {
           let currentScope = scopeCol !== -1 ? String(row[scopeCol] || "").trim().toUpperCase() : "";
           let currentTimesheet = tsCol !== -1 ? String(row[tsCol] || "").trim() : "";
           let workerId = idCol !== -1 ? String(row[idCol] || "").trim() : "W-" + Math.floor(Math.random()*10000);
+          
+          let compStr = compCol !== -1 ? String(row[compCol] || "").trim().toUpperCase() : "OTHER";
+          if (!siteCompanies.includes(compStr) && compStr !== "") siteCompanies.push(compStr);
+          if (compStr === "") compStr = "OTHER";
+
           let workerName = "";
           workerCols.forEach(wc => { let val = String(row[wc] || "").trim(); if(val) workerName += val + " "; });
           workerName = workerName.trim() || "Ouvrier";
@@ -1401,12 +1586,11 @@ function importExcelFile(event) {
             importedSupervisors[currentSupervisor].timesheetNo = currentTimesheet;
           }
 
-          const taskKey = `${companySource}___${currentScope}`;
+          const taskKey = `${compStr}___${currentScope}`;
           if (!importedSupervisors[currentSupervisor].tasks[taskKey]) {
-            importedSupervisors[currentSupervisor].tasks[taskKey] = { source: companySource, desc: currentScope, workers: 0, workerList: [] };
+            importedSupervisors[currentSupervisor].tasks[taskKey] = { source: compStr, desc: currentScope, workers: "", workerList: [] };
           }
-          importedSupervisors[currentSupervisor].tasks[taskKey].workers += 1;
-          importedSupervisors[currentSupervisor].tasks[taskKey].workerList.push({ id: workerId, name: workerName, company: companySource });
+          importedSupervisors[currentSupervisor].tasks[taskKey].workerList.push({ id: workerId, name: workerName, company: compStr });
           totalImportedWorkers += 1;
         }
       });
@@ -1439,7 +1623,7 @@ function importExcelFile(event) {
       let nextCardsData = [];
       cardsData.forEach((c, idx) => {
         if (matchedIndices.has(idx)) {
-          c.tasks.forEach(t => { t.workers = 0; t.workerList = []; });
+          c.tasks.forEach(t => { t.workers = ""; t.workerList = []; });
           nextCardsData.push(c);
         } else {
           if (keepMissing) nextCardsData.push(c);
@@ -1478,8 +1662,10 @@ function importExcelFile(event) {
         }
       });
 
-      cardsData.forEach(c => { c.tasks = c.tasks.filter(t => t.workers > 0 || (t.desc && t.desc.trim() !== "")); });
-      renderCards(); syncToFirebase();
+      renderCompanySelects();
+      renderPayrollTable();
+      renderCards(); 
+      syncToFirebase();
       alert(`Import réussi : ${totalImportedWorkers} ouvriers liés !`);
 
     } catch (err) { alert("Erreur technique : " + err.message); }
@@ -1503,12 +1689,6 @@ function importWorkersDB(event) {
 
       workbook.SheetNames.forEach(sheetName => {
         if (!sheetName) return;
-        const upperSheet = String(sheetName).trim().toUpperCase();
-        let defaultCompany = "OTHER";
-        if (upperSheet.includes("LOAN") || upperSheet.includes("SKY")) defaultCompany = "SKYBUILDING";
-        else if (upperSheet.includes("DSS")) defaultCompany = "DSS";
-        else if (upperSheet.includes("EURO")) defaultCompany = "EUROASIA";
-
         const worksheet = workbook.Sheets[sheetName];
         if (!worksheet) return;
 
@@ -1547,13 +1727,10 @@ function importWorkersDB(event) {
           let workerId = idCol !== -1 ? String(row[idCol] || "").trim() : "";
           if (!workerId) workerId = "W-" + Math.floor(Math.random()*100000);
 
-          let workerComp = defaultCompany;
+          let workerComp = "OTHER";
           if (companyCol !== -1 && String(row[companyCol] || "").trim() !== "") {
-            let rawComp = String(row[companyCol]).trim().toUpperCase();
-            if (rawComp.includes("SKY") || rawComp.includes("LOAN")) workerComp = "SKYBUILDING";
-            else if (rawComp.includes("DSS")) workerComp = "DSS";
-            else if (rawComp.includes("EURO")) workerComp = "EUROASIA";
-            else workerComp = "OTHER";
+            workerComp = String(row[companyCol]).trim().toUpperCase();
+            if (!siteCompanies.includes(workerComp)) siteCompanies.push(workerComp);
           }
 
           let isAssigned = false;
@@ -1574,7 +1751,10 @@ function importWorkersDB(event) {
         }
       });
 
-      renderDrawer(); syncToFirebase();
+      renderCompanySelects();
+      renderPayrollTable();
+      renderDrawer(); 
+      syncToFirebase();
       if (newWorkersCount > 0) alert(`Succès : ${newWorkersCount} nouveaux ouvriers ajoutés à la base !`);
       else alert("Aucun nouvel ouvrier ajouté (Ils sont peut-être déjà tous dans la base ou assignés).");
 
