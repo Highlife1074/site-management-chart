@@ -1,32 +1,38 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Riviera Tower Supervision and Workers Organisation Chart</title>
+<!-- 
+==========================================
+MODIFICATIONS DANS : index.html
+==========================================
+-->
 
-<!-- Polices -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- --- AVANT (Zone de tes filtres en haut de page) --- -->
+<select id="managerSelect" onchange="window.applyFilters()">
+    <!-- options -->
+</select>
+<select id="supervisorSelect" onchange="window.applyFilters()">
+    <!-- options -->
+</select>
 
-<!-- Librairies externes -->
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<!-- --- APRÈS --- -->
+<!-- Ajout de l'attribut "multiple" pour permettre la multi-sélection -->
+<select id="managerSelect" multiple onchange="window.applyFilters()">
+    <!-- options -->
+</select>
+<select id="supervisorSelect" multiple onchange="window.applyFilters()">
+    <!-- options -->
+</select>
 
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<!-- ========================================== -->
 
-<!-- Lien vers le nouveau fichier CSS -->
-<link rel="stylesheet" href="styles.css">
-</head>
-<body>
+<!-- --- AVANT (Dans la structure de tes cartes, si tu les as en dur ou en template) --- -->
+<div class="card-header">
+    <h3>Nom du Superviseur</h3>
+</div>
 
-<!-- ... TOUT LE RESTE DU HTML (Toutes les divs, modals, et la top-bar) ... -->
-<!-- (Insère ici tout le contenu HTML de ton fichier d'origine, de la balise <div id="error-banner"> jusqu'à <div id="db-print-zone"></div>) -->
-
-<!-- Lien vers le nouveau fichier JavaScript -->
-<script src="app.js"></script>
-</body>
-</html>
+<!-- --- APRÈS --- -->
+<!-- Ajout du bouton d'impression (Si tu génères ce HTML via JavaScript dans renderCards, il faut ajouter ce bouton dans ta template JS avec ${card.name}) -->
+<div class="card-header">
+    <h3>Nom du Superviseur</h3>
+    <button class="print-single-btn" onclick="window.printSingleTimesheet('Nom du Superviseur')">
+        🖨️ Imprimer la fiche
+    </button>
+</div>
