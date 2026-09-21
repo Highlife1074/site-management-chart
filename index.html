@@ -10,9 +10,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-<!-- Librairies externes -->
+<!-- Librairies externes (SortableJS complet avec plugin MultiDrag officiel) -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -168,6 +168,9 @@
   .btn-add-task { background: transparent; border: 1px dashed #cbd5e1; color: #64748b; font-size: 10px; font-weight: 600; padding: 4px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 2px; transition: 0.15s; }
   .btn-add-task:hover { background: #f1f5f9; color: #0f172a; }
 
+  .divider { width: 1px; height: 24px; background: #e2e8f0; margin: 0 4px; }
+
+  /* ZONE PANIER */
   .card-worker-dropzone { 
     min-height: 40px; 
     border: 2px dashed #93c5fd; 
@@ -762,7 +765,7 @@ function initLayout() {
   const board = document.getElementById('categories-board');
   board.innerHTML = `
     <div class="category-section" id="section-alpha" style="display:none;">
-      <h2 class="category-title" style="color: #2563eb; border-bottom: 2px solid #2563eb;">TOUTES LES TIMESHEETS (ORDRE ALPHABÉTIQUE A-Z)</h2>
+      <h2 class="category-title" style="color: #2563eb; border-bottom: 2px solid #2563eb;">TOUTES LES TIMESHEETS (PAR N° DE TIMESHEET A-Z)</h2>
       <div class="cards-grid" id="grid-alpha" data-category="alpha"></div>
     </div>
   ` + CATEGORY_INFO.map(cat => `
@@ -884,7 +887,7 @@ function handleCheck(cIdx, isChecked) {
   else selectedForPrint.delete(cIdx);
 }
 
-// --- BASE DE DONNÉES GLOBALE (ÉDITEUR & IMPRESSION/EXCEL) ---
+// --- BASE DE DONNÉES GLOBALE ---
 function openDBModal() {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
   renderDBTable();
@@ -1081,7 +1084,7 @@ function renderPayrollTable() {
   document.getElementById('payroll-table-body').innerHTML = html;
 }
 
-// --- AFFICHAGE CARTES (AVEC SUPPORT DU TRI ALPHABÉTIQUE) ---
+// --- AFFICHAGE CARTES (TRI ALPHABÉTIQUE STRICT PAR NUMÉRO DE TIMESHEET) ---
 function renderCards() {
   try {
     const alphaGrid = document.getElementById('grid-alpha');
@@ -1092,14 +1095,24 @@ function renderCards() {
       if(grid) grid.innerHTML = "";
     });
 
-    // Liste des cartes avec leur index original pour la manipulation
     let displayList = cardsData.map((card, cIdx) => ({ card, cIdx }));
 
+    // MODIFIÉ : Tri strict par numéro de Timesheet
     if (currentFilter === 'alpha') {
       displayList.sort((a, b) => {
-        let nameA = (a.card.name || '').trim().toUpperCase();
-        let nameB = (b.card.name || '').trim().toUpperCase();
-        return nameA.localeCompare(nameB);
+        let tsA = (a.card.timesheetNo || '').trim();
+        let tsB = (b.card.timesheetNo || '').trim();
+
+        if (tsA && tsB) {
+          return tsA.localeCompare(tsB, undefined, { numeric: true, sensitivity: 'base' });
+        }
+        if (tsA && !tsB) return -1;
+        if (!tsA && tsB) return 1;
+
+        // Si aucun numéro de TS, fallback sur le nom du superviseur
+        let nameA = (a.card.name || '').trim();
+        let nameB = (b.card.name || '').trim();
+        return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
       });
     }
 
@@ -1509,7 +1522,7 @@ function addManualWorker() {
 
 function reorderCardsBasedOnDOM() {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  if (currentFilter === 'alpha') return; // Ne réorganise pas en DB si on est en mode tri A-Z
+  if (currentFilter === 'alpha') return;
 
   const newCardsData = [];
   CATEGORY_INFO.forEach(cat => {
@@ -1574,13 +1587,12 @@ function removeTask(cIdx, tIdx) {
   if(currentView==='orgchart') renderOrgChart(); 
 }
 
-// MODIFIÉ : Ajout Timesheet en tête (category: civil + unshift + scroll en haut)
 function addNewSupervisor() { 
   if (currentRole === 'viewer' || currentRole === 'cfo') return; 
   cardsData.unshift({ 
     name: "NOUVELLE TIMESHEET", 
     manager: "", 
-    category: "civil", // Tout premier lot (Civil Works)
+    category: "civil",
     timesheetNo: "", 
     shiftType: "Shift 1", 
     shiftHours: "07:00 - 15:00", 
@@ -1588,7 +1600,6 @@ function addNewSupervisor() {
     tasks: [{ desc: "", foreman: "", source: siteCompanies[0], workers: "", workerList: [] }] 
   }); 
   
-  // Si un filtre autre que "all", "alpha" ou "civil" est actif, on repasse sur "all" pour voir la carte
   if (!['all', 'alpha', 'civil'].includes(currentFilter)) {
     setFilter('all');
   } else {
@@ -1596,7 +1607,7 @@ function addNewSupervisor() {
   }
   
   syncToFirebase(); 
-  window.scrollTo({ top: 0, behavior: 'smooth' }); // Remonte instantanément en haut de page
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function removeSupervisor(cIdx) { 
