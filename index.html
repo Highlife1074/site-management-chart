@@ -327,7 +327,7 @@
 <div id="error-banner"></div>
 
 <!-- BOUTONS FLOTTANTS -->
-<div id="fab-move" onclick="openMultiMoveModal()">
+<div id="fab-move" onclick="openMultiMoveModal(event)">
   ➡️ Déplacer <span id="fab-count">0</span> ouvrier(s)
 </div>
 
@@ -1097,7 +1097,7 @@ function renderCards() {
 
     let displayList = cardsData.map((card, cIdx) => ({ card, cIdx }));
 
-    // MODIFIÉ : Tri strict par numéro de Timesheet
+    // Tri strict par numéro de Timesheet
     if (currentFilter === 'alpha') {
       displayList.sort((a, b) => {
         let tsA = (a.card.timesheetNo || '').trim();
@@ -1396,7 +1396,7 @@ function handleWorkerDrop(evt) {
 }
 
 function updateFab() {
-  const selected = document.querySelectorAll('.worker-pill.selected-pill');
+  const selected = document.querySelectorAll('.worker-pill.sortable-selected, .worker-pill.selected-pill');
   const fabMove = document.getElementById('fab-move');
   const fabCount = document.getElementById('fab-count');
   
@@ -1408,9 +1408,19 @@ function updateFab() {
   }
 }
 
-function openMultiMoveModal() {
-  const count = document.querySelectorAll('.worker-pill.selected-pill').length;
-  if (count === 0) return;
+window.openMultiMoveModal = function(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  
+  const selectedPills = document.querySelectorAll('.worker-pill.sortable-selected, .worker-pill.selected-pill');
+  const count = selectedPills.length;
+  
+  if (count === 0) {
+      alert("Aucun ouvrier n'est actuellement sélectionné.");
+      return;
+  }
   
   let html = `<option value="-1">👷 Renvoyer à la Base (Non assigné)</option>`;
   cardsData.forEach((c, idx) => {
@@ -1430,7 +1440,7 @@ function closeWorkerModal() {
 function confirmWorkerMove() {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
   const targetCIdx = parseInt(document.getElementById('modal-sup-select').value);
-  const selectedPills = document.querySelectorAll('.worker-pill.selected-pill');
+  const selectedPills = document.querySelectorAll('.worker-pill.sortable-selected, .worker-pill.selected-pill');
   
   selectedPills.forEach(pill => {
       const wId = pill.dataset.wid;
