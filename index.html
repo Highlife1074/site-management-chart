@@ -6,7 +6,7 @@
   <title>Riviera Tower Supervision & Workers Organisation Chart</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Phosphor Icons -->
+  <!-- Phosphor Icons for Construction & Dashboard UI -->
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <script>
     tailwind.config = {
@@ -22,6 +22,11 @@
               700: '#1d4ed8',
               800: '#1e40af',
               900: '#1e3a8a',
+            },
+            site: {
+              concrete: '#334155',
+              safety: '#f97316',
+              crane: '#eab308',
             }
           }
         }
@@ -29,12 +34,30 @@
     }
   </script>
   <style>
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
-    ::-webkit-scrollbar-thumb { background: rgba(71, 85, 105, 0.7); border-radius: 9999px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 1); }
-    .drag-ghost { opacity: 0.35; transform: scale(0.97); }
-    .drop-active { border-color: #3b82f6 !important; background-color: rgba(59, 130, 246, 0.12) !important; }
+    /* Custom scrollbar styling for board columns */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(71, 85, 105, 0.7);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 1);
+    }
+    .drag-ghost {
+      opacity: 0.35;
+      transform: scale(0.97);
+    }
+    .drop-active {
+      border-color: #3b82f6 !important;
+      background-color: rgba(59, 130, 246, 0.08) !important;
+    }
   </style>
 </head>
 <body class="h-full text-slate-100 flex flex-col font-sans select-none overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
@@ -57,8 +80,9 @@
       </div>
     </div>
 
-    <!-- Actions & Filtres -->
+    <!-- Search and Quick Actions -->
     <div class="flex items-center gap-3 flex-wrap">
+      <!-- Search -->
       <div class="relative min-w-[240px]">
         <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
         <input 
@@ -69,6 +93,7 @@
         />
       </div>
 
+      <!-- Filter by contractor -->
       <select id="filter-contractor" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-200 focus:outline-none focus:border-brand-500 transition-all">
         <option value="ALL">Toutes les entreprises</option>
         <option value="Bouygues-Ellaktor JV">Bouygues-Ellaktor JV</option>
@@ -78,6 +103,7 @@
         <option value="Titan Cement Ltd">Titan Cement Ltd</option>
       </select>
 
+      <!-- Add Worker Button -->
       <button 
         id="btn-open-add-modal"
         class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-medium text-xs shadow-md shadow-emerald-950/40 transition-all">
@@ -85,9 +111,10 @@
         <span>Ajouter Ouvrier</span>
       </button>
 
+      <!-- Reset / Demo Button -->
       <button 
         id="btn-reset-demo" 
-        title="Réinitialiser les données"
+        title="Réinitialiser les données de démonstration"
         class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-all text-xs flex items-center justify-center">
         <i class="ph ph-arrow-counter-clockwise text-base"></i>
       </button>
@@ -106,29 +133,36 @@
         <span id="stat-active-zones" class="font-bold text-brand-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">4/4</span>
       </div>
       <div class="flex items-center gap-2">
-        <span class="text-slate-400">Entreprises :</span>
-        <span id="stat-contractors-count" class="font-bold text-amber-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">0</span>
+        <span class="text-slate-400">Entreprises Principales :</span>
+        <span id="stat-contractors-count" class="font-bold text-amber-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">5</span>
       </div>
     </div>
     <div class="flex items-center gap-4 text-slate-400 text-xs">
-      <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Sur Site</div>
-      <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Briefing Sécurité</div>
-      <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Grue / Hauteur</div>
+      <div class="flex items-center gap-1.5">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Sur Site
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Briefing Sécurité
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Grue / Hauteur
+      </div>
     </div>
   </section>
 
   <!-- Main Interactive Board -->
   <main class="flex-1 overflow-x-auto p-6 flex gap-5 items-start">
+    <!-- Board columns will be injected here dynamically -->
     <div id="kanban-board" class="flex gap-5 w-full h-full min-w-max pb-4"></div>
   </main>
 
-  <!-- MODAL: DÉPLACER -->
-  <div id="modal-move" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm" style="display: none;">
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-5 shadow-2xl shadow-black/80">
+  <!-- MODAL: DEPLACER (WORKING BLUE BUTTON TARGET) -->
+  <div id="modal-move" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 shadow-2xl shadow-black/80 transform transition-all">
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold">
-            <i class="ph ph-arrows-left-right text-lg"></i>
+            <i class="ph ph-arrows-out-card text-lg"></i>
           </div>
           <div>
             <h3 class="font-bold text-slate-100 text-sm">Déplacer l'Ouvrier</h3>
@@ -143,9 +177,12 @@
       <div class="py-4 space-y-3">
         <input type="hidden" id="move-worker-id">
         <p class="text-xs text-slate-300">
-          Choisissez la zone de travail / équipe de destination :
+          Choisissez la zone de travail / équipe de destination pour cet intervenant :
         </p>
-        <div id="move-zone-options" class="space-y-2"></div>
+
+        <div id="move-zone-options" class="space-y-2">
+          <!-- Dynamic radio buttons will be added here -->
+        </div>
       </div>
 
       <div class="pt-3 border-t border-slate-800 flex justify-end gap-2">
@@ -161,8 +198,8 @@
   </div>
 
   <!-- MODAL: AJOUTER OUVRIER -->
-  <div id="modal-add-worker" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm" style="display: none;">
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-5 shadow-2xl shadow-black/80">
+  <div id="modal-add-worker" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-5 shadow-2xl shadow-black/80">
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 rounded-lg bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-bold">
@@ -182,28 +219,58 @@
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-slate-300 font-medium mb-1">Nom & Prénom *</label>
-            <input type="text" name="name" required placeholder="ex: Nikos Alexopoulos" class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
+            <input 
+              type="text" 
+              name="name" 
+              required 
+              placeholder="ex: Nikos Alexopoulos" 
+              class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+            />
           </div>
           <div>
             <label class="block text-slate-300 font-medium mb-1">Métier / Rôle *</label>
-            <input type="text" name="role" required placeholder="ex: Grutier Principal, Ferrailleur..." class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
+            <input 
+              type="text" 
+              name="role" 
+              required 
+              placeholder="ex: Grutier Principal, Ferrailleur..." 
+              class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+            />
           </div>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-slate-300 font-medium mb-1">Entreprise *</label>
-            <input type="text" name="contractor" required placeholder="ex: Bouygues-Ellaktor JV" class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
+            <label class="block text-slate-300 font-medium mb-1">Entreprise / Sous-traitant *</label>
+            <input 
+              type="text" 
+              name="contractor" 
+              required 
+              placeholder="ex: Bouygues-Ellaktor JV" 
+              class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+            />
           </div>
           <div>
             <label class="block text-slate-300 font-medium mb-1">Code WBS *</label>
-            <input type="text" name="wbs" required placeholder="ex: WBS-2.1.4" class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
+            <input 
+              type="text" 
+              name="wbs" 
+              required 
+              placeholder="ex: WBS-2.1.4" 
+              class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+            />
           </div>
         </div>
 
         <div>
-          <label class="block text-slate-300 font-medium mb-1">Zone d'affectation *</label>
-          <select name="zoneId" id="form-select-zone" required class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:border-emerald-500"></select>
+          <label class="block text-slate-300 font-medium mb-1">Zone / Équipe d'affectation *</label>
+          <select 
+            name="zoneId" 
+            id="form-select-zone"
+            required 
+            class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:border-emerald-500">
+            <!-- Dynamic zones -->
+          </select>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -217,15 +284,22 @@
           </div>
           <div>
             <label class="block text-slate-300 font-medium mb-1">Badge d'accès / ID</label>
-            <input type="text" name="badge" placeholder="ex: RT-8834" class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
+            <input 
+              type="text" 
+              name="badge" 
+              placeholder="ex: RT-8834" 
+              class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+            />
           </div>
         </div>
 
         <div class="pt-3 border-t border-slate-800 flex justify-end gap-2">
-          <button type="button" id="btn-cancel-add" class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition">Annuler</button>
+          <button type="button" id="btn-cancel-add" class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition">
+            Annuler
+          </button>
           <button type="submit" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition flex items-center gap-1.5 shadow-md shadow-emerald-900/40">
             <i class="ph ph-plus-circle font-bold"></i>
-            <span>Enregistrer</span>
+            <span>Enregistrer l'ouvrier</span>
           </button>
         </div>
       </form>
@@ -233,24 +307,130 @@
   </div>
 
   <script>
+    // Initial Construction Teams and Zones for Riviera Tower Project
     const initialZones = [
-      { id: 'core-wall', name: 'Noyau & Grues Tour', wbsScope: 'WBS 2.1 - Core Climbing & Tower Cranes', icon: 'ph-crane', description: 'Coffrage auto-grimpant, bétonnage noyau & levage lourd' },
-      { id: 'substructure', name: 'Gros Œuvre & Dalles', wbsScope: 'WBS 2.2 - Post-tensioned Slabs & Columns', icon: 'ph-wall', description: 'Coffrage, ferraillage haute densité et coulage' },
-      { id: 'facade-mep', name: 'Façade & Lots Techniques (MEP)', wbsScope: 'WBS 3.4 - Unitized Curtain Wall & HVAC', icon: 'ph-wrench', description: 'Pose des façades et réseaux fluides' },
-      { id: 'logistics', name: 'Logistique & Sécurité Chantier', wbsScope: 'WBS 1.3 - Site Access, Hoists & HSE', icon: 'ph-shield-check', description: 'Monte-charges, accès et sécurité' }
+      {
+        id: 'core-wall',
+        name: 'Noyau & Grues Tour',
+        wbsScope: 'WBS 2.1 - Core Climbing & Tower Cranes',
+        color: 'border-amber-500/40',
+        badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+        icon: 'ph-crane',
+        description: 'Coffrage auto-grimpant, bétonnage noyau & levage lourd'
+      },
+      {
+        id: 'substructure',
+        name: 'Gros Œuvre & Dalles',
+        wbsScope: 'WBS 2.2 - Post-tensioned Slabs & Columns',
+        color: 'border-blue-500/40',
+        badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+        icon: 'ph-wall',
+        description: 'Coffrage, ferraillage haute densité et coulage'
+      },
+      {
+        id: 'facade-mep',
+        name: 'Façade & Lots Techniques (MEP)',
+        wbsScope: 'WBS 3.4 - Unitized Curtain Wall & HVAC',
+        color: 'border-teal-500/40',
+        badgeColor: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
+        icon: 'ph-wrench',
+        description: 'Pose des panneaux vitrés courbe et gaines techniques'
+      },
+      {
+        id: 'logistics',
+        name: 'Logistique & Sécurité Chantier',
+        wbsScope: 'WBS 1.3 - Site Access, Hoists & HSE',
+        color: 'border-purple-500/40',
+        badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+        icon: 'ph-shield-check',
+        description: 'Monte-charges de chantier, circulation, sécurité globale'
+      }
     ];
 
     const initialWorkers = [
-      { id: 'w-1', name: 'Dimitris Voulgaris', role: 'Chef Grutier (Liebherr 1000 EC-H)', contractor: 'Bouygues-Ellaktor JV', wbs: 'WBS-2.1.2', zoneId: 'core-wall', status: 'height', badge: 'RT-1002' },
-      { id: 'w-2', name: 'Stelios Kotsis', role: 'Superviseur Coffrage Auto-Grimpant', contractor: 'PERI Formwork', wbs: 'WBS-2.1.5', zoneId: 'core-wall', status: 'active', badge: 'RT-1045' },
-      { id: 'w-3', name: 'Marc Lefebvre', role: 'Ingénieur Qualité Béton', contractor: 'Bouygues-Ellaktor JV', wbs: 'WBS-2.2.1', zoneId: 'substructure', status: 'active', badge: 'RT-2030' },
-      { id: 'w-4', name: 'Ioannis Papaioannou', role: 'Chef d\'Équipe Ferrailleurs', contractor: 'Titan Cement Ltd', wbs: 'WBS-2.2.3', zoneId: 'substructure', status: 'active', badge: 'RT-2089' },
-      { id: 'w-5', name: 'Andreas Georgiou', role: 'Monteur Façade Panneaux Doubles', contractor: 'Bouygues-Ellaktor JV', wbs: 'WBS-3.4.1', zoneId: 'facade-mep', status: 'height', badge: 'RT-3011' },
-      { id: 'w-6', name: 'Eleni Kostopoulos', role: 'Coordinatrice Réseaux & HVAC', contractor: 'Schindler Lifts', wbs: 'WBS-3.4.8', zoneId: 'facade-mep', status: 'briefing', badge: 'RT-3094' },
-      { id: 'w-7', name: 'Kostas Karamanlis', role: 'Opérateur Ascenseurs Alimak', contractor: 'Bauer Foundations', wbs: 'WBS-1.3.4', zoneId: 'logistics', status: 'active', badge: 'RT-0042' },
-      { id: 'w-8', name: 'Nathalie Mercier', role: 'Responsable Prévention & HSE', contractor: 'Bouygues-Ellaktor JV', wbs: 'WBS-1.3.1', zoneId: 'logistics', status: 'active', badge: 'RT-0008' }
+      {
+        id: 'w-1',
+        name: 'Dimitris Voulgaris',
+        role: 'Chef Grutier (Grue Liebherr 1000 EC-H)',
+        contractor: 'Bouygues-Ellaktor JV',
+        wbs: 'WBS-2.1.2',
+        zoneId: 'core-wall',
+        status: 'height',
+        badge: 'RT-1002'
+      },
+      {
+        id: 'w-2',
+        name: 'Stelios Kotsis',
+        role: 'Superviseur Coffrage Auto-Grimpant',
+        contractor: 'PERI Formwork',
+        wbs: 'WBS-2.1.5',
+        zoneId: 'core-wall',
+        status: 'active',
+        badge: 'RT-1045'
+      },
+      {
+        id: 'w-3',
+        name: 'Marc Lefebvre',
+        role: 'Ingénieur Contrôle Qualité Béton',
+        contractor: 'Bouygues-Ellaktor JV',
+        wbs: 'WBS-2.2.1',
+        zoneId: 'substructure',
+        status: 'active',
+        badge: 'RT-2030'
+      },
+      {
+        id: 'w-4',
+        name: 'Ioannis Papaioannou',
+        role: 'Chef d\'Équipe Ferrailleurs',
+        contractor: 'Titan Cement Ltd',
+        wbs: 'WBS-2.2.3',
+        zoneId: 'substructure',
+        status: 'active',
+        badge: 'RT-2089'
+      },
+      {
+        id: 'w-5',
+        name: 'Andreas Georgiou',
+        role: 'Monteur Façade Panneaux Doubles',
+        contractor: 'Bouygues-Ellaktor JV',
+        wbs: 'WBS-3.4.1',
+        zoneId: 'facade-mep',
+        status: 'height',
+        badge: 'RT-3011'
+      },
+      {
+        id: 'w-6',
+        name: 'Eleni Kostopoulos',
+        role: 'Coordinatrice Réseaux & Pompes CVC',
+        contractor: 'Schindler Lifts',
+        wbs: 'WBS-3.4.8',
+        zoneId: 'facade-mep',
+        status: 'briefing',
+        badge: 'RT-3094'
+      },
+      {
+        id: 'w-7',
+        name: 'Kostas Karamanlis',
+        role: 'Opérateur Ascenseurs de Chantier Alimak',
+        contractor: 'Bauer Foundations',
+        wbs: 'WBS-1.3.4',
+        zoneId: 'logistics',
+        status: 'active',
+        badge: 'RT-0042'
+      },
+      {
+        id: 'w-8',
+        name: 'Nathalie Mercier',
+        role: 'Responsable Prévention & HSE',
+        contractor: 'Bouygues-Ellaktor JV',
+        wbs: 'WBS-1.3.1',
+        zoneId: 'logistics',
+        status: 'active',
+        badge: 'RT-0008'
+      }
     ];
 
+    // Reactive State
     let zones = [...initialZones];
     let workers = JSON.parse(JSON.stringify(initialWorkers));
     let searchQuery = '';
@@ -262,7 +442,8 @@
     });
 
     function initApp() {
-      setupGlobalBoardEvents();
+      setupDelegatedCardListeners();
+      setupDragAndDropContainers();
       setupHeaderControls();
       setupModals();
       renderBoard();
@@ -270,11 +451,12 @@
       populateAddWorkerZoneSelect();
     }
 
-    // ÉCOUTEURS GLOBAUX SUR LE DOCUMENT (Résout définitivement le clic sur "Déplacer")
-    function setupGlobalBoardEvents() {
-      // Clics gérés au niveau document
-      document.addEventListener('click', (e) => {
-        // 1. Bouton Déplacer (Bleu)
+    // Event delegation on board: guarantees clicking "Déplacer" always works even after re-rendering
+    function setupDelegatedCardListeners() {
+      const kanbanBoard = document.getElementById('kanban-board');
+
+      kanbanBoard.addEventListener('click', (e) => {
+        // Find the closest "Déplacer" button
         const moveBtn = e.target.closest('.btn-move-worker');
         if (moveBtn) {
           e.preventDefault();
@@ -284,7 +466,7 @@
           return;
         }
 
-        // 2. Bouton Supprimer
+        // Delete button
         const deleteBtn = e.target.closest('.btn-delete-worker');
         if (deleteBtn) {
           e.preventDefault();
@@ -294,26 +476,20 @@
           return;
         }
 
-        // 3. Changement de Statut (badge)
+        // Status cycle badge click
         const statusBadge = e.target.closest('.badge-status');
         if (statusBadge) {
-          e.preventDefault();
-          e.stopPropagation();
           const workerId = statusBadge.getAttribute('data-worker-id');
           cycleWorkerStatus(workerId);
         }
       });
+    }
 
-      // DRAG & DROP HTML5
+    function setupDragAndDropContainers() {
+      // Setup global dragstart / dragend
       document.addEventListener('dragstart', (e) => {
-        // Empêche le drag si on clique sur un bouton intérieur
-        if (e.target.closest('button') || e.target.closest('.badge-status')) {
-          e.preventDefault();
-          return;
-        }
         const card = e.target.closest('.worker-card');
         if (!card) return;
-
         draggedWorkerId = card.getAttribute('data-id');
         card.classList.add('drag-ghost');
         e.dataTransfer.setData('text/plain', draggedWorkerId);
@@ -322,36 +498,36 @@
 
       document.addEventListener('dragend', (e) => {
         const card = e.target.closest('.worker-card');
-        if (card) card.classList.remove('drag-ghost');
+        if (card) {
+          card.classList.remove('drag-ghost');
+        }
         draggedWorkerId = null;
         document.querySelectorAll('.zone-dropzone').forEach(dz => dz.classList.remove('drop-active'));
       });
+    }
 
-      document.addEventListener('dragover', (e) => {
-        const dropzone = e.target.closest('.zone-dropzone');
-        if (dropzone) {
-          e.preventDefault(); // OBLIGATOIRE pour autoriser le DROP
-          e.dataTransfer.dropEffect = 'move';
-          dropzone.classList.add('drop-active');
-        }
-      });
-
-      document.addEventListener('dragleave', (e) => {
-        const dropzone = e.target.closest('.zone-dropzone');
-        if (dropzone && !dropzone.contains(e.relatedTarget)) {
-          dropzone.classList.remove('drop-active');
-        }
-      });
-
-      document.addEventListener('drop', (e) => {
-        const dropzone = e.target.closest('.zone-dropzone');
-        if (!dropzone) return;
-
+    // Attach listeners on drop zones (called during render)
+    function attachDropZoneEvents(dropZoneElement) {
+      dropZoneElement.addEventListener('dragover', (e) => {
+        // MANDATORY: preventDefault allows dropping!
         e.preventDefault();
-        dropzone.classList.remove('drop-active');
+        e.dataTransfer.dropEffect = 'move';
+        dropZoneElement.classList.add('drop-active');
+      });
+
+      dropZoneElement.addEventListener('dragleave', (e) => {
+        // Remove active state when leaving container
+        if (!dropZoneElement.contains(e.relatedTarget)) {
+          dropZoneElement.classList.remove('drop-active');
+        }
+      });
+
+      dropZoneElement.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZoneElement.classList.remove('drop-active');
 
         const workerId = e.dataTransfer.getData('text/plain') || draggedWorkerId;
-        const targetZoneId = dropzone.getAttribute('data-zone-id');
+        const targetZoneId = dropZoneElement.getAttribute('data-zone-id');
 
         if (workerId && targetZoneId) {
           moveWorkerToZone(workerId, targetZoneId);
@@ -360,13 +536,13 @@
     }
 
     function setupModals() {
-      // Modal Déplacer
+      // Move Modal
       const modalMove = document.getElementById('modal-move');
       const closeMove = document.getElementById('btn-close-move-modal');
       const cancelMove = document.getElementById('btn-cancel-move');
       const confirmMove = document.getElementById('btn-confirm-move');
 
-      const hideMoveModal = () => { modalMove.style.display = 'none'; };
+      const hideMoveModal = () => modalMove.classList.add('hidden');
       closeMove.addEventListener('click', hideMoveModal);
       cancelMove.addEventListener('click', hideMoveModal);
 
@@ -375,22 +551,25 @@
         const selectedRadio = document.querySelector('input[name="target-zone"]:checked');
         if (!selectedRadio) return;
 
-        moveWorkerToZone(workerId, selectedRadio.value);
+        const targetZoneId = selectedRadio.value;
+        moveWorkerToZone(workerId, targetZoneId);
         hideMoveModal();
       });
 
-      // Modal Ajouter Ouvrier
+      // Add Worker Modal
       const modalAdd = document.getElementById('modal-add-worker');
       const btnOpenAdd = document.getElementById('btn-open-add-modal');
       const btnCloseAdd = document.getElementById('btn-close-add-modal');
       const btnCancelAdd = document.getElementById('btn-cancel-add');
       const formAdd = document.getElementById('form-add-worker');
 
-      btnOpenAdd.addEventListener('click', () => { modalAdd.style.display = 'flex'; });
+      const showAddModal = () => modalAdd.classList.remove('hidden');
       const hideAddModal = () => {
-        modalAdd.style.display = 'none';
+        modalAdd.classList.add('hidden');
         formAdd.reset();
       };
+
+      btnOpenAdd.addEventListener('click', showAddModal);
       btnCloseAdd.addEventListener('click', hideAddModal);
       btnCancelAdd.addEventListener('click', hideAddModal);
 
@@ -437,6 +616,19 @@
       });
     }
 
+    function moveWorkerToZone(workerId, targetZoneId) {
+      const worker = workers.find(w => w.id === workerId);
+      if (!worker) return;
+
+      if (worker.zoneId === targetZoneId) {
+        return; // already in target
+      }
+
+      worker.zoneId = targetZoneId;
+      renderBoard();
+      updateMetrics();
+    }
+
     function openMoveModal(workerId) {
       const worker = workers.find(w => w.id === workerId);
       if (!worker) return;
@@ -473,17 +665,7 @@
         optionsContainer.appendChild(div);
       });
 
-      const modalMove = document.getElementById('modal-move');
-      modalMove.style.display = 'flex';
-    }
-
-    function moveWorkerToZone(workerId, targetZoneId) {
-      const worker = workers.find(w => w.id === workerId);
-      if (!worker || worker.zoneId === targetZoneId) return;
-
-      worker.zoneId = targetZoneId;
-      renderBoard();
-      updateMetrics();
+      document.getElementById('modal-move').classList.remove('hidden');
     }
 
     function deleteWorker(workerId) {
@@ -512,6 +694,7 @@
       const boardContainer = document.getElementById('kanban-board');
       boardContainer.innerHTML = '';
 
+      // Filter workers based on search and contractor dropdown
       const filteredWorkers = workers.filter(w => {
         const matchesContractor = selectedContractor === 'ALL' || w.contractor === selectedContractor;
         const matchesQuery = !searchQuery || 
@@ -525,10 +708,12 @@
       zones.forEach(zone => {
         const zoneWorkers = filteredWorkers.filter(w => w.zoneId === zone.id);
         
+        // Build Column HTML
         const column = document.createElement('div');
         column.className = 'w-80 md:w-88 flex-shrink-0 flex flex-col h-full bg-slate-900/70 border border-slate-800/80 rounded-2xl overflow-hidden backdrop-blur-sm shadow-xl';
 
         column.innerHTML = `
+          <!-- Column Header -->
           <div class="p-3.5 border-b border-slate-800 bg-slate-900/90 flex flex-col gap-1.5">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
@@ -547,21 +732,30 @@
             </div>
           </div>
 
-          <div class="zone-dropzone flex-1 overflow-y-auto p-3 space-y-2.5 min-h-[300px] border-2 border-transparent transition-all rounded-b-2xl" data-zone-id="${zone.id}">
+          <!-- Drop Zone Area -->
+          <div 
+            class="zone-dropzone flex-1 overflow-y-auto p-3 space-y-2.5 min-h-[300px] border-2 border-transparent transition-all rounded-b-2xl" 
+            data-zone-id="${zone.id}">
             ${zoneWorkers.length === 0 ? `
-              <div class="h-44 border-2 border-dashed border-slate-800 rounded-xl flex flex-col items-center justify-center text-slate-500 text-xs p-4 text-center pointer-events-none">
+              <div class="h-44 border-2 border-dashed border-slate-800 rounded-xl flex flex-col items-center justify-center text-slate-500 text-xs p-4 text-center">
                 <i class="ph ph-hand-grabbing text-2xl mb-1 text-slate-600"></i>
                 <p>Aucun ouvrier assigné</p>
-                <p class="text-[10px] text-slate-600 mt-0.5">Glissez une carte ici ou utilisez "Déplacer"</p>
+                <p class="text-[10px] text-slate-600 mt-0.5">Glissez une carte ici ou utilisez le bouton "Déplacer"</p>
               </div>
             ` : ''}
           </div>
         `;
 
         const dropzone = column.querySelector('.zone-dropzone');
+
+        // Render each card inside the zone
         zoneWorkers.forEach(worker => {
-          dropzone.appendChild(createWorkerCardElement(worker));
+          const card = createWorkerCardElement(worker);
+          dropzone.appendChild(card);
         });
+
+        // Attach native HTML5 Drag and Drop listeners
+        attachDropZoneEvents(dropzone);
 
         boardContainer.appendChild(column);
       });
@@ -573,18 +767,19 @@
       card.setAttribute('draggable', 'true');
       card.setAttribute('data-id', worker.id);
 
+      // Status Badges & Colors
       let statusBadgeHtml = '';
       if (worker.status === 'active') {
-        statusBadgeHtml = `<span class="badge-status cursor-pointer inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" data-worker-id="${worker.id}" title="Cliquer pour changer le statut"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Sur Site</span>`;
+        statusBadgeHtml = `<span class="badge-status cursor-pointer inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" data-worker-id="${worker.id}" title="Cliquer pour basculer le statut"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Sur Site</span>`;
       } else if (worker.status === 'briefing') {
-        statusBadgeHtml = `<span class="badge-status cursor-pointer inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30" data-worker-id="${worker.id}" title="Cliquer pour changer le statut"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>Briefing</span>`;
+        statusBadgeHtml = `<span class="badge-status cursor-pointer inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30" data-worker-id="${worker.id}" title="Cliquer pour basculer le statut"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>Briefing</span>`;
       } else {
-        statusBadgeHtml = `<span class="badge-status cursor-pointer inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/30" data-worker-id="${worker.id}" title="Cliquer pour changer le statut"><span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>Hauteur</span>`;
+        statusBadgeHtml = `<span class="badge-status cursor-pointer inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/30" data-worker-id="${worker.id}" title="Cliquer pour basculer le statut"><span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>Hauteur</span>`;
       }
 
       card.innerHTML = `
         <div class="flex items-start justify-between gap-2 mb-2">
-          <div class="flex items-center gap-2 pointer-events-none">
+          <div class="flex items-center gap-2">
             <div class="w-8 h-8 rounded-lg bg-slate-700/60 border border-slate-600 flex items-center justify-center font-bold text-slate-200 text-xs shadow-inner">
               ${worker.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
             </div>
@@ -593,15 +788,15 @@
               <p class="text-[11px] text-brand-300 font-medium leading-tight">${worker.role}</p>
             </div>
           </div>
-          <button type="button" class="btn-delete-worker text-slate-500 hover:text-rose-400 p-1 rounded transition opacity-0 group-hover:opacity-100" data-worker-id="${worker.id}" title="Supprimer">
-            <i class="ph ph-trash text-sm pointer-events-none"></i>
+          <button class="btn-delete-worker text-slate-500 hover:text-rose-400 p-1 rounded transition opacity-0 group-hover:opacity-100" data-worker-id="${worker.id}" title="Supprimer">
+            <i class="ph ph-trash text-sm"></i>
           </button>
         </div>
 
-        <div class="space-y-1 my-2.5 text-[11px] text-slate-400 bg-slate-900/40 p-2 rounded-lg border border-slate-800 pointer-events-none">
+        <div class="space-y-1 my-2.5 text-[11px] text-slate-400 bg-slate-900/40 p-2 rounded-lg border border-slate-800">
           <div class="flex items-center justify-between">
             <span class="text-slate-500">Entreprise :</span>
-            <span class="text-slate-300 font-medium truncate max-w-[140px] text-right">${worker.contractor}</span>
+            <span class="text-slate-300 font-medium truncate max-w-[140px] text-right" title="${worker.contractor}">${worker.contractor}</span>
           </div>
           <div class="flex items-center justify-between">
             <span class="text-slate-500">WBS :</span>
@@ -616,14 +811,14 @@
         <div class="flex items-center justify-between pt-1 gap-2">
           <div>${statusBadgeHtml}</div>
 
-          <!-- BOUTON DÉPLACER AVEC POINTER-EVENTS CONTROLÉS -->
+          <!-- THE BLUE 'DEPLACER' BUTTON -->
           <button 
-            type="button" 
-            class="btn-move-worker inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-medium text-xs transition shadow shadow-blue-900/50 cursor-pointer"
+            type="button"
+            class="btn-move-worker inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-medium text-xs transition-all shadow shadow-blue-900/50 hover:shadow-blue-600/30"
             data-worker-id="${worker.id}"
             title="Transférer vers une autre équipe">
-            <i class="ph ph-arrows-left-right text-xs font-bold pointer-events-none"></i>
-            <span class="pointer-events-none">Déplacer</span>
+            <i class="ph ph-arrows-left-right text-xs font-bold"></i>
+            <span>Déplacer</span>
           </button>
         </div>
       `;
@@ -633,8 +828,10 @@
 
     function updateMetrics() {
       document.getElementById('stat-total-workers').textContent = workers.length;
+
       const activeZonesCount = zones.filter(z => workers.some(w => w.zoneId === z.id)).length;
       document.getElementById('stat-active-zones').textContent = `${activeZonesCount}/${zones.length}`;
+
       const contractors = new Set(workers.map(w => w.contractor));
       document.getElementById('stat-contractors-count').textContent = contractors.size;
     }
