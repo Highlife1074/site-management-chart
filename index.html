@@ -364,21 +364,21 @@
 <div id="error-banner"></div>
 
 <!-- BOUTONS FLOTTANTS -->
-<div id="fab-move" onpointerdown="window.handleFabClick(event)" onmousedown="window.handleFabClick(event)">
+<div id="fab-move" onpointerdown="event.stopPropagation()" onmousedown="event.stopPropagation()" onclick="handleFabClick(event)">
   ➡️ Déplacer <span id="fab-count">0</span> ouvrier(s)
 </div>
 
 <!-- CONTENEUR FLOTTANT POUR L'IMPRESSION (AU DESSUS DE BASE OUVRIER) -->
 <div id="fab-print-container" style="display:none; position:fixed; bottom:90px; right:30px; flex-direction:column; gap:10px; z-index:1900; align-items:flex-end;">
-  <button class="btn btn-black" onclick="window.openPrintModal()" style="padding:14px 24px; border-radius:30px; font-size:14px; font-weight:800; box-shadow:0 10px 25px rgba(0,0,0,0.3); border: 2px solid white; display:flex; align-items:center; gap:8px;">
+  <button class="btn btn-black" onclick="openPrintModal()" style="padding:14px 24px; border-radius:30px; font-size:14px; font-weight:800; box-shadow:0 10px 25px rgba(0,0,0,0.3); border: 2px solid white; display:flex; align-items:center; gap:8px;">
     📄 Imprimer TS <span id="print-counter" style="background:white; color:#0f172a; padding:2px 8px; border-radius:12px; font-size:12px;">0</span>
   </button>
-  <button class="btn btn-outline" onclick="window.uncheckAllTS()" style="padding:8px 16px; border-radius:20px; font-size:12px; font-weight:700; color:#dc2626; border-color:#fca5a5; background:white; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+  <button class="btn btn-outline" onclick="uncheckAllTS()" style="padding:8px 16px; border-radius:20px; font-size:12px; font-weight:700; color:#dc2626; border-color:#fca5a5; background:white; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
     🗙 Annuler sélection
   </button>
 </div>
 
-<div id="fab-drawer" onclick="window.toggleDrawer()">
+<div id="fab-drawer" onclick="toggleDrawer()">
   👷 Base Ouvriers <span id="fab-drawer-count">0</span>
 </div>
 
@@ -390,14 +390,14 @@
        <span style="font-size:12px; color:#64748b;">Modifiez les champs directement. Toute modification est sauvegardée.</span>
        
        <div style="display:flex; gap:8px;">
-          <button class="btn btn-warning" onclick="window.cleanDuplicates()" title="Supprime automatiquement les doublons (garde l'ouvrier assigné en priorité)">🧹 Nettoyer Doublons</button>
-          <button class="btn btn-outline" onclick="window.exportWorkersExcel()">💾 Exporter Excel</button>
-          <button class="btn btn-outline" onclick="window.printDB()">🖨️ Imprimer</button>
+          <button class="btn btn-warning" onclick="cleanDuplicates()" title="Supprime automatiquement les doublons (garde l'ouvrier assigné en priorité)">🧹 Nettoyer Doublons</button>
+          <button class="btn btn-outline" onclick="exportWorkersExcel()">💾 Exporter Excel</button>
+          <button class="btn btn-outline" onclick="printDB()">🖨️ Imprimer</button>
        </div>
     </div>
     
     <div style="margin-bottom: 10px;">
-        <input type="text" id="db-search-input" class="modal-select" placeholder="🔍 Rechercher un nom, ID ou entreprise..." oninput="window.filterDBTable(this.value)">
+        <input type="text" id="db-search-input" class="modal-select" placeholder="🔍 Rechercher un nom, ID ou entreprise..." oninput="filterDBTable(this.value)">
     </div>
 
     <div style="overflow-y:auto; flex-grow:1; border:1px solid #cbd5e1; border-radius:8px;">
@@ -412,11 +412,12 @@
            </tr>
          </thead>
          <tbody id="db-table-body">
+           <!-- Généré en JS -->
          </tbody>
        </table>
     </div>
     <div class="modal-actions">
-       <button class="btn btn-black" onclick="window.closeDBModal()">Fermer</button>
+       <button class="btn btn-black" onclick="closeDBModal()">Fermer</button>
     </div>
   </div>
 </div>
@@ -437,7 +438,7 @@
       <ul><li>Check the small <strong>square box (☑)</strong> for every Supervisor who needs a Timesheet.</li><li>Click the black <strong>📄 Imprimer TS</strong> button.</li><li>Select the date of the <strong>next Monday</strong>.</li><li>The system will automatically generate 6 pages per team (Monday to Saturday), properly paginated (max 15 workers per page), with signature blocks on every page.</li></ul>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-black" onclick="window.closeGuideModal()">J'ai compris</button>
+      <button class="btn btn-black" onclick="closeGuideModal()">J'ai compris</button>
     </div>
   </div>
 </div>
@@ -449,8 +450,8 @@
     <p style="font-size:13px; color:#64748b; margin-top:-8px;" id="modal-worker-name"></p>
     <select id="modal-sup-select" class="modal-select"></select>
     <div class="modal-actions">
-      <button class="btn btn-outline" onclick="window.closeWorkerModal()">Annuler</button>
-      <button class="btn btn-success" onclick="window.confirmWorkerMove()">✅ Confirmer</button>
+      <button class="btn btn-outline" onclick="closeWorkerModal()">Annuler</button>
+      <button class="btn btn-success" onclick="confirmWorkerMove()">✅ Confirmer</button>
     </div>
   </div>
 </div>
@@ -461,8 +462,8 @@
     <p style="font-size:13px; color:#64748b; margin-top:-8px;">Sélectionnez le premier jour (Lundi) :</p>
     <input type="date" id="print-date-input" class="modal-select" />
     <div class="modal-actions" style="margin-top:8px;">
-      <button class="btn btn-outline" onclick="window.closePrintModal()">Annuler</button>
-      <button class="btn btn-black" onclick="window.executePrint()">Générer (6 jours)</button>
+      <button class="btn btn-outline" onclick="closePrintModal()">Annuler</button>
+      <button class="btn btn-black" onclick="executePrint()">Générer (6 jours)</button>
     </div>
   </div>
 </div>
@@ -472,10 +473,10 @@
     <div class="modal-title">⚙️ Colonnes de pointage</div>
     <p style="font-size:12px; color:#64748b; margin-top:-8px;">Définissez les tâches qui apparaîtront en colonnes sur la feuille imprimée.</p>
     <div id="ts-tasks-list" style="display:flex; flex-direction:column; gap:8px; margin-top:8px; max-height: 250px; overflow-y:auto; padding-right:4px;"></div>
-    <button class="btn btn-outline" style="margin-top:8px; justify-content:center;" onclick="window.addTsTaskInput()">+ Ajouter une colonne</button>
+    <button class="btn btn-outline" style="margin-top:8px; justify-content:center;" onclick="addTsTaskInput()">+ Ajouter une colonne</button>
     <div class="modal-actions" style="margin-top:12px;">
-      <button class="btn btn-outline" onclick="window.closeTsTasksModal()">Annuler</button>
-      <button class="btn btn-success" onclick="window.saveTsTasks()">Enregistrer</button>
+      <button class="btn btn-outline" onclick="closeTsTasksModal()">Annuler</button>
+      <button class="btn btn-success" onclick="saveTsTasks()">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -487,11 +488,11 @@
     <p style="font-size:12px; color:#64748b; margin-top:-8px;">Ajoutez de nouveaux sous-traitants pour les assigner aux tâches.</p>
     <div style="display:flex; gap:8px;">
        <input type="text" id="new-comp-input" class="modal-select" placeholder="Nom de l'entreprise...">
-       <button class="btn btn-black" onclick="window.addCompany()">Ajouter</button>
+       <button class="btn btn-black" onclick="addCompany()">Ajouter</button>
     </div>
     <div id="companies-list" style="margin-top:12px; display:flex; flex-direction:column; gap:8px; max-height:200px; overflow-y:auto;"></div>
     <div class="modal-actions" style="margin-top:16px;">
-      <button class="btn btn-outline" onclick="window.closeCompaniesModal()">Fermer</button>
+      <button class="btn btn-outline" onclick="closeCompaniesModal()">Fermer</button>
     </div>
   </div>
 </div>
@@ -500,11 +501,11 @@
 <div id="workers-drawer" class="drawer">
   <div class="drawer-header">
     <h3 style="font-size:16px; font-weight:800; margin:0;">👷 Base Ouvriers</h3>
-    <button class="btn-close-drawer" onclick="window.toggleDrawer()">&times;</button>
+    <button class="btn-close-drawer" onclick="toggleDrawer()">&times;</button>
   </div>
   
   <div style="display: flex; gap: 8px; margin-top: 4px;">
-    <input type="file" id="db-file-input" accept=".xlsx, .xls" style="display:none" onchange="window.importWorkersDB(event)">
+    <input type="file" id="db-file-input" accept=".xlsx, .xls" style="display:none" onchange="importWorkersDB(event)">
     <button class="btn btn-success" id="btn-import-db" style="font-size:11px; padding:6px 10px; width:100%;" onclick="document.getElementById('db-file-input').click()">📥 Importer Base Excel</button>
   </div>
 
@@ -513,7 +514,7 @@
     <input type="text" id="new-w-id" placeholder="ID / N° (ex: W-123)" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;">
     <input type="text" id="new-w-name" placeholder="Nom Complet" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;">
     <select id="new-w-comp" class="dynamic-comp-select" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;"></select>
-    <button class="btn btn-outline" style="font-size:11px; padding:4px; justify-content:center;" onclick="window.addManualWorker()">+ Ajout Manuel</button>
+    <button class="btn btn-outline" style="font-size:11px; padding:4px; justify-content:center;" onclick="addManualWorker()">+ Ajout Manuel</button>
   </div>
 
   <h4 style="font-size:13px; font-weight:800; margin-top:12px; padding-bottom:8px; border-bottom:1px solid #e2e8f0;">Ouvriers Non Assignés</h4>
@@ -531,11 +532,11 @@
   </div>
   <div class="actions-group">
     
-    <button class="btn btn-blue" onclick="window.openGuideModal()">📖 Guide</button>
+    <button class="btn btn-blue" onclick="openGuideModal()">📖 Guide</button>
 
     <div class="role-container">
       <span class="role-label">PROFIL :</span>
-      <select id="role-selector" class="role-select" onchange="window.changeRole(this.value)">
+      <select id="role-selector" class="role-select" onchange="changeRole(this.value)">
         <option value="viewer">👁️ Lecteur</option>
         <option value="timekeeper">⏱️ Timekeeper</option>
         <option value="cfo">💰 CFO</option>
@@ -543,29 +544,29 @@
       </select>
     </div>
 
-    <!-- NOUVEAUX ONGLETS -->
+    <!-- ONGLETS VUES -->
     <div class="view-toggle-group">
-        <button id="btn-view-dash" class="view-toggle-btn active" onclick="window.switchView('dashboard')">📊 Cartes</button>
-        <button id="btn-view-org" class="view-toggle-btn" onclick="window.switchView('orgchart')">🗺️ Détails</button>
-        <button id="btn-view-tree" class="view-toggle-btn" onclick="window.switchView('tree')">🌳 Arbre</button>
+        <button id="btn-view-dash" class="view-toggle-btn active" onclick="switchView('dashboard')">📊 Cartes</button>
+        <button id="btn-view-org" class="view-toggle-btn" onclick="switchView('orgchart')">🗺️ Détails</button>
+        <button id="btn-view-tree" class="view-toggle-btn" onclick="switchView('tree')">🌳 Arbre</button>
     </div>
 
     <div class="divider"></div>
 
-    <button class="btn btn-outline" onclick="window.openDBModal()" title="Éditer la base de données de tous les ouvriers">🗃️ Base Globale</button>
-    <button class="btn btn-outline" id="btn-add-sup" onclick="window.addNewSupervisor()">+ Ajout Timesheet</button>
+    <button class="btn btn-outline" onclick="openDBModal()" title="Éditer la base de données de tous les ouvriers">🗃️ Base Globale</button>
+    <button class="btn btn-outline" id="btn-add-sup" onclick="addNewSupervisor()">+ Ajout Timesheet</button>
     
-    <button class="btn btn-icon" id="btn-settings-menu" onclick="window.toggleAdminMenu()" title="Outils avancés">⚙️</button>
+    <button class="btn btn-icon" id="btn-settings-menu" onclick="toggleAdminMenu()" title="Outils avancés">⚙️</button>
     
     <div id="admin-dropdown">
       <span style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase;">Configuration</span>
-      <button class="btn btn-outline" style="width:100%; justify-content:left;" onclick="window.openCompaniesModal()">🏢 Gérer Entreprises</button>
+      <button class="btn btn-outline" style="width:100%; justify-content:left;" onclick="openCompaniesModal()">🏢 Gérer Entreprises</button>
       <hr style="border:0; border-top:1px solid #e2e8f0; margin:4px 0;">
       <span style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase;">Données</span>
-      <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display:none" onchange="window.importExcelFile(event)">
+      <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display:none" onchange="importExcelFile(event)">
       <button class="btn btn-outline" style="width:100%; justify-content:left;" id="btn-import" onclick="document.getElementById('excel-file-input').click()" title="ZÉRO SUPPRESSION : Ajoute les nouveaux ouvriers pointés sans effacer les assignations manuelles.">📥 Import Pointages</button>
-      <button class="btn btn-outline" style="width:100%; justify-content:left;" onclick="window.exportBackup()">💾 Sauvegarder (JSON)</button>
-      <input type="file" id="backup-file-input" accept=".json" style="display:none" onchange="window.importBackup(event)">
+      <button class="btn btn-outline" style="width:100%; justify-content:left;" onclick="exportBackup()">💾 Sauvegarder (JSON)</button>
+      <input type="file" id="backup-file-input" accept=".json" style="display:none" onchange="importBackup(event)">
       <button class="btn btn-outline" style="width:100%; justify-content:left;" onclick="document.getElementById('backup-file-input').click()">📂 Restaurer (JSON)</button>
     </div>
 
@@ -618,32 +619,32 @@
   <div class="filter-bar" style="margin-top:-8px; padding-bottom:12px;">
       
       <div class="multi-select-container">
-        <div class="multi-select-button" onclick="window.toggleMultiDropdown('mgr-options')">
+        <div class="multi-select-button" onclick="toggleMultiDropdown('mgr-options')">
           👨‍💼 Managers <span id="mgr-badge" class="multi-select-badge">TOUT</span>
         </div>
         <div class="multi-select-dropdown" id="mgr-options">
           <div style="border-bottom:1px solid #e2e8f0; padding-bottom:6px; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
              <span style="font-size:10px; font-weight:800; color:#64748b;">FILTRER PAR MANAGER :</span>
-             <button onclick="window.clearMultiFilter('mgr')" style="background:none; border:none; color:#2563eb; font-size:10px; font-weight:bold; cursor:pointer;">Tout</button>
+             <button onclick="clearMultiFilter('mgr')" style="background:none; border:none; color:#2563eb; font-size:10px; font-weight:bold; cursor:pointer;">Tout</button>
           </div>
           <div id="mgr-options-list" style="display:flex; flex-direction:column; max-height:200px; overflow-y:auto;"></div>
         </div>
       </div>
 
       <div class="multi-select-container">
-        <div class="multi-select-button" onclick="window.toggleMultiDropdown('sup-options')">
+        <div class="multi-select-button" onclick="toggleMultiDropdown('sup-options')">
           👷 Superviseurs <span id="sup-badge" class="multi-select-badge">TOUT</span>
         </div>
         <div class="multi-select-dropdown" id="sup-options">
           <div style="border-bottom:1px solid #e2e8f0; padding-bottom:6px; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
              <span style="font-size:10px; font-weight:800; color:#64748b;">FILTRER PAR SUP :</span>
-             <button onclick="window.clearMultiFilter('sup')" style="background:none; border:none; color:#2563eb; font-size:10px; font-weight:bold; cursor:pointer;">Tout</button>
+             <button onclick="clearMultiFilter('sup')" style="background:none; border:none; color:#2563eb; font-size:10px; font-weight:bold; cursor:pointer;">Tout</button>
           </div>
           <div id="sup-options-list" style="display:flex; flex-direction:column; max-height:200px; overflow-y:auto;"></div>
         </div>
       </div>
 
-      <button class="btn btn-outline" id="btn-select-visible" onclick="window.checkVisibleTS()" style="margin-left:auto; border-color:#2563eb; color:#2563eb; display:none;">✔️ Sélectionner fiches affichées</button>
+      <button class="btn btn-outline" id="btn-select-visible" onclick="checkVisibleTS()" style="margin-left:auto; border-color:#2563eb; color:#2563eb; display:none;">✔️ Sélectionner fiches affichées</button>
   </div>
   
   <div id="categories-board"></div>
@@ -667,27 +668,9 @@ window.onerror = function(msg, url, line) {
   return false;
 };
 
-// Menus
-window.toggleAdminMenu = function() {
-  const menu = document.getElementById('admin-dropdown');
-  menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
-}
-window.openGuideModal = function() { document.getElementById('guide-modal').style.display = 'flex'; }
-window.closeGuideModal = function() { document.getElementById('guide-modal').style.display = 'none'; }
-
-document.addEventListener('click', function(e) {
-  const btn = document.getElementById('btn-settings-menu');
-  const menu = document.getElementById('admin-dropdown');
-  if (btn && menu && !btn.contains(e.target) && !menu.contains(e.target)) {
-    menu.style.display = 'none';
-  }
-  
-  if (!e.target.closest('.multi-select-container') && !e.target.closest('.filter-btn')) {
-      document.querySelectorAll('.multi-select-dropdown').forEach(el => el.style.display = 'none');
-  }
-});
-
-// --- GESTION DES RÔLES / PROFILS ---
+// ==========================================
+// 1. VARIABLES GLOBALES ET INITIALISATION
+// ==========================================
 const PASSWORDS = { viewer: '', timekeeper: 'timekeeper', cfo: 'cfo', admin: 'admin' };
 let currentRole = localStorage.getItem('app_role') || 'viewer';
 let currentView = 'dashboard';
@@ -696,18 +679,177 @@ let workerSortables = [];
 let selectedForPrint = new Set(); 
 let currentTsCardIdx = -1;
 
-window.changeRole = function(newRole) {
-  if (newRole !== 'viewer') {
-    const pwd = prompt(`Mot de passe pour le profil ${newRole.toUpperCase()} :`);
-    if (pwd !== PASSWORDS[newRole]) {
-      alert("Mot de passe incorrect.");
-      document.getElementById('role-selector').value = currentRole;
-      return;
+const CATEGORY_INFO = [
+  { id: 'civil', name: 'CIVIL WORKS', color: '#ea580c' },
+  { id: 'trades', name: 'TRADES & FINISHES', color: '#2563eb' },
+  { id: 'facade', name: 'FAÇADE', color: '#0891b2' },
+  { id: 'logistic', name: 'LOGISTICS', color: '#8b5cf6' },
+  { id: 'external', name: 'EXTERNAL WORKS', color: '#059669' },
+  { id: 'indirect', name: 'INDIRECT & SERVICES', color: '#475569' },
+  { id: 'plant', name: 'PLANT & EQUIPMENT', color: '#dc2626' }
+];
+
+let cardsData = [];
+let unassignedWorkers = [];
+let payrollCounts = {};
+let siteCompanies = ['SKYBUILDING', 'DSS', 'EUROASIA', 'OTHER'];
+let siteSupervisors = [];
+let db = null, docRef = null, isSaving = false;
+
+let currentFilterCat = 'all';
+let currentFilterMgr = [];
+let currentFilterSup = [];
+
+const DEFAULT_DATA = [
+  { name: "NOUVELLE TIMESHEET", manager: "", category: "civil", timesheetNo: "", timesheetName: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "Activité à définir", foreman: "", source: "SKYBUILDING", workers: "", workerList: [] }] }
+];
+
+try {
+  const localSaved = localStorage.getItem("site_chart_backup");
+  if (localSaved) {
+    let parsed = JSON.parse(localSaved);
+    if (parsed.cardsData && Array.isArray(parsed.cardsData)) { 
+      cardsData = parsed.cardsData; 
+      payrollCounts = parsed.payrollCounts || {};
+      unassignedWorkers = parsed.unassignedWorkers || [];
+      if (parsed.companies && Array.isArray(parsed.companies)) siteCompanies = parsed.companies;
+      if (parsed.supervisors && Array.isArray(parsed.supervisors)) siteSupervisors = parsed.supervisors;
+    } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
+  } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
+} catch(e) { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
+
+// ==========================================
+// 2. FONCTIONS UTILITAIRES ET LOGIQUE
+// ==========================================
+
+function buildSupervisorsList() {
+    cardsData.forEach(c => {
+        if (c.name && c.name !== "NOUVELLE TIMESHEET" && c.name !== "Inconnu" && !siteSupervisors.includes(c.name)) {
+            siteSupervisors.push(c.name);
+        }
+    });
+    siteSupervisors.sort();
+}
+buildSupervisorsList();
+
+function findWorkerDuplicate(searchId, searchName, excludeId = null) {
+  const norm = str => String(str || '').trim().toUpperCase();
+  const sId = searchId ? norm(searchId) : null;
+  const sName = searchName ? norm(searchName) : null;
+
+  for (const w of unassignedWorkers) {
+    if (excludeId && norm(w.id) === norm(excludeId)) continue;
+    if (sId && norm(w.id) === sId) return { found: true, location: 'dans la Base (Non assigné)', worker: w };
+    if (sName && norm(w.name) === sName) return { found: true, location: 'dans la Base (Non assigné)', worker: w };
+  }
+
+  for (const card of cardsData) {
+    for (const t of (card.tasks || [])) {
+      for (const w of (t.workerList || [])) {
+        if (excludeId && norm(w.id) === norm(excludeId)) continue;
+        if (sId && norm(w.id) === sId) return { found: true, location: `sur l'équipe de ${card.name}`, worker: w };
+        if (sName && norm(w.name) === sName) return { found: true, location: `sur l'équipe de ${card.name}`, worker: w };
+      }
     }
   }
-  currentRole = newRole;
-  localStorage.setItem('app_role', currentRole);
-  document.getElementById('role-selector').value = currentRole;
+  return { found: false };
+}
+
+function syncToFirebase() {
+  if (currentRole === 'viewer') return; 
+  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, supervisors: siteSupervisors})); } catch(e){}
+  if (!docRef) return;
+  isSaving = true;
+  document.getElementById("sync-text").innerText = "Enregistrement...";
+
+  docRef.set({
+    cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, supervisors: siteSupervisors,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true }).then(() => {
+    document.getElementById("sync-dot").style.background = "#16a34a";
+    document.getElementById("sync-text").innerText = "Connecté à Firebase";
+    setTimeout(() => { isSaving = false; }, 300);
+  }).catch(() => {
+    document.getElementById("sync-dot").style.background = "#eab308";
+    document.getElementById("sync-text").innerText = "Sauvegardé en local";
+    isSaving = false;
+  });
+}
+
+function recalculateTotals() {
+  let grandTotal = 0;
+  let compTotals = {};
+  siteCompanies.forEach(c => compTotals[c] = 0);
+  let cats = { civil: 0, trades: 0, facade: 0, logistic: 0, external: 0, indirect: 0, plant: 0 };
+
+  cardsData.forEach((card, cIdx) => {
+    let cardEffectiveSum = 0;
+    let cardLinkedSum = 0;
+    let cardHasDiff = false;
+
+    if(card.tasks) {
+      card.tasks.forEach(t => {
+        const lCount = t.workerList ? t.workerList.length : 0;
+        const hasM = t.workers !== undefined && t.workers !== null && t.workers !== "";
+        const eCount = hasM ? parseInt(t.workers) : lCount;
+        
+        cardEffectiveSum += eCount; 
+        grandTotal += eCount;
+        cardLinkedSum += lCount;
+        if(hasM && lCount !== eCount) cardHasDiff = true;
+
+        let safeSource = t.source ? String(t.source) : siteCompanies[0];
+        if (compTotals[safeSource] !== undefined) {
+           compTotals[safeSource] += eCount;
+        } else {
+           if (!siteCompanies.includes(safeSource)) {
+              siteCompanies.push(safeSource);
+           }
+           compTotals[safeSource] = eCount;
+        }
+      });
+    }
+    const b = document.getElementById(`card-total-${cIdx}`);
+    if (b) {
+      const mismatchIcon = cardHasDiff ? `<span title="Alerte: ${cardLinkedSum} nommés vs ${cardEffectiveSum} saisis" style="color:#dc2626; margin-right:4px;">⚠️</span>` : '';
+      b.innerHTML = `${mismatchIcon}${cardEffectiveSum} Wkrs`;
+      if(cardHasDiff){
+        b.classList.add('error');
+      } else {
+        b.classList.remove('error');
+      }
+    }
+    if (cats.hasOwnProperty(card.category)) cats[card.category] += cardEffectiveSum;
+  });
+
+  document.getElementById("grand-total").innerText = grandTotal;
+  document.getElementById("cat-civil").innerText = cats.civil;
+  document.getElementById("cat-trades").innerText = cats.trades;
+  document.getElementById("cat-facade").innerText = cats.facade;
+  document.getElementById("cat-logistic").innerText = cats.logistic;
+  document.getElementById("cat-external").innerText = cats.external;
+  document.getElementById("cat-indirect").innerText = cats.indirect;
+  document.getElementById("cat-plant").innerText = cats.plant;
+
+  siteCompanies.forEach(comp => {
+     const safeComp = comp ? String(comp) : 'OTHER';
+     const compId = safeComp.toLowerCase().replace(/[^a-z0-9]/g, '');
+     const tsTotal = compTotals[comp] || 0;
+     const elTotal = document.getElementById(`total-${compId}`);
+     if (elTotal) elTotal.innerText = tsTotal;
+
+     const prTotal = payrollCounts[comp] || 0;
+     const diff = tsTotal - prTotal;
+     const elDiff = document.getElementById(`diff-${compId}`);
+     const inputEl = document.getElementById(`pr-${compId}`);
+     
+     if (inputEl && document.activeElement !== inputEl) inputEl.value = prTotal;
+     if (elDiff) {
+        elDiff.innerText = diff > 0 ? `+${diff}` : diff;
+        elDiff.className = `diff-badge ${diff === 0 ? 'diff-ok' : 'diff-warn'}`;
+     }
+  });
+
   applyRolePermissions();
 }
 
@@ -742,10 +884,10 @@ function applyRolePermissions() {
   sortableInstances.forEach(s => s.option("disabled", isViewer || isCFO));
   workerSortables.forEach(s => s.option("disabled", isViewer || isCFO));
   
-  window.updatePrintButtons();
+  updatePrintButtons();
 }
 
-window.updatePrintButtons = function() {
+function updatePrintButtons() {
     const container = document.getElementById('fab-print-container');
     const counter = document.getElementById('print-counter');
     if (container && counter) {
@@ -758,105 +900,9 @@ window.updatePrintButtons = function() {
     }
 }
 
-// CORRECTION CLIC CASE À COCHER
-window.handleCheck = function(cIdx, isChecked) {
-  if (isChecked) selectedForPrint.add(cIdx);
-  else selectedForPrint.delete(cIdx);
-  window.updatePrintButtons();
-};
-
-window.uncheckAllTS = function() {
-    selectedForPrint.clear();
-    renderCards();
-    window.updatePrintButtons();
-};
-
-window.checkVisibleTS = function() {
-    if (currentRole === 'viewer' || currentRole === 'cfo') return;
-    document.querySelectorAll('.card').forEach(cardEl => {
-        if(cardEl.style.display !== 'none') {
-            selectedForPrint.add(parseInt(cardEl.dataset.cidx));
-        }
-    });
-    renderCards();
-    window.updatePrintButtons();
-};
-
-window.switchView = function(viewName) {
-    currentView = viewName;
-    
-    document.getElementById('dashboard-view').style.display = viewName === 'dashboard' ? 'flex' : 'none';
-    document.getElementById('orgchart-view').style.display = viewName === 'orgchart' ? 'block' : 'none';
-    document.getElementById('orgchart-tree-view').style.display = viewName === 'tree' ? 'block' : 'none';
-    
-    document.getElementById('btn-view-dash').classList.toggle('active', viewName === 'dashboard');
-    document.getElementById('btn-view-org').classList.toggle('active', viewName === 'orgchart');
-    document.getElementById('btn-view-tree').classList.toggle('active', viewName === 'tree');
-    
-    window.refreshActiveView();
-};
-
-window.refreshActiveView = function() {
-    if (currentView === 'dashboard') {
-        renderCards();
-    } else if (currentView === 'orgchart') {
-        window.renderOrgChart();
-    } else if (currentView === 'tree') {
-        window.renderOrgChartTree();
-    }
-};
-
-window.toggleDrawer = function() { document.getElementById('workers-drawer').classList.toggle('open'); }
-
-const CATEGORY_INFO = [
-  { id: 'civil', name: 'CIVIL WORKS', color: '#ea580c' },
-  { id: 'trades', name: 'TRADES & FINISHES', color: '#2563eb' },
-  { id: 'facade', name: 'FAÇADE', color: '#0891b2' },
-  { id: 'logistic', name: 'LOGISTICS', color: '#8b5cf6' },
-  { id: 'external', name: 'EXTERNAL WORKS', color: '#059669' },
-  { id: 'indirect', name: 'INDIRECT & SERVICES', color: '#475569' },
-  { id: 'plant', name: 'PLANT & EQUIPMENT', color: '#dc2626' }
-];
-
-let cardsData = [];
-let unassignedWorkers = [];
-let payrollCounts = {};
-let siteCompanies = ['SKYBUILDING', 'DSS', 'EUROASIA', 'OTHER'];
-let siteSupervisors = [];
-let db = null, docRef = null, isSaving = false;
-
-// Variables Filtres
-let currentFilterCat = 'all';
-let currentFilterMgr = [];
-let currentFilterSup = [];
-
-const DEFAULT_DATA = [
-  { name: "NOUVELLE TIMESHEET", manager: "", category: "civil", timesheetNo: "", timesheetName: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "Activité à définir", foreman: "", source: "SKYBUILDING", workers: "", workerList: [] }] }
-];
-
-try {
-  const localSaved = localStorage.getItem("site_chart_backup");
-  if (localSaved) {
-    let parsed = JSON.parse(localSaved);
-    if (parsed.cardsData && Array.isArray(parsed.cardsData)) { 
-      cardsData = parsed.cardsData; 
-      payrollCounts = parsed.payrollCounts || {};
-      unassignedWorkers = parsed.unassignedWorkers || [];
-      if (parsed.companies && Array.isArray(parsed.companies)) siteCompanies = parsed.companies;
-      if (parsed.supervisors && Array.isArray(parsed.supervisors)) siteSupervisors = parsed.supervisors;
-    } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
-  } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
-} catch(e) { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
-
-function buildSupervisorsList() {
-    cardsData.forEach(c => {
-        if (c.name && c.name !== "NOUVELLE TIMESHEET" && c.name !== "Inconnu" && !siteSupervisors.includes(c.name)) {
-            siteSupervisors.push(c.name);
-        }
-    });
-    siteSupervisors.sort();
-}
-buildSupervisorsList();
+// ==========================================
+// 4. RENDU UI (HTML, CARTES, VUES)
+// ==========================================
 
 function updateFilterDropdowns() {
     const mgrs = new Set();
@@ -873,40 +919,21 @@ function updateFilterDropdowns() {
     let mgrHtml = '';
     Array.from(mgrs).sort().forEach(m => {
         let isChecked = currentFilterMgr.includes(m) ? 'checked' : '';
-        mgrHtml += `<label><input type="checkbox" value="${m}" onchange="window.updateFiltersFromUI()" ${isChecked}> ${m}</label>`;
+        mgrHtml += `<label><input type="checkbox" value="${m}" onchange="updateFiltersFromUI()" ${isChecked}> ${m}</label>`;
     });
     mgrOptionsList.innerHTML = mgrHtml || '<span style="font-size:10px; color:#94a3b8; padding:4px;">Aucun MGR</span>';
 
     let supHtml = '';
     Array.from(sups).sort().forEach(s => {
         let isChecked = currentFilterSup.includes(s) ? 'checked' : '';
-        supHtml += `<label><input type="checkbox" value="${s}" onchange="window.updateFiltersFromUI()" ${isChecked}> ${s}</label>`;
+        supHtml += `<label><input type="checkbox" value="${s}" onchange="updateFiltersFromUI()" ${isChecked}> ${s}</label>`;
     });
     supOptionsList.innerHTML = supHtml || '<span style="font-size:10px; color:#94a3b8; padding:4px;">Aucun SUP</span>';
     
-    window.updateFilterBadges();
+    updateFilterBadges();
 }
 
-window.updateFiltersFromUI = function() {
-    currentFilterMgr = Array.from(document.querySelectorAll('#mgr-options-list input:checked')).map(cb => cb.value);
-    currentFilterSup = Array.from(document.querySelectorAll('#sup-options-list input:checked')).map(cb => cb.value);
-    window.updateFilterBadges();
-    renderCards();
-};
-
-window.clearMultiFilter = function(type) {
-    if (type === 'mgr') {
-        currentFilterMgr = [];
-        document.querySelectorAll('#mgr-options-list input').forEach(cb => cb.checked = false);
-    } else {
-        currentFilterSup = [];
-        document.querySelectorAll('#sup-options-list input').forEach(cb => cb.checked = false);
-    }
-    window.updateFilterBadges();
-    renderCards();
-};
-
-window.updateFilterBadges = function() {
+function updateFilterBadges() {
     const mgrBadge = document.getElementById('mgr-badge');
     const supBadge = document.getElementById('sup-badge');
     if(mgrBadge) {
@@ -927,432 +954,6 @@ window.updateFilterBadges = function() {
             supBadge.classList.remove('active');
         }
     }
-};
-
-window.findWorkerDuplicate = function(searchId, searchName, excludeId = null) {
-  const norm = str => String(str || '').trim().toUpperCase();
-  const sId = searchId ? norm(searchId) : null;
-  const sName = searchName ? norm(searchName) : null;
-
-  for (const w of unassignedWorkers) {
-    if (excludeId && norm(w.id) === norm(excludeId)) continue;
-    if (sId && norm(w.id) === sId) return { found: true, location: 'dans la Base (Non assigné)', worker: w };
-    if (sName && norm(w.name) === sName) return { found: true, location: 'dans la Base (Non assigné)', worker: w };
-  }
-
-  for (const card of cardsData) {
-    for (const t of (card.tasks || [])) {
-      for (const w of (t.workerList || [])) {
-        if (excludeId && norm(w.id) === norm(excludeId)) continue;
-        if (sId && norm(w.id) === sId) return { found: true, location: `sur l'équipe de ${card.name}`, worker: w };
-        if (sName && norm(w.name) === sName) return { found: true, location: `sur l'équipe de ${card.name}`, worker: w };
-      }
-    }
-  }
-  return { found: false };
-}
-
-window.setFilter = function(catId) {
-  currentFilterCat = catId;
-  document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-  if(document.getElementById(`filter-${catId}`)) document.getElementById(`filter-${catId}`).classList.add('active');
-
-  const alphaSection = document.getElementById('section-alpha');
-  if (catId === 'alpha') {
-    if (alphaSection) alphaSection.style.display = 'block';
-    CATEGORY_INFO.forEach(cat => {
-      const section = document.getElementById(`section-${cat.id}`);
-      if (section) section.style.display = 'none';
-    });
-  } else {
-    if (alphaSection) alphaSection.style.display = 'none';
-    CATEGORY_INFO.forEach(cat => {
-      const section = document.getElementById(`section-${cat.id}`);
-      if (section) section.style.display = (catId === 'all' || catId === cat.id) ? 'block' : 'none';
-    });
-  }
-  renderCards();
-}
-
-function initLayout() {
-  document.getElementById('role-selector').value = currentRole;
-
-  const filterBar = document.getElementById('filter-bar');
-  filterBar.innerHTML = `
-    <button class="filter-btn active" id="filter-all" onclick="window.setFilter('all')">TOUT AFFICHER</button>
-    <button class="filter-btn" id="filter-alpha" onclick="window.setFilter('alpha')" style="border-left: 4px solid #2563eb; font-weight:800;">🔤 ALPHABÉTIQUE (A-Z)</button>
-    ${CATEGORY_INFO.map(cat => `<button class="filter-btn" id="filter-${cat.id}" onclick="window.setFilter('${cat.id}')" style="border-left: 4px solid ${cat.color};">${cat.name}</button>`).join('')}
-  `;
-
-  const board = document.getElementById('categories-board');
-  board.innerHTML = `
-    <div class="category-section" id="section-alpha" style="display:none;">
-      <h2 class="category-title" style="color: #2563eb; border-bottom: 2px solid #2563eb;">TOUTES LES TIMESHEETS (PAR N° DE TIMESHEET A-Z)</h2>
-      <div class="cards-grid" id="grid-alpha" data-category="alpha"></div>
-    </div>
-  ` + CATEGORY_INFO.map(cat => `
-    <div class="category-section" id="section-${cat.id}">
-      <h2 class="category-title" style="color: ${cat.color}; border-bottom: 2px solid ${cat.color};">${cat.name}</h2>
-      <div class="cards-grid" id="grid-${cat.id}" data-category="${cat.id}"></div>
-    </div>
-  `).join('');
-
-  CATEGORY_INFO.forEach(cat => {
-    const s = new Sortable(document.getElementById(`grid-${cat.id}`), {
-      group: 'supervisors', 
-      handle: '.drag-handle', 
-      animation: 150, 
-      ghostClass: 'sortable-ghost',
-      filter: "input, select, button, .ts-checkbox, .ts-btn-config, .cat-select", // BOUCLIER POUR NE PAS BLOQUER LES CLICS DANS LE HEADER
-      preventOnFilter: false,
-      onEnd: function (evt) { window.reorderCardsBasedOnDOM(); }
-    });
-    sortableInstances.push(s);
-  });
-}
-
-initLayout();
-renderCompanySelects();
-renderPayrollTable();
-renderCards();
-renderDrawer();
-applyRolePermissions();
-
-// --- 2. CONNEXION FIREBASE ---
-setTimeout(() => {
-  try {
-    const firebaseConfig = {
-      apiKey: "AIzaSyBn_xbuD6Xct-Yd_e-9z5XvV6IyVb8oa7g",
-      authDomain: "site-management-chart.firebaseapp.com",
-      projectId: "site-management-chart",
-      storageBucket: "site-management-chart.firebasestorage.app",
-      messagingSenderId: "180113020881",
-      appId: "1:180113020881:web:2dc1e88de4cbd352beb2f0"
-    };
-
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore();
-    db.settings({ experimentalAutoDetectLongPolling: true });
-    docRef = db.collection("site_charts").doc("current_week");
-
-    docRef.onSnapshot((doc) => {
-      if (isSaving) return;
-      if (doc && doc.exists) {
-        const data = doc.data();
-        if (data.cardsData) cardsData = data.cardsData;
-        if (data.payrollCounts) payrollCounts = data.payrollCounts;
-        if (data.unassignedWorkers) unassignedWorkers = data.unassignedWorkers;
-        if (data.companies) siteCompanies = data.companies;
-        if (data.supervisors) siteSupervisors = data.supervisors;
-        
-        buildSupervisorsList(); 
-        
-        renderCompanySelects();
-        renderPayrollTable();
-        window.refreshActiveView();
-        renderDrawer();
-        if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
-        window.updateFab(); 
-      } else { window.syncToFirebase(); }
-      document.getElementById("sync-dot").style.background = "#16a34a";
-      document.getElementById("sync-text").innerText = "Connecté à Firebase";
-    }, (err) => {
-      document.getElementById("sync-dot").style.background = "#eab308";
-      document.getElementById("sync-text").innerText = "Mode local / Hors-ligne";
-    });
-  } catch (err) {
-    document.getElementById("sync-dot").style.background = "#eab308";
-    document.getElementById("sync-text").innerText = "Mode local actif";
-  }
-}, 500);
-
-// --- 3. FONCTIONS CLÉS & SYNCHRONISATION ---
-window.syncToFirebase = function() {
-  if (currentRole === 'viewer') return; 
-  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, supervisors: siteSupervisors})); } catch(e){}
-  if (!docRef) return;
-  isSaving = true;
-  document.getElementById("sync-text").innerText = "Enregistrement...";
-
-  docRef.set({
-    cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, supervisors: siteSupervisors,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  }, { merge: true }).then(() => {
-    document.getElementById("sync-dot").style.background = "#16a34a";
-    document.getElementById("sync-text").innerText = "Connecté à Firebase";
-    setTimeout(() => { isSaving = false; }, 300);
-  }).catch(() => {
-    document.getElementById("sync-dot").style.background = "#eab308";
-    document.getElementById("sync-text").innerText = "Sauvegardé en local";
-    isSaving = false;
-  });
-}
-
-// --- NETTOYAGE AUTOMATIQUE DES DOUBLONS ---
-window.cleanDuplicates = function() {
-  if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  
-  if (!confirm("Voulez-vous rechercher et supprimer automatiquement tous les doublons de la base de données ?\n\n(L'ouvrier assigné à une équipe de chantier sera conservé en priorité)")) return;
-  
-  let seenIds = new Set();
-  let seenNames = new Set();
-  let removedCount = 0;
-
-  const isDup = (w) => {
-      const normId = String(w.id || '').trim().toUpperCase();
-      const normName = String(w.name || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase().replace(/\s+/g, ' ');
-      
-      if ((normId !== '' && seenIds.has(normId)) || (normName !== '' && seenNames.has(normName))) {
-          return true; 
-      }
-      
-      if (normId !== '') seenIds.add(normId);
-      if (normName !== '') seenNames.add(normName);
-      return false;
-  };
-
-  cardsData.forEach(c => {
-      if (c.tasks) {
-          c.tasks.forEach(t => {
-              if (t.workerList) {
-                  t.workerList = t.workerList.filter(w => {
-                      if (isDup(w)) { removedCount++; return false; }
-                      return true;
-                  });
-              }
-          });
-      }
-  });
-
-  unassignedWorkers = unassignedWorkers.filter(w => {
-      if (isDup(w)) { removedCount++; return false; }
-      return true;
-  });
-
-  if (removedCount > 0) {
-      alert(`✅ Nettoyage terminé : ${removedCount} doublon(s) supprimé(s).`);
-      window.recalculateTotals();
-      window.refreshActiveView();
-      renderDrawer();
-      if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
-      window.syncToFirebase();
-  } else {
-      alert("👌 Aucun doublon n'a été trouvé dans la base de données !");
-  }
-};
-
-
-// --- BASE DE DONNÉES GLOBALE & RECHERCHE ---
-window.openDBModal = function() {
-  if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  document.getElementById('db-search-input').value = ""; 
-  renderDBTable();
-  document.getElementById('db-modal').style.display = 'flex';
-}
-
-window.closeDBModal = function() {
-  document.getElementById('db-modal').style.display = 'none';
-}
-
-window.filterDBTable = function(query) {
-  const lowerQuery = query.toLowerCase();
-  const rows = document.querySelectorAll('#db-table-body tr');
-  
-  rows.forEach(row => {
-     const idText = row.cells[0].querySelector('input').value.toLowerCase();
-     const nameText = row.cells[1].querySelector('input').value.toLowerCase();
-     const companyText = row.cells[2].querySelector('select').value.toLowerCase();
-     
-     if (idText.includes(lowerQuery) || nameText.includes(lowerQuery) || companyText.includes(lowerQuery)) {
-        row.style.display = '';
-     } else {
-        row.style.display = 'none';
-     }
-  });
-}
-
-function renderDBTable() {
-  const tbody = document.getElementById('db-table-body');
-  let html = '';
-  
-  const addRow = (w, context, cIdx, tIdx, supName) => {
-     const isUnassigned = context === 'unassigned';
-     html += `<tr>
-        <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9;"><input type="text" class="db-input" value="${w.id}" onchange="window.editWorker('${w.id}', 'id', this.value, '${context}', ${cIdx}, ${tIdx}, this)"></td>
-        <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9;"><input type="text" class="db-input" value="${w.name}" onchange="window.editWorker('${w.id}', 'name', this.value, '${context}', ${cIdx}, ${tIdx}, this)"></td>
-        <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9;">
-          <select class="db-input" onchange="window.editWorker('${w.id}', 'company', this.value, '${context}', ${cIdx}, ${tIdx}, this)">
-            ${siteCompanies.map(c => `<option value="${c}" ${w.company===c?'selected':''}>${c}</option>`).join('')}
-          </select>
-        </td>
-        <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9; font-size:11px; color:#64748b;">
-          ${isUnassigned ? '<span style="color:#f59e0b; font-weight:700;">En attente</span>' : `Assigné : <b>${supName}</b>`}
-        </td>
-        <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9;">
-           <button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5; padding:2px 8px;" onclick="window.deleteWorkerFromDB('${w.id}', '${context}', ${cIdx}, ${tIdx})">&times;</button>
-        </td>
-     </tr>`;
-  };
-  
-  unassignedWorkers.forEach(w => addRow(w, 'unassigned', -1, -1, ''));
-  cardsData.forEach((c, cIdx) => {
-     c.tasks.forEach((t, tIdx) => {
-        t.workerList.forEach(w => addRow(w, 'assigned', cIdx, tIdx, c.name));
-     });
-  });
-  tbody.innerHTML = html;
-  
-  const currentQuery = document.getElementById('db-search-input').value;
-  if(currentQuery) window.filterDBTable(currentQuery);
-}
-
-window.editWorker = function(oldId, field, newVal, context, cIdx, tIdx, inputEl) {
-  let w = context === 'unassigned' ? unassignedWorkers.find(x => x.id === oldId) : cardsData[cIdx].tasks[tIdx].workerList.find(x => x.id === oldId);
-  if (!w) return;
-
-  let dup = { found: false };
-  
-  if (field === 'id') {
-    dup = window.findWorkerDuplicate(newVal.trim(), null, oldId);
-  } else if (field === 'name') {
-    dup = window.findWorkerDuplicate(null, newVal.trim(), oldId);
-  }
-
-  if (dup.found) {
-    const msg = `⚠️ DOUBLON DÉTECTÉ !\n\nL'information "${newVal}" est déjà utilisée ${dup.location} par l'ouvrier [${dup.worker.name}].\n\nConserver ces deux lignes va fausser les effectifs du chantier.\n\nVoulez-vous SUPPRIMER définitivement la ligne que vous êtes en train de modifier pour nettoyer la base ?`;
-    
-    if (confirm(msg)) {
-       if (context === 'unassigned') {
-         const index = unassignedWorkers.findIndex(x => x.id === oldId);
-         if(index !== -1) unassignedWorkers.splice(index, 1);
-       } else {
-         const index = cardsData[cIdx].tasks[tIdx].workerList.findIndex(x => x.id === oldId);
-         if(index !== -1) cardsData[cIdx].tasks[tIdx].workerList.splice(index, 1);
-       }
-       window.syncToFirebase();
-       window.refreshActiveView();
-       renderDrawer();
-       renderDBTable();
-       return;
-    } else {
-       if (inputEl) inputEl.value = w[field];
-       return;
-    }
-  }
-
-  w[field] = newVal.trim();
-  window.syncToFirebase();
-  window.refreshActiveView();
-  renderDrawer();
-}
-
-window.deleteWorkerFromDB = function(wId, context, cIdx, tIdx) {
-  if(!confirm("Supprimer cet ouvrier DÉFINITIVEMENT de la base ?")) return;
-  if (context === 'unassigned') {
-     const index = unassignedWorkers.findIndex(x => x.id === wId);
-     if(index !== -1) unassignedWorkers.splice(index, 1);
-  } else {
-     const index = cardsData[cIdx].tasks[tIdx].workerList.findIndex(x => x.id === wId);
-     if(index !== -1) cardsData[cIdx].tasks[tIdx].workerList.splice(index, 1);
-  }
-  window.syncToFirebase();
-  window.refreshActiveView();
-  renderDrawer();
-  renderDBTable();
-}
-
-window.exportWorkersExcel = function() {
-  let exportData = [];
-  unassignedWorkers.forEach(w => exportData.push({ "ID": w.id, "Nom Complet": w.name, "Entreprise": w.company, "Statut": "En attente (Non assigné)" }));
-  cardsData.forEach(c => {
-     c.tasks.forEach(t => {
-        t.workerList.forEach(w => {
-           exportData.push({ "ID": w.id, "Nom Complet": w.name, "Entreprise": w.company, "Statut": `Assigné à : ${c.name}` });
-        });
-     });
-  });
-  if(exportData.length === 0) { alert("La base est vide."); return; }
-  const ws = XLSX.utils.json_to_sheet(exportData);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Base Ouvriers");
-  XLSX.writeFile(wb, `Database_Ouvriers_${new Date().toISOString().split('T')[0]}.xlsx`);
-}
-
-window.printDB = function() {
-  let exportData = [];
-  unassignedWorkers.forEach(w => exportData.push({ id: w.id, name: w.name, comp: w.company, stat: "En attente (Non assigné)" }));
-  cardsData.forEach(c => {
-     c.tasks.forEach(t => {
-        t.workerList.forEach(w => { exportData.push({ id: w.id, name: w.name, comp: w.company, stat: `Assigné à : ${c.name}` }); });
-     });
-  });
-  
-  let html = `
-    <h1 style="text-align:center; font-family:Arial; margin-bottom:20px;">BASE DE DONNÉES GLOBALE DES OUVRIERS</h1>
-    <table class="db-print-table">
-      <thead><tr><th>ID</th><th>Nom Complet</th><th>Entreprise</th><th>Statut / Assignation</th></tr></thead>
-      <tbody>
-        ${exportData.map(w => `<tr><td>${w.id}</td><td>${w.name}</td><td>${w.comp}</td><td>${w.stat}</td></tr>`).join('')}
-      </tbody>
-    </table>
-  `;
-  document.getElementById('db-print-zone').innerHTML = html;
-  document.body.classList.add('print-mode-db');
-  window.print();
-  setTimeout(() => { document.body.classList.remove('print-mode-db'); }, 500);
-}
-
-// --- GESTION ENTREPRISES DYNAMIQUE ---
-function renderCompanySelects() {
-  const opts = siteCompanies.map(c => `<option value="${c}">${c}</option>`).join('');
-  document.querySelectorAll('.dynamic-comp-select').forEach(el => {
-    const currentVal = el.value;
-    el.innerHTML = opts;
-    if (siteCompanies.includes(currentVal)) el.value = currentVal;
-  });
-}
-
-window.openCompaniesModal = function() {
-  if (currentRole === 'viewer' || currentRole === 'timekeeper') return;
-  renderCompaniesList();
-  document.getElementById('companies-modal').style.display = 'flex';
-}
-window.closeCompaniesModal = function() { document.getElementById('companies-modal').style.display = 'none'; }
-
-function renderCompaniesList() {
-  const list = document.getElementById('companies-list');
-  list.innerHTML = siteCompanies.map(c => `
-    <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
-      <span style="font-size:12px; font-weight:700;">${c}</span>
-      ${!['SKYBUILDING', 'DSS', 'EUROASIA', 'OTHER'].includes(c) 
-        ? `<button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5; padding:2px 6px;" onclick="window.removeCompany('${c}')">&times;</button>` 
-        : '<span style="font-size:10px; color:#94a3b8;">Défaut</span>'}
-    </div>
-  `).join('');
-}
-
-window.addCompany = function() {
-  const val = document.getElementById('new-comp-input').value.trim().toUpperCase();
-  if (val && !siteCompanies.includes(val)) {
-     siteCompanies.push(val);
-     document.getElementById('new-comp-input').value = '';
-     renderCompaniesList();
-     renderCompanySelects();
-     renderPayrollTable();
-     window.refreshActiveView();
-     window.syncToFirebase();
-  }
-}
-
-window.removeCompany = function(comp) {
-  if (confirm(`Supprimer définitivement l'entreprise ${comp} ?`)) {
-     siteCompanies = siteCompanies.filter(c => c !== comp);
-     renderCompaniesList();
-     renderCompanySelects();
-     renderPayrollTable();
-     window.refreshActiveView();
-     window.syncToFirebase();
-  }
 }
 
 function renderPayrollTable() {
@@ -1374,14 +975,88 @@ function renderPayrollTable() {
     html += `<tr>
       <td><span class="tag-color" style="background:${color}; width:8px; height:8px; display:inline-block; border-radius:50%; margin-right:4px;"></span> ${comp}</td>
       <td style="text-align:center; font-weight:800;" id="total-${compId}">0</td>
-      <td style="text-align:center;"><input type="number" id="pr-${compId}" class="payroll-input" value="${payrollCounts[comp] || 0}" oninput="window.updatePayroll('${comp}', this.value)" ${currentRole==='viewer' || currentRole==='timekeeper' ? 'disabled':''}></td>
+      <td style="text-align:center;"><input type="number" id="pr-${compId}" class="payroll-input" value="${payrollCounts[comp] || 0}" oninput="updatePayroll('${comp}', this.value)" ${currentRole==='viewer' || currentRole==='timekeeper' ? 'disabled':''}></td>
       <td style="text-align:center;"><span id="diff-${compId}" class="diff-badge diff-ok">0</span></td>
     </tr>`;
   });
-  document.getElementById('payroll-table-body').innerHTML = html;
+  const tBody = document.getElementById('payroll-table-body');
+  if (tBody) tBody.innerHTML = html;
 }
 
-// --- AFFICHAGE CARTES (MULTI-FILTRES) ---
+function renderCompanySelects() {
+  const opts = siteCompanies.map(c => `<option value="${c}">${c}</option>`).join('');
+  document.querySelectorAll('.dynamic-comp-select').forEach(el => {
+    const currentVal = el.value;
+    el.innerHTML = opts;
+    if (siteCompanies.includes(currentVal)) el.value = currentVal;
+  });
+}
+
+function renderDrawer() {
+  const dz = document.getElementById('unassigned-dropzone');
+  if (!dz) return;
+  
+  dz.innerHTML = unassignedWorkers.map(w => {
+    let colorClass = 'other';
+    if(w.company === 'SKYBUILDING') colorClass = 'skybuilding';
+    else if(w.company === 'DSS') colorClass = 'dss';
+    else if(w.company === 'EUROASIA') colorClass = 'euroasia';
+    
+    return `<div class="worker-pill ${colorClass}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="unassigned" data-tidx="unassigned">
+      ${w.id} - ${w.name}
+    </div>`;
+  }).join('');
+
+  const fabDrawerCount = document.getElementById('fab-drawer-count');
+  if (fabDrawerCount) fabDrawerCount.innerText = unassignedWorkers.length;
+}
+
+function renderDBTable() {
+  const tbody = document.getElementById('db-table-body');
+  if(!tbody) return;
+  let html = '';
+  
+  const addRow = (w, context, cIdx, tIdx, supName) => {
+     const isUnassigned = context === 'unassigned';
+     html += `<tr>
+        <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9;"><input type="text" class="db-input" value="${w.id}" onchange="editWorker('${w.id}', 'id', this.value, '${context}', ${cIdx}, ${tIdx}, this)"></td>
+        <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9;"><input type="text" class="db-input" value="${w.name}" onchange="editWorker('${w.id}', 'name', this.value, '${context}', ${cIdx}, ${tIdx}, this)"></td>
+        <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9;">
+          <select class="db-input" onchange="editWorker('${w.id}', 'company', this.value, '${context}', ${cIdx}, ${tIdx}, this)">
+            ${siteCompanies.map(c => `<option value="${c}" ${w.company===c?'selected':''}>${c}</option>`).join('')}
+          </select>
+        </td>
+        <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9; font-size:11px; color:#64748b;">
+          ${isUnassigned ? '<span style="color:#f59e0b; font-weight:700;">En attente</span>' : `Assigné : <b>${supName}</b>`}
+        </td>
+        <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9;">
+           <button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5; padding:2px 8px;" onclick="deleteWorkerFromDB('${w.id}', '${context}', ${cIdx}, ${tIdx})">&times;</button>
+        </td>
+     </tr>`;
+  };
+  
+  unassignedWorkers.forEach(w => addRow(w, 'unassigned', -1, -1, ''));
+  cardsData.forEach((c, cIdx) => {
+     c.tasks.forEach((t, tIdx) => {
+        t.workerList.forEach(w => addRow(w, 'assigned', cIdx, tIdx, c.name));
+     });
+  });
+  tbody.innerHTML = html;
+  
+  const currentQuery = document.getElementById('db-search-input').value;
+  if(currentQuery) filterDBTable(currentQuery);
+}
+
+function refreshActiveView() {
+    if (currentView === 'dashboard') {
+        renderCards();
+    } else if (currentView === 'orgchart') {
+        renderOrgChart();
+    } else if (currentView === 'tree') {
+        renderOrgChartTree();
+    }
+}
+
 function renderCards() {
   try {
     updateFilterDropdowns(); 
@@ -1468,19 +1143,19 @@ function renderCards() {
         return `
         <div class="task-item">
           <div class="task-foreman">
-            👷‍♂️ FOREMAN: <span contenteditable="true" data-placeholder="Nom..." onblur="window.updateTaskForeman(${cIdx}, ${tIdx}, this.innerText)">${t.foreman || ''}</span>
+            👷‍♂️ FOREMAN: <span contenteditable="true" data-placeholder="Nom..." onblur="updateTaskForeman(${cIdx}, ${tIdx}, this.innerText)">${t.foreman || ''}</span>
           </div>
-          <div class="task-desc" contenteditable="true" onblur="window.updateTaskDesc(${cIdx}, ${tIdx}, this.innerText)">${t.desc || ''}</div>
+          <div class="task-desc" contenteditable="true" onblur="updateTaskDesc(${cIdx}, ${tIdx}, this.innerText)">${t.desc || ''}</div>
           <div class="task-controls">
-            <select class="source-select" style="background:#f1f5f9; color:#0f172a;" onchange="window.updateTaskSource(${cIdx}, ${tIdx}, this.value, this)">
+            <select class="source-select" style="background:#f1f5f9; color:#0f172a;" onclick="event.stopPropagation()" onchange="updateTaskSource(${cIdx}, ${tIdx}, this.value, this)">
               ${companyOpts}
             </select>
             <div style="display:flex; align-items:center; gap:6px;">
               <div class="count-comparator ${compClass}" title="${compTitle}">
                 <span style="margin-right:2px; font-weight:700;">👥 ${linkedCount}</span> /
-                <input type="number" min="0" class="worker-count-input" placeholder="${linkedCount}" value="${hasManualOverride ? manualCount : ''}" oninput="window.updateWorkerCount(${cIdx}, ${tIdx}, this.value)" />
+                <input type="number" min="0" class="worker-count-input" placeholder="${linkedCount}" value="${hasManualOverride ? manualCount : ''}" onclick="event.stopPropagation()" oninput="updateWorkerCount(${cIdx}, ${tIdx}, this.value)" />
               </div>
-              <span class="btn-delete-task" title="Supprimer cette ligne" onclick="window.removeTask(${cIdx}, ${tIdx})">&times;</span>
+              <span class="btn-delete-task" title="Supprimer cette ligne" onclick="removeTask(${cIdx}, ${tIdx})">&times;</span>
             </div>
           </div>
           <div class="task-worker-dropzone" data-cidx="${cIdx}" data-tidx="${tIdx}">
@@ -1507,7 +1182,7 @@ function renderCards() {
       const mismatchIcon = cardHasDiff ? `<span title="Alerte: ${cardLinkedSum} nommés vs ${cardEffectiveSum} saisis" style="color:#dc2626; margin-right:4px;">⚠️</span>` : '';
 
       let supSelectHtml = `
-        <select class="sup-name-select" onchange="window.handleSupChange(${cIdx}, this)">
+        <select class="sup-name-select" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" onchange="handleSupChange(${cIdx}, this)">
           <option value="" disabled hidden ${!card.name || card.name === 'Inconnu' || card.name === 'NOUVELLE TIMESHEET' ? 'selected' : ''}>Choisir Superviseur...</option>
           ${siteSupervisors.map(s => `<option value="${s}" ${card.name === s ? 'selected' : ''}>${s}</option>`).join('')}
           <option value="__NEW__" style="font-weight:bold; color:#2563eb;">+ Ajouter un nouveau...</option>
@@ -1517,8 +1192,8 @@ function renderCards() {
       cardEl.innerHTML = `
         <div class="card-header drag-handle" title="Glisser pour déplacer">
           <div style="display:flex; align-items:center; gap:8px;">
-            <input type="checkbox" class="ts-checkbox" title="Sélectionner pour impression TS" onchange="window.handleCheck(${cIdx}, this.checked)" ${isChecked}>
-            <select class="cat-select" onchange="window.changeCategory(${cIdx}, this.value)">
+            <input type="checkbox" class="ts-checkbox" title="Sélectionner pour impression TS" onchange="handleCheck(${cIdx}, this.checked)" ${isChecked}>
+            <select class="cat-select" onchange="changeCategory(${cIdx}, this.value)">
               <option value="civil" ${catId==='civil'?'selected':''}>Civil</option>
               <option value="trades" ${catId==='trades'?'selected':''}>Trades</option>
               <option value="facade" ${catId==='facade'?'selected':''}>Façade</option>
@@ -1533,76 +1208,43 @@ function renderCards() {
         <div class="card-title-row">
           <div style="display:flex; flex-direction:column; gap:2px; width:100%;">
             <div class="manager-field">
-              Mgr: <span class="manager-name" contenteditable="true" onblur="window.updateManager(${cIdx}, this.innerText)">${card.manager || ''}</span>
+              Mgr: <span class="manager-name" contenteditable="true" onblur="updateManager(${cIdx}, this.innerText)">${card.manager || ''}</span>
             </div>
             
             ${supSelectHtml}
             
             <div class="ts-badge-container">
-              <div class="ts-badge" title="Numéro Timesheet">N°: <span contenteditable="true" data-placeholder="N°..." onblur="window.updateTimesheetNo(${cIdx}, this.innerText)">${card.timesheetNo || ''}</span></div>
-              <div class="ts-badge" title="Nom de la Timesheet">Nom: <span contenteditable="true" data-placeholder="Nom TS..." onblur="window.updateTimesheetName(${cIdx}, this.innerText)">${card.timesheetName || ''}</span></div>
+              <div class="ts-badge" title="Numéro Timesheet">N°: <span contenteditable="true" data-placeholder="N°..." onblur="updateTimesheetNo(${cIdx}, this.innerText)">${card.timesheetNo || ''}</span></div>
+              <div class="ts-badge" title="Nom de la Timesheet">Nom: <span contenteditable="true" data-placeholder="Nom TS..." onblur="updateTimesheetName(${cIdx}, this.innerText)">${card.timesheetName || ''}</span></div>
               <div class="ts-badge">
-                <select class="ts-select" onchange="window.updateShiftType(${cIdx}, this.value)">
+                <select class="ts-select" onclick="event.stopPropagation()" onchange="updateShiftType(${cIdx}, this.value)">
                   <option value="Shift 1" ${sType==='Shift 1'?'selected':''}>Shift 1</option>
                   <option value="Shift 2" ${sType==='Shift 2'?'selected':''}>Shift 2</option>
                   <option value="Night" ${sType==='Night'?'selected':''}>Night</option>
                 </select>
-                <span contenteditable="true" data-placeholder="07:00-15:00" onblur="window.updateShiftHours(${cIdx}, this.innerText)">${sHours}</span>
+                <span contenteditable="true" data-placeholder="07:00-15:00" onblur="updateShiftHours(${cIdx}, this.innerText)">${sHours}</span>
               </div>
-              <button class="ts-btn-config" onclick="window.openTsTasksModal(${cIdx})" title="Colonnes">⚙️ TS</button>
+              <button class="ts-btn-config" onclick="openTsTasksModal(${cIdx})" title="Colonnes">⚙️ TS</button>
             </div>
           </div>
-          <button class="btn-remove-card" onclick="window.removeSupervisor(${cIdx})">&times;</button>
+          <button class="btn-remove-card" onclick="removeSupervisor(${cIdx})">&times;</button>
         </div>
         <div class="card-body">
           ${tasksHtml}
-          <button class="btn-add-task" onclick="window.addTask(${cIdx})">+ Ajouter Ligne</button>
+          <button class="btn-add-task" onclick="addTask(${cIdx})">+ Ajouter Ligne</button>
         </div>
       `;
       if (targetGrid) targetGrid.appendChild(cardEl);
     });
 
-    window.recalculateTotals();
+    recalculateTotals();
     initWorkerSortables();
   } catch (err) { console.error("Render error:", err); }
 }
 
-window.handleSupChange = function(cIdx, selectEl) {
-    if (currentRole === 'viewer' || currentRole === 'cfo') {
-        selectEl.value = cardsData[cIdx].name; 
-        return;
-    }
-    const val = selectEl.value;
-    if (val === '__NEW__') {
-        const newName = prompt("Nom du nouveau Superviseur (ex: VASSILIS TSIRKAS) :");
-        if (newName && newName.trim() !== '') {
-            const upperName = newName.trim().toUpperCase();
-            if (!siteSupervisors.includes(upperName)) {
-                siteSupervisors.push(upperName);
-                siteSupervisors.sort();
-            }
-            cardsData[cIdx].name = upperName;
-        } else {
-            selectEl.value = cardsData[cIdx].name; 
-            return;
-        }
-    } else {
-        cardsData[cIdx].name = val;
-    }
-    window.syncToFirebase();
-    window.refreshActiveView();
-}
-
-window.updateTimesheetName = function(cIdx, val) { 
-  if (currentRole === 'viewer' || currentRole === 'cfo') return; 
-  cardsData[cIdx].timesheetName = val.trim(); 
-  window.syncToFirebase(); 
-  if(currentView === 'orgchart' || currentView === 'tree') window.refreshActiveView(); 
-}
-
-// --- VUE 2 : ORGANIGRAMME DETAILLE ---
-window.renderOrgChart = function() {
+function renderOrgChart() {
   const container = document.getElementById('orgchart-view');
+  if(!container) return;
   const groups = {};
   
   cardsData.forEach(c => {
@@ -1679,9 +1321,9 @@ window.renderOrgChart = function() {
   container.innerHTML = html;
 }
 
-// --- VUE 3 : ARBORESCENCE SIMPLIFIÉE ---
-window.renderOrgChartTree = function() {
+function renderOrgChartTree() {
   const container = document.getElementById('orgchart-tree-view');
+  if(!container) return;
   const groups = {}; 
 
   cardsData.forEach(c => {
@@ -1757,29 +1399,36 @@ window.renderOrgChartTree = function() {
   container.innerHTML = html;
 }
 
-// --- GESTION DU MULTI-SELECT ET DRAG DROP ---
-function initWorkerSortables() {
-  workerSortables.forEach(s => s.destroy());
-  workerSortables = [];
-  if (currentRole === 'viewer' || currentRole === 'cfo') return;
+// ==========================================
+// 5. FONCTIONS D'ACTIONS (CLICK / DRAG / MODALS)
+// ==========================================
 
-  document.querySelectorAll('.task-worker-dropzone, #unassigned-dropzone').forEach(el => {
-    const s = new Sortable(el, {
-      group: 'workers-pool',
-      animation: 150,
-      multiDrag: true,
-      selectedClass: 'selected-pill',
-      fallbackTolerance: 3,
-      forceFallback: true, 
-      scroll: true, 
-      bubbleScroll: true,
-      onSelect: function() { window.updateFab(); },
-      onDeselect: function() { window.updateFab(); },
-      onEnd: function(evt) { window.handleWorkerDrop(evt); }
-    });
-    workerSortables.push(s);
-  });
+function updateFiltersFromUI() {
+    currentFilterMgr = Array.from(document.querySelectorAll('#mgr-options-list input:checked')).map(cb => cb.value);
+    currentFilterSup = Array.from(document.querySelectorAll('#sup-options-list input:checked')).map(cb => cb.value);
+    updateFilterBadges();
+    renderCards();
 }
+
+function clearMultiFilter(type) {
+    if (type === 'mgr') {
+        currentFilterMgr = [];
+        document.querySelectorAll('#mgr-options-list input').forEach(cb => cb.checked = false);
+    } else {
+        currentFilterSup = [];
+        document.querySelectorAll('#sup-options-list input').forEach(cb => cb.checked = false);
+    }
+    updateFilterBadges();
+    renderCards();
+}
+
+window.toggleMultiDropdown = function(id) {
+    document.querySelectorAll('.multi-select-dropdown').forEach(el => {
+        if(el.id !== id) el.style.display = 'none';
+    });
+    const el = document.getElementById(id);
+    el.style.display = el.style.display === 'flex' ? 'none' : 'flex';
+};
 
 window.handleWorkerDrop = function(evt) {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
@@ -1817,11 +1466,11 @@ window.handleWorkerDrop = function(evt) {
      cardsData[toCIdx].tasks[toTIdx].workerList.push(...workersToMove);
   }
 
-  window.recalculateTotals();
-  window.refreshActiveView();
-  window.renderDrawer();
+  recalculateTotals();
+  refreshActiveView();
+  renderDrawer();
   window.updateFab();
-  window.syncToFirebase();
+  syncToFirebase();
 }
 
 window.updateFab = function() {
@@ -1917,29 +1566,10 @@ window.confirmWorkerMove = function() {
   
   window.closeWorkerModal(); 
   document.getElementById('fab-move').style.display = 'none';
-  window.recalculateTotals(); 
-  window.refreshActiveView(); 
-  window.renderDrawer(); 
-  window.syncToFirebase();
-}
-
-window.renderDrawer = function() {
-  const dz = document.getElementById('unassigned-dropzone');
-  if (!dz) return;
-  
-  dz.innerHTML = unassignedWorkers.map(w => {
-    let colorClass = 'other';
-    if(w.company === 'SKYBUILDING') colorClass = 'skybuilding';
-    else if(w.company === 'DSS') colorClass = 'dss';
-    else if(w.company === 'EUROASIA') colorClass = 'euroasia';
-    
-    return `<div class="worker-pill ${colorClass}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="unassigned" data-tidx="unassigned">
-      ${w.id} - ${w.name}
-    </div>`;
-  }).join('');
-
-  const fabDrawerCount = document.getElementById('fab-drawer-count');
-  if (fabDrawerCount) fabDrawerCount.innerText = unassignedWorkers.length;
+  recalculateTotals(); 
+  refreshActiveView(); 
+  renderDrawer(); 
+  syncToFirebase();
 }
 
 window.addManualWorker = function() {
@@ -1956,7 +1586,7 @@ window.addManualWorker = function() {
     return;
   }
 
-  const dup = window.findWorkerDuplicate(id, name);
+  const dup = findWorkerDuplicate(id, name);
   if (dup.found) {
     alert(`⚠️ DOUBLON DÉTECTÉ !\n\nL'ouvrier "${name}" (ID: ${id}) existe déjà ${dup.location}.\n\nNom existant : ${dup.worker.name}\nID existant : ${dup.worker.id}\nEntreprise : ${dup.worker.company}\n\nAjout annulé.`);
     return;
@@ -1964,9 +1594,9 @@ window.addManualWorker = function() {
 
   unassignedWorkers.push({ id, name, company: comp });
   idInput.value = ""; nameInput.value = "";
-  window.renderDrawer(); 
+  renderDrawer(); 
   if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
-  window.syncToFirebase();
+  syncToFirebase();
 }
 
 window.reorderCardsBasedOnDOM = function() {
@@ -1986,47 +1616,66 @@ window.reorderCardsBasedOnDOM = function() {
     });
   });
   cardsData = newCardsData;
-  renderCards(); window.syncToFirebase();
+  renderCards(); syncToFirebase();
 }
 
-window.updateManager = function(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].manager = val.trim(); window.syncToFirebase(); if(currentView !== 'dashboard') window.refreshActiveView(); }
-window.updateShiftType = function(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].shiftType = val; window.syncToFirebase(); }
-window.updateShiftHours = function(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].shiftHours = val.trim(); window.syncToFirebase(); }
-window.updateTaskForeman = function(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].foreman = val.trim(); window.syncToFirebase(); if(currentView !== 'dashboard') window.refreshActiveView(); }
-window.updateTaskDesc = function(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].desc = val.trim(); window.syncToFirebase(); }
-window.updateTaskSource = function(cIdx, tIdx, val, el) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].source = val; window.recalculateTotals(); window.syncToFirebase(); }
-
-window.updateWorkerCount = function(cIdx, tIdx, val) { 
-  if (currentRole === 'viewer' || currentRole === 'cfo') return; 
-  cardsData[cIdx].tasks[tIdx].workers = (val.trim() === "") ? "" : parseInt(val); 
-  renderCards(); window.syncToFirebase(); if(currentView !== 'dashboard') window.refreshActiveView(); 
+window.updateManager = function(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].manager = val.trim(); syncToFirebase(); if(currentView !== 'dashboard') refreshActiveView(); }
+window.handleSupChange = function(cIdx, selectEl) {
+    if (currentRole === 'viewer' || currentRole === 'cfo') {
+        selectEl.value = cardsData[cIdx].name; 
+        return;
+    }
+    const val = selectEl.value;
+    if (val === '__NEW__') {
+        const newName = prompt("Nom du nouveau Superviseur (ex: VASSILIS TSIRKAS) :");
+        if (newName && newName.trim() !== '') {
+            const upperName = newName.trim().toUpperCase();
+            if (!siteSupervisors.includes(upperName)) {
+                siteSupervisors.push(upperName);
+                siteSupervisors.sort();
+            }
+            cardsData[cIdx].name = upperName;
+        } else {
+            selectEl.value = cardsData[cIdx].name; 
+            return;
+        }
+    } else {
+        cardsData[cIdx].name = val;
+    }
+    syncToFirebase();
+    refreshActiveView();
 }
-
-window.changeCategory = function(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].category = val; renderCards(); window.syncToFirebase(); }
+window.updateTimesheetNo = function(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].timesheetNo = val.trim(); syncToFirebase(); if(currentView !== 'dashboard') refreshActiveView(); }
+window.updateTimesheetName = function(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].timesheetName = val.trim(); syncToFirebase(); if(currentView !== 'dashboard') refreshActiveView(); }
+window.updateShiftType = function(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].shiftType = val; syncToFirebase(); }
+window.updateShiftHours = function(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].shiftHours = val.trim(); syncToFirebase(); }
+window.updateTaskForeman = function(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].foreman = val.trim(); syncToFirebase(); if(currentView !== 'dashboard') refreshActiveView(); }
+window.updateTaskDesc = function(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].desc = val.trim(); syncToFirebase(); }
+window.updateTaskSource = function(cIdx, tIdx, val, el) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].source = val; recalculateTotals(); syncToFirebase(); }
+window.updateWorkerCount = function(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].workers = (val.trim() === "") ? "" : parseInt(val); renderCards(); syncToFirebase(); if(currentView !== 'dashboard') refreshActiveView(); }
+window.changeCategory = function(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].category = val; renderCards(); syncToFirebase(); }
 
 window.addTask = function(cIdx) { 
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); 
   if (currentRole === 'viewer' || currentRole === 'cfo') return; 
   cardsData[cIdx].tasks.push({ desc: "", foreman: "", source: siteCompanies[0], workers: "", workerList: [] }); 
   renderCards(); 
-  window.syncToFirebase(); 
+  syncToFirebase(); 
 }
 
 window.removeTask = function(cIdx, tIdx) { 
   if (currentRole === 'viewer' || currentRole === 'cfo') return; 
-  
   const task = cardsData[cIdx].tasks[tIdx];
   if (task && task.workerList) {
       task.workerList.forEach(w => {
           if (!unassignedWorkers.find(uw => uw.id === w.id)) unassignedWorkers.push(w);
       });
   }
-  
   cardsData[cIdx].tasks.splice(tIdx, 1); 
   renderCards(); 
-  window.renderDrawer();
-  window.syncToFirebase(); 
-  if(currentView !== 'dashboard') window.refreshActiveView(); 
+  renderDrawer();
+  syncToFirebase(); 
+  if(currentView !== 'dashboard') refreshActiveView(); 
 }
 
 window.addNewSupervisor = function() { 
@@ -2044,12 +1693,11 @@ window.addNewSupervisor = function() {
   }); 
   
   if (currentFilterCat !== 'all' && currentFilterCat !== 'alpha' && currentFilterCat !== 'civil') {
-    window.setFilter('all');
+    setFilter('all');
   } else {
     renderCards();
   }
-  
-  window.syncToFirebase(); 
+  syncToFirebase(); 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -2063,579 +1711,30 @@ window.removeSupervisor = function(cIdx) {
               });
           }
       });
-      
       cardsData.splice(cIdx, 1); 
       renderCards(); 
-      window.renderDrawer();
-      window.syncToFirebase(); 
-      if(currentView !== 'dashboard') window.refreshActiveView(); 
+      renderDrawer();
+      syncToFirebase(); 
+      if(currentView !== 'dashboard') refreshActiveView(); 
   } 
 }
 
 window.updatePayroll = function(company, val) {
   if (currentRole === 'viewer' || currentRole === 'timekeeper') return;
   payrollCounts[company] = parseInt(val) || 0;
-  window.recalculateTotals(); window.syncToFirebase();
+  recalculateTotals(); syncToFirebase();
 }
 
-window.recalculateTotals = function() {
-  let grandTotal = 0;
-  let compTotals = {};
-  siteCompanies.forEach(c => compTotals[c] = 0);
-  let cats = { civil: 0, trades: 0, facade: 0, logistic: 0, external: 0, indirect: 0, plant: 0 };
+// ==========================================
+// 6. INITIALISATION PRINCIPALE DU SCRIPT
+// ==========================================
+initLayout();
+renderCompanySelects();
+renderPayrollTable();
+renderCards();
+renderDrawer();
+applyRolePermissions();
 
-  cardsData.forEach((card, cIdx) => {
-    let cardEffectiveSum = 0;
-    let cardLinkedSum = 0;
-    let cardHasDiff = false;
-
-    if(card.tasks) {
-      card.tasks.forEach(t => {
-        const lCount = t.workerList ? t.workerList.length : 0;
-        const hasM = t.workers !== undefined && t.workers !== null && t.workers !== "";
-        const eCount = hasM ? parseInt(t.workers) : lCount;
-        
-        cardEffectiveSum += eCount; 
-        grandTotal += eCount;
-        cardLinkedSum += lCount;
-        if(hasM && lCount !== eCount) cardHasDiff = true;
-
-        let safeSource = t.source ? String(t.source) : siteCompanies[0];
-        if (compTotals[safeSource] !== undefined) {
-           compTotals[safeSource] += eCount;
-        } else {
-           if (!siteCompanies.includes(safeSource)) {
-              siteCompanies.push(safeSource);
-           }
-           compTotals[safeSource] = eCount;
-        }
-      });
-    }
-    const b = document.getElementById(`card-total-${cIdx}`);
-    if (b) {
-      const mismatchIcon = cardHasDiff ? `<span title="Alerte: ${cardLinkedSum} nommés vs ${cardEffectiveSum} saisis" style="color:#dc2626; margin-right:4px;">⚠️</span>` : '';
-      b.innerHTML = `${mismatchIcon}${cardEffectiveSum} Wkrs`;
-      if(cardHasDiff){
-        b.classList.add('error');
-      } else {
-        b.classList.remove('error');
-      }
-    }
-    if (cats.hasOwnProperty(card.category)) cats[card.category] += cardEffectiveSum;
-  });
-
-  document.getElementById("grand-total").innerText = grandTotal;
-  document.getElementById("cat-civil").innerText = cats.civil;
-  document.getElementById("cat-trades").innerText = cats.trades;
-  document.getElementById("cat-facade").innerText = cats.facade;
-  document.getElementById("cat-logistic").innerText = cats.logistic;
-  document.getElementById("cat-external").innerText = cats.external;
-  document.getElementById("cat-indirect").innerText = cats.indirect;
-  document.getElementById("cat-plant").innerText = cats.plant;
-
-  siteCompanies.forEach(comp => {
-     const safeComp = comp ? String(comp) : 'OTHER';
-     const compId = safeComp.toLowerCase().replace(/[^a-z0-9]/g, '');
-     const tsTotal = compTotals[comp] || 0;
-     const elTotal = document.getElementById(`total-${compId}`);
-     if (elTotal) elTotal.innerText = tsTotal;
-
-     const prTotal = payrollCounts[comp] || 0;
-     const diff = tsTotal - prTotal;
-     const elDiff = document.getElementById(`diff-${compId}`);
-     const inputEl = document.getElementById(`pr-${compId}`);
-     
-     if (inputEl && document.activeElement !== inputEl) inputEl.value = prTotal;
-     if (elDiff) {
-        elDiff.innerText = diff > 0 ? `+${diff}` : diff;
-        elDiff.className = `diff-badge ${diff === 0 ? 'diff-ok' : 'diff-warn'}`;
-     }
-  });
-
-  applyRolePermissions();
-}
-
-// --- GESTION DES COLONNES TIMESHEET ---
-window.openTsTasksModal = function(cIdx) {
-  if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  currentTsCardIdx = cIdx;
-  const card = cardsData[cIdx];
-  
-  let pts = card.printTasks;
-  if (!pts || pts.length === 0) {
-     pts = card.tasks.map(t => {
-        let prefix = t.foreman ? `[${t.foreman}] ` : '';
-        return prefix + t.desc;
-     }).filter(d => d.trim() !== "");
-  }
-  
-  window.renderTsTasksList(pts);
-  document.getElementById('ts-tasks-modal').style.display = 'flex';
-}
-
-window.renderTsTasksList = function(tasksArray) {
-  const list = document.getElementById('ts-tasks-list');
-  list.innerHTML = '';
-  if(tasksArray.length === 0) tasksArray = [""];
-  tasksArray.forEach((t) => {
-     list.insertAdjacentHTML('beforeend', `
-       <div style="display:flex; gap:6px;">
-         <input type="text" class="modal-select ts-task-input" value="${t}" placeholder="Nom de la tâche à pointer...">
-         <button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5;" onclick="this.parentElement.remove()" style="padding:4px 8px;">&times;</button>
-       </div>
-     `);
-  });
-}
-
-window.addTsTaskInput = function() {
-  document.getElementById('ts-tasks-list').insertAdjacentHTML('beforeend', `
-       <div style="display:flex; gap:6px;">
-         <input type="text" class="modal-select ts-task-input" placeholder="Nom de la tâche à pointer...">
-         <button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5;" onclick="this.parentElement.remove()" style="padding:4px 8px;">&times;</button>
-       </div>
-  `);
-}
-
-window.closeTsTasksModal = function() {
-  document.getElementById('ts-tasks-modal').style.display = 'none';
-}
-
-window.saveTsTasks = function() {
-  if (currentTsCardIdx === -1) return;
-  const inputs = document.querySelectorAll('.ts-task-input');
-  const newTasks = [];
-  inputs.forEach(input => {
-     if (input.value.trim() !== "") newTasks.push(input.value.trim());
-  });
-  cardsData[currentTsCardIdx].printTasks = newTasks;
-  window.syncToFirebase();
-  window.closeTsTasksModal();
-}
-
-// --- IMPRESSION DES TIMESHEETS AVEC PAGINATION (15 max) ET COLONNE TOTAL ---
-window.openPrintModal = function() {
-  if (selectedForPrint.size === 0) {
-    alert("Veuillez cocher au moins un superviseur (case en haut à gauche de la carte) pour imprimer sa Timesheet.");
-    return;
-  }
-  document.getElementById('print-modal').style.display = 'flex';
-}
-
-window.closePrintModal = function() { document.getElementById('print-modal').style.display = 'none'; }
-
-window.executePrint = function() {
-  const dateInput = document.getElementById('print-date-input').value;
-  if (!dateInput) { alert("Veuillez sélectionner une date (Lundi)."); return; }
-
-  const baseDate = new Date(dateInput);
-  const printZone = document.getElementById('timesheet-print-zone');
-  let htmlContent = '';
-
-  const daysNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-  const monthsNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-  const WORKERS_PER_PAGE = 15;
-
-  selectedForPrint.forEach(cIdx => {
-    const card = cardsData[cIdx];
-    if (!card) return;
-
-    let taskHeaders = card.printTasks !== undefined ? [...card.printTasks] : card.tasks.map(t => (t.foreman ? `[${t.foreman}] ` : '') + t.desc).filter(d => d.trim() !== "");
-    // AJOUT DE LA COLONNE TOTAL AUTOMATIQUE ICI
-    taskHeaders.push('TOTAL'); 
-
-    let taskThs = taskHeaders.map(th => `<th class="ts-task-col">${th || '&nbsp;'}</th>`).join('');
-
-    const workersMap = new Map();
-    let unnamedCount = 0;
-
-    card.tasks.forEach(t => {
-      const linked = t.workerList ? t.workerList.length : 0;
-      const hasM = t.workers !== undefined && t.workers !== null && t.workers !== "";
-      const manual = hasM ? parseInt(t.workers) : linked;
-      
-      if (t.workerList && linked > 0) {
-        t.workerList.forEach(w => workersMap.set(w.id, w));
-      }
-      if (manual > linked) {
-        unnamedCount += (manual - linked);
-      }
-    });
-
-    const workersList = Array.from(workersMap.values());
-    let allRows = [];
-    
-    workersList.forEach(w => {
-      let taskCells = taskHeaders.map(() => `<td></td>`).join('');
-      allRows.push(`<tr><td>${w.id}</td><td>${w.name}</td><td>${w.company}</td>${taskCells}</tr>`);
-    });
-    
-    for(let i=0; i < unnamedCount; i++) {
-      let taskCells = taskHeaders.map(() => `<td></td>`).join('');
-      allRows.push(`<tr><td>-</td><td><em>Ouvrier non identifié</em></td><td>-</td>${taskCells}</tr>`);
-    }
-    
-    if(allRows.length === 0) {
-       allRows.push(`<tr><td colspan="${3 + taskHeaders.length}" style="text-align:center;">Aucun ouvrier pour cette équipe</td></tr>`);
-    }
-
-    const totalPagesPerDay = Math.ceil(allRows.length / WORKERS_PER_PAGE);
-
-    for (let d = 0; d < 6; d++) {
-      let currentDate = new Date(baseDate);
-      currentDate.setDate(currentDate.getDate() + d);
-      let dayStr = `${daysNames[currentDate.getDay()]} ${currentDate.getDate().toString().padStart(2,'0')} ${monthsNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
-
-      for (let p = 0; p < totalPagesPerDay; p++) {
-        let chunkRows = allRows.slice(p * WORKERS_PER_PAGE, (p + 1) * WORKERS_PER_PAGE).join('');
-        let pageIndicator = totalPagesPerDay > 1 ? `<div style="text-align:right; font-size:11px; margin-top:-20px; margin-bottom:10px; color:#475569;">Page ${p + 1} / ${totalPagesPerDay}</div>` : '';
-        
-        let totalsRow = (p === totalPagesPerDay - 1) ? `
-          <tr style="background-color:#f8fafc; font-weight:bold;">
-            <td colspan="3" style="text-align:right;">TOTAL WORKERS :</td>
-            <td colspan="${taskHeaders.length}" style="text-align:center;">${workersList.length + unnamedCount}</td>
-          </tr>` : '';
-
-        htmlContent += `
-          <div class="ts-page">
-            <div class="ts-header">DAILY TIMESHEET</div>
-            ${pageIndicator}
-            <div class="ts-info-box">
-              <div>
-                <div style="margin-bottom:6px;">PROJECT: <span style="font-weight:normal;">Riviera Tower</span></div>
-                <div style="margin-bottom:6px;">SUPERVISOR: <span style="font-weight:normal;">${card.name}</span></div>
-                <div>CATEGORY: <span style="font-weight:normal;">${(CATEGORY_INFO.find(c=>c.id===card.category)||{}).name || card.category}</span></div>
-              </div>
-              <div style="text-align:right;">
-                <div style="margin-bottom:6px;">DATE: <span style="font-weight:normal;">${dayStr}</span></div>
-                <div style="margin-bottom:6px;">TIMESHEET: <span style="font-weight:normal;">${card.timesheetNo || '_____'} ${card.timesheetName || ''}</span></div>
-                <div>SHIFT: <span style="font-weight:normal;">${card.shiftType || 'Shift 1'} (${card.shiftHours || '07:00 - 15:00'})</span></div>
-              </div>
-            </div>
-
-            <table class="ts-table">
-              <thead>
-                <tr>
-                  <th style="width:10%">ID</th>
-                  <th style="width:25%">Name</th>
-                  <th style="width:15%">Company</th>
-                  ${taskThs}
-                </tr>
-              </thead>
-              <tbody>
-                ${chunkRows}
-                ${totalsRow}
-              </tbody>
-            </table>
-
-            <div class="ts-signatures">
-              <div class="ts-sign-box">Team Leader</div>
-              <div class="ts-sign-box">Supervisor</div>
-              <div class="ts-sign-box">Timekeeper</div>
-            </div>
-          </div>
-        `;
-      }
-    }
-  });
-
-  printZone.innerHTML = htmlContent;
-  window.closePrintModal();
-  
-  document.body.classList.add('print-mode-ts');
-  window.print();
-  setTimeout(() => { document.body.classList.remove('print-mode-ts'); }, 500);
-}
-
-window.exportBackup = function() {
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, supervisors: siteSupervisors}, null, 2));
-  const dlAnchorElem = document.createElement('a');
-  dlAnchorElem.setAttribute("href", dataStr);
-  dlAnchorElem.setAttribute("download", `site_backup_${new Date().toISOString().split('T')[0]}.json`);
-  document.body.appendChild(dlAnchorElem); dlAnchorElem.click(); dlAnchorElem.remove();
-}
-
-window.importBackup = function(event) {
-  if (currentRole === 'viewer') return;
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const parsed = JSON.parse(e.target.result);
-      if (parsed.cardsData) {
-        cardsData = parsed.cardsData;
-        payrollCounts = parsed.payrollCounts || {};
-        unassignedWorkers = parsed.unassignedWorkers || [];
-        if (parsed.companies) siteCompanies = parsed.companies;
-        if (parsed.supervisors) siteSupervisors = parsed.supervisors;
-        renderCompanySelects();
-        renderPayrollTable();
-        renderCards(); 
-        window.renderDrawer(); 
-        window.syncToFirebase();
-        alert("Sauvegarde restaurée avec succès !");
-      } else { alert("Fichier invalide."); }
-    } catch (err) { alert("Erreur : " + err.message); }
-    event.target.value = "";
-  };
-  reader.readAsText(file);
-}
-
-// --- IMPORTATION EXCEL GLOBALE POINTAGE (ZÉRO SUPPRESSION) ---
-window.importExcelFile = function(event) {
-  if (currentRole === 'viewer' || currentRole === 'cfo') return; 
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const importedSupervisors = {};
-      let totalImportedWorkers = 0;
-
-      workbook.SheetNames.forEach(sheetName => {
-        if (!sheetName) return;
-        const worksheet = workbook.Sheets[sheetName];
-        if (!worksheet) return;
-        const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
-        if (!rawRows || rawRows.length === 0) return;
-
-        let headerRowIdx = -1;
-        for (let r = 0; r < rawRows.length; r++) {
-          const rowArray = rawRows[r];
-          if (!Array.isArray(rowArray)) continue;
-          const lineStr = rowArray.map(cell => String(cell || "").toUpperCase()).join(" ");
-          if (lineStr.includes("SUPERVISOR")) { headerRowIdx = r; break; }
-        }
-        if (headerRowIdx === -1) return;
-
-        const headerRow = rawRows[headerRowIdx] || [];
-        let supCol = -1, scopeCol = -1, tsCol = -1, idCol = -1, compCol = -1, workerCols = [];
-        for (let c = 0; c < headerRow.length; c++) {
-          const colName = String(headerRow[c] || "").trim().toUpperCase();
-          if (colName.includes("SUPERVISOR") && supCol === -1) supCol = c;
-          if (colName.includes("SCOPE") && scopeCol === -1) scopeCol = c;
-          if (colName.includes("TIMESHEET") && tsCol === -1) tsCol = c;
-          if ((colName.includes("COMET") || colName === "NO." || colName === "ID") && idCol === -1) idCol = c;
-          if (colName.includes("COMPANY") || colName.includes("SUBCON")) compCol = c;
-          if (colName.includes("NAME") || colName.includes("SURNAME")) workerCols.push(c);
-        }
-        if (supCol === -1) return;
-
-        for (let r = headerRowIdx + 1; r < rawRows.length; r++) {
-          const row = rawRows[r];
-          if (!Array.isArray(row) || row.length === 0) continue;
-
-          let currentSupervisor = String(row[supCol] || "").trim().toUpperCase();
-          let currentScope = scopeCol !== -1 ? String(row[scopeCol] || "").trim().toUpperCase() : "";
-          let currentTimesheet = tsCol !== -1 ? String(row[tsCol] || "").trim() : "";
-          let workerId = idCol !== -1 ? String(row[idCol] || "").trim() : "W-" + Math.floor(Math.random()*10000);
-          
-          let compStr = compCol !== -1 ? String(row[compCol] || "").trim().toUpperCase() : "OTHER";
-          if (!siteCompanies.includes(compStr) && compStr !== "") siteCompanies.push(compStr);
-          if (compStr === "") compStr = "OTHER";
-
-          let workerName = "";
-          workerCols.forEach(wc => { let val = String(row[wc] || "").trim(); if(val) workerName += val + " "; });
-          workerName = workerName.trim() || "Ouvrier";
-
-          let hasWorker = workerCols.length > 0 ? workerName !== "Ouvrier" : true;
-          if (!currentSupervisor || !hasWorker) continue;
-          
-          if (!importedSupervisors[currentSupervisor]) {
-            importedSupervisors[currentSupervisor] = { timesheetNo: currentTimesheet, tasks: {} };
-          } else if (currentTimesheet && !importedSupervisors[currentSupervisor].timesheetNo) {
-            importedSupervisors[currentSupervisor].timesheetNo = currentTimesheet;
-          }
-
-          const taskKey = `${compStr}___${currentScope}`;
-          if (!importedSupervisors[currentSupervisor].tasks[taskKey]) {
-            importedSupervisors[currentSupervisor].tasks[taskKey] = { source: compStr, desc: currentScope, workers: "", workerList: [] };
-          }
-          importedSupervisors[currentSupervisor].tasks[taskKey].workerList.push({ id: workerId, name: workerName, company: compStr });
-          totalImportedWorkers += 1;
-        }
-      });
-
-      if (totalImportedWorkers === 0) { alert("Aucun ouvrier détecté."); event.target.value = ""; return; }
-
-      let matchedIndices = new Set();
-      Object.keys(importedSupervisors).forEach(supName => {
-        let existingCardIdx = cardsData.findIndex(c => {
-          const cleanExist = String(c.name || "").toUpperCase().replace(/[^A-Z]/g, '');
-          const cleanImport = String(supName || "").toUpperCase().replace(/[^A-Z]/g, '');
-          if (!cleanExist || !cleanImport) return false;
-          return cleanExist.includes(cleanImport) || cleanImport.includes(cleanExist) || (cleanExist.substring(0,5) === cleanImport.substring(0,5));
-        });
-        if (existingCardIdx !== -1) matchedIndices.add(existingCardIdx);
-      });
-
-      let missingNamesArr = [];
-      cardsData.forEach((c, idx) => {
-        if (!matchedIndices.has(idx)) {
-           missingNamesArr.push(c.name + (c.timesheetNo ? ` (TS: ${c.timesheetNo})` : ''));
-        }
-      });
-
-      let keepMissing = true;
-      if (missingNamesArr.length > 0) {
-        keepMissing = confirm("⚠️ ATTENTION : Les équipes suivantes sont absentes de l'Excel :\n\n" + missingNamesArr.join("\n") + "\n\n• [OK] : Conserver l'existant (Recommandé)\n• [Annuler] : Supprimer les cartes absentes");
-      }
-
-      let nextCardsData = [];
-      cardsData.forEach((c, idx) => {
-        if (matchedIndices.has(idx) || keepMissing) {
-          nextCardsData.push(c);
-        }
-      });
-      cardsData = nextCardsData;
-
-      // FUSION DES DONNÉES
-      Object.keys(importedSupervisors).forEach(supName => {
-        const supData = importedSupervisors[supName];
-        let existingCard = cardsData.find(c => {
-          const cleanExist = String(c.name || "").toUpperCase().replace(/[^A-Z]/g, '');
-          const cleanImport = String(supName || "").toUpperCase().replace(/[^A-Z]/g, '');
-          if (!cleanExist || !cleanImport) return false;
-          return cleanExist.includes(cleanImport) || cleanImport.includes(cleanExist) || (cleanExist.substring(0,5) === cleanImport.substring(0,5));
-        });
-
-        const newTaskList = Object.values(supData.tasks);
-
-        if (existingCard) {
-          if(!existingCard.timesheetNo && supData.timesheetNo) {
-             existingCard.timesheetNo = supData.timesheetNo;
-          }
-          
-          newTaskList.forEach(newT => {
-            let matchTask = existingCard.tasks.find(t => t.source === newT.source && t.desc === newT.desc);
-            if (matchTask) { 
-               newT.workerList.forEach(importedW => {
-                  let exists = matchTask.workerList.find(w => w.id === importedW.id || w.name.toUpperCase() === importedW.name.toUpperCase());
-                  if(!exists) {
-                     matchTask.workerList.push(importedW);
-                  }
-               });
-            } else { 
-               existingCard.tasks.push(newT); 
-            }
-          });
-        } else {
-          let cat = "trades"; let sUp = supName.toUpperCase();
-          if (sUp.includes("TAREK") || sUp.includes("TSIRKAS") || sUp.includes("CHRISTOS") || sUp.includes("BAGU")) cat = "civil";
-          else if (sUp.includes("PRAKASH") || sUp.includes("TAMMET") || sUp.includes("PROTECTION")) cat = "logistic";
-          else if (sUp.includes("RAZVAN") || sUp.includes("LOUKAS") || sUp.includes("BAKHIT")) cat = "external";
-          else if (sUp.includes("KUMAR") || sUp.includes("PLANT")) cat = "plant";
-          else if (sUp.includes("AHMED") || sUp.includes("FRED")) cat = "indirect";
-          else if (sUp.includes("TASSOS")) cat = "facade";
-
-          cardsData.push({ name: supName, manager: "", category: cat, timesheetNo: supData.timesheetNo, timesheetName: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: newTaskList });
-        }
-      });
-
-      renderCompanySelects();
-      renderPayrollTable();
-      renderCards(); 
-      window.syncToFirebase();
-      alert(`Import Fusionné avec succès : ${totalImportedWorkers} ouvriers traités. (Vos assignations manuelles précédentes n'ont pas été supprimées)`);
-
-    } catch (err) { alert("Erreur technique : " + err.message); }
-    event.target.value = "";
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-// --- IMPORTATEUR DE LA BASE OUVRIERS (ZÉRO SUPPRESSION) ---
-window.importWorkersDB = function(event) {
-  if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-      let newWorkersCount = 0;
-
-      workbook.SheetNames.forEach(sheetName => {
-        if (!sheetName) return;
-        const worksheet = workbook.Sheets[sheetName];
-        if (!worksheet) return;
-
-        const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
-        if (!rawRows || rawRows.length === 0) return;
-
-        let headerRowIdx = -1;
-        for (let r = 0; r < rawRows.length; r++) {
-          const rowArray = rawRows[r];
-          if (!Array.isArray(rowArray)) continue;
-          const lineStr = rowArray.map(cell => String(cell || "").toUpperCase()).join(" ");
-          if (lineStr.includes("NAME") || lineStr.includes("SURNAME") || lineStr.includes("NOM")) { headerRowIdx = r; break; }
-        }
-        if (headerRowIdx === -1) return;
-
-        const headerRow = rawRows[headerRowIdx] || [];
-        let idCol = -1, companyCol = -1, workerCols = [];
-        for (let c = 0; c < headerRow.length; c++) {
-          const colName = String(headerRow[c] || "").trim().toUpperCase();
-          if ((colName.includes("COMET") || colName === "NO." || colName === "ID" || colName.includes("NEOAXESS")) && idCol === -1) idCol = c;
-          if (colName.includes("NAME") || colName.includes("SURNAME") || colName.includes("NOM")) workerCols.push(c);
-          if (colName.includes("COMPANY") || colName.includes("SUBCONTRACTOR") || colName === "CO." || colName.includes("ENTREPRISE")) companyCol = c;
-        }
-
-        if (workerCols.length === 0) return;
-
-        for (let r = headerRowIdx + 1; r < rawRows.length; r++) {
-          const row = rawRows[r];
-          if (!Array.isArray(row) || row.length === 0) continue;
-
-          let workerName = "";
-          workerCols.forEach(wc => { let val = String(row[wc] || "").trim(); if(val) workerName += val + " "; });
-          workerName = workerName.trim();
-          if (!workerName) continue;
-
-          let workerId = idCol !== -1 ? String(row[idCol] || "").trim() : "";
-          if (!workerId) workerId = "W-" + Math.floor(Math.random()*100000);
-
-          let workerComp = "OTHER";
-          if (companyCol !== -1 && String(row[companyCol] || "").trim() !== "") {
-            workerComp = String(row[companyCol]).trim().toUpperCase();
-            if (!siteCompanies.includes(workerComp)) siteCompanies.push(workerComp);
-          }
-
-          let isAssigned = false;
-          cardsData.forEach(c => {
-            if (c.tasks) {
-              c.tasks.forEach(t => {
-                if (t.workerList && t.workerList.find(w => w.id === workerId || w.name.toUpperCase() === workerName.toUpperCase())) isAssigned = true;
-              });
-            }
-          });
-          
-          let isUnassigned = unassignedWorkers.find(w => w.id === workerId || w.name.toUpperCase() === workerName.toUpperCase());
-
-          if (!isAssigned && !isUnassigned) {
-            unassignedWorkers.push({ id: workerId, name: workerName, company: workerComp });
-            newWorkersCount++;
-          }
-        }
-      });
-
-      renderCompanySelects();
-      renderPayrollTable();
-      window.renderDrawer(); 
-      if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
-      window.syncToFirebase();
-      if (newWorkersCount > 0) alert(`Succès : ${newWorkersCount} nouveaux ouvriers ajoutés à la base !`);
-      else alert("Aucun nouvel ouvrier ajouté (Ils sont peut-être déjà tous dans la base ou assignés).");
-
-    } catch (err) { alert("Erreur technique : " + err.message); }
-    event.target.value = "";
-  };
-  reader.readAsArrayBuffer(file);
-}
 </script>
 </body>
 </html>
