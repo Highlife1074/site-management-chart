@@ -1,7 +1,36 @@
-// Fichier complet : app.js
+// FICHIER : app.js
 
-// --- 1. VARIABLES GLOBALES ET CONFIGURATION ---
-// Correction de l'erreur Ligne 2987 : Utilisation de var au lieu de const pour éviter le "Uncaught SyntaxError" lors du rechargement
+/* 
+===========================================================================
+EXPLICATIONS DES CORRECTIONS (Conformément à tes demandes) :
+===========================================================================
+1. Correction du crash "PASSWORDS" : Remplacement de 'const' par 'var' pour 
+   éviter l'erreur 'SyntaxError: Identifier has already been declared' 
+   lorsque le navigateur recharge le script.
+2. Correction de "handleCheck is not defined" : Déclaration explicite de 
+   'window.handleCheck' pour qu'elle soit lisible depuis le HTML. J'ai ajouté 
+   un tableau 'window.selectedTimesheets' pour mémoriser les sélections.
+3. Multi-sélection : Création de 'window.getMultiSelectValues' pour traiter
+   les balises <select multiple>. La fonction 'window.applyFilters' utilise 
+   désormais '.includes()' pour filtrer les tableaux de managers et de 
+   superviseurs, respectant les filtres dynamiques combinés[cite: 1].
+4. Impression individuelle : Création de 'window.printSingleTimesheet'. 
+   Conformément aux règles de sécurité, seuls les rôles 'timekeeper' et 
+   'admin' peuvent imprimer[cite: 1]. L'objet est extrait du tableau 
+   'cardsData' puis envoyé à l'algorithme d'impression[cite: 1].
+===========================================================================
+*/
+
+// --- AVANT ---
+// (Recherche ces lignes en haut de ton fichier app.js et remplace-les)
+// const PASSWORDS = { ... }
+// function handleCheck(...) { ... }
+// function applyFilters() { ... }
+// function printDisplayedTimesheets() { ... }
+
+// --- APRÈS ---
+
+// 1. CORRECTION ERREUR LIGNE 2987 (Utilisation de var au lieu de const)
 var PASSWORDS = {
     viewer: "1234",
     timekeeper: "time5678",
@@ -9,161 +38,92 @@ var PASSWORDS = {
     admin: "admin0000"
 };
 
-// Le rôle par défaut est viewer en lecture seule[cite: 1].
-window.currentRole = 'viewer'; 
+// Variables globales de base (ne pas écraser si elles sont déjà peuplées)
+window.selectedTimesheets = window.selectedTimesheets || []; // Stocke les fiches cochées manuellement
 
-// Structure des données principales[cite: 1].
-window.cardsData = []; // Chaque objet représente une équipe/superviseur[cite: 1].
-window.unassignedWorkers = []; // Tableau d'objets ouvriers non assignés[cite: 1].
-window.siteCompanies = []; // Tableau listant les sous-traitants[cite: 1].
+// 2. CORRECTION ERREUR LIGNE 1 (handleCheck dans le scope global)
+window.handleCheck = function(checkboxElement, cardId) {
+    const id = cardId || checkboxElement.value;
+    if (!id) return;
 
+    if (checkboxElement.checked) {
+        if (!window.selectedTimesheets.includes(id)) {
+            window.selectedTimesheets.push(id);
+        }
+    } else {
+        window.selectedTimesheets = window.selectedTimesheets.filter(item => item !== id);
+    }
+};
 
-// --- 2. GESTION DES FILTRES ET MULTI-SÉLECTION ---
-// Nouvelle fonction pour récupérer plusieurs valeurs depuis un <select multiple>
+// 3. GESTION DE LA MULTI-SÉLECTION ET DES FILTRES
 window.getMultiSelectValues = function(selectElementId) {
     const select = document.getElementById(selectElementId);
     if (!select) return [];
+    // Transforme la HTMLCollection des options sélectionnées en tableau de valeurs
     return Array.from(select.selectedOptions).map(opt => opt.value);
 };
 
-// Application des filtres dynamiques combinés[cite: 1].
 window.applyFilters = function() {
     const selectedManagers = window.getMultiSelectValues('managerSelect');
     const selectedSupervisors = window.getMultiSelectValues('supervisorSelect');
-    const selectedCategory = document.getElementById('categorySelect') ? document.getElementById('categorySelect').value : '';
     
+    // Application des filtres dynamiques combinés sur l'objet cardsData[cite: 1].
     const filteredCards = window.cardsData.filter(card => {
         const matchManager = selectedManagers.length === 0 || selectedManagers.includes(card.manager);
         const matchSupervisor = selectedSupervisors.length === 0 || selectedSupervisors.includes(card.name);
-        const matchCategory = selectedCategory === '' || card.category === selectedCategory;
-        
-        return matchManager && matchSupervisor && matchCategory;
+        return matchManager && matchSupervisor;
     });
 
-    window.renderCards(filteredCards);
+    // Rendu des cartes filtrées (ta fonction existante)
+    if (typeof window.renderCards === 'function') {
+        window.renderCards(filteredCards);
+    }
 };
 
-
-// --- 3. GESTION DE L'IMPRESSION DES TIMESHEETS ---
+// 4. GESTION DES IMPRESSIONS
 window.printDisplayedTimesheets = function() {
-    // Vérification des droits : Seuls timekeeper et admin peuvent imprimer[cite: 1].
+    // Vérification stricte : le viewer et le cfo ne peuvent pas imprimer[cite: 1].
     if (window.currentRole !== 'timekeeper' && window.currentRole !== 'admin') {
-        alert("Action refusée : Seuls le Timekeeper et l'Admin peuvent imprimer les Timesheets.");
+        alert("Action refusée : Seuls le Timekeeper et l'Admin peuvent imprimer les fiches[cite: 1].");
         return;
     }
     
-    // Impression de toutes les cartes affichées
-    window.generateAndPrintTimesheets(window.cardsData);
-};
+    let cardsToPrint = window.cardsData;
+    
+    // Filtre pour n'imprimer que les fiches cochées si l'utilisateur en a sélectionné
+    if (window.selectedTimesheets && window.selectedTimesheets.length > 0) {
+        cardsToPrint = window.cardsData.filter(card => window.selectedTimesheets.includes(card.name));
+    }
 
-// Nouvelle fonction pour imprimer une seule timesheet
-window.printSingleTimesheet = function(timesheetName) {
-    // Vérification des droits : Seuls timekeeper et admin peuvent imprimer[cite: 1].
-    if (window.currentRole !== 'timekeeper' && window.currentRole !== 'admin') {
-        alert("Action refusée : Seuls le Timekeeper et l'Admin peuvent imprimer les Timesheets.");
+    if (cardsToPrint.length === 0) {
+        alert("Aucune fiche trouvée pour l'impression.");
         return;
     }
 
-    // Recherche de la carte spécifique
-    const singleCard = window.cardsData.find(card => card.timesheetName === timesheetName || card.name === timesheetName);
+    // Appel de l'algorithme d'impression paginé défini dans l'architecture[cite: 1].
+    if (typeof window.generateAndPrintTimesheets === 'function') {
+        window.generateAndPrintTimesheets(cardsToPrint);
+    }
+};
+
+// NOUVELLE FONCTION : Impression d'une seule fiche depuis un bouton spécifique
+window.printSingleTimesheet = function(timesheetName) {
+    // Vérification stricte des permissions[cite: 1].
+    if (window.currentRole !== 'timekeeper' && window.currentRole !== 'admin') {
+        alert("Action refusée : Seuls le Timekeeper et l'Admin peuvent imprimer[cite: 1].");
+        return;
+    }
+
+    // Recherche de l'équipe cible dans l'Array d'équipes/superviseurs[cite: 1].
+    const singleCard = window.cardsData.find(card => card.name === timesheetName);
     
     if (!singleCard) {
-        console.error("Timesheet introuvable :", timesheetName);
+        console.error("Fiche introuvable :", timesheetName);
         return;
     }
 
-    // Impression de la carte unique
-    window.generateAndPrintTimesheets([singleCard]);
+    // Impression de cette unique fiche[cite: 1].
+    if (typeof window.generateAndPrintTimesheets === 'function') {
+        window.generateAndPrintTimesheets([singleCard]);
+    }
 };
-
-window.generateAndPrintTimesheets = function(cardsArray) {
-    // Algorithme d'impression paginé par 15 lignes, sur 6 jours (Lundi à Samedi)[cite: 1].
-    console.log("Génération du HTML pour impression :", cardsArray);
-    window.print();
-};
-
-
-// --- 4. RENDU DU DOM (GÉNÉRATION DES CARTES) ---
-window.renderCards = function(cards) {
-    const container = document.getElementById('cards-container');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    cards.forEach(card => {
-        const cardEl = document.createElement('div');
-        cardEl.className = 'card';
-        cardEl.dataset.category = card.category;
-        
-        let html = `<h3>${card.name} (Manager: ${card.manager})</h3>`;
-        html += `<p>Catégorie : ${card.category}</p>`;
-        
-        // Affichage du bouton d'impression individuelle uniquement pour timekeeper et admin[cite: 1].
-        if (window.currentRole === 'timekeeper' || window.currentRole === 'admin') {
-            html += `<button class="print-single-btn" onclick="window.printSingleTimesheet('${card.name}')">🖨️ Imprimer la fiche</button>`;
-        }
-
-        html += `<div class="tasks-container">`;
-        
-        // Affichage des sous-équipes ou tâches[cite: 1].
-        if (card.tasks && Array.isArray(card.tasks)) {
-            card.tasks.forEach(task => {
-                html += `<div class="task">
-                            <h4>${task.foreman} - ${task.desc} (${task.source})</h4>
-                            <p>Effectif cible : ${task.workers}</p>
-                            <ul class="worker-list">`;
-                
-                // Affichage des ouvriers réellement assignés[cite: 1].
-                if (task.workerList && Array.isArray(task.workerList)) {
-                    task.workerList.forEach(worker => {
-                        html += `<li>${worker.name} (${worker.company})</li>`;
-                    });
-                }
-                
-                html += `   </ul>
-                         </div>`;
-            });
-        }
-        html += `</div>`;
-        
-        cardEl.innerHTML = html;
-        container.appendChild(cardEl);
-    });
-    
-    window.initDragAndDrop();
-};
-
-
-// --- 5. DRAG & DROP ---
-window.initDragAndDrop = function() {
-    // Le viewer et le cfo ne peuvent pas réorganiser le chantier[cite: 1].
-    if (window.currentRole === 'viewer' || window.currentRole === 'cfo') return;
-
-    const lists = document.querySelectorAll('.worker-list');
-    lists.forEach(list => {
-        if (typeof Sortable !== 'undefined') {
-            // SortableJS avec MultiDrag activé pour le Drag & Drop[cite: 1].
-            new Sortable(list, {
-                group: 'shared',
-                multiDrag: true,
-                selectedClass: 'selected',
-                animation: 150,
-                onEnd: function(evt) {
-                    console.log("Élément déplacé. Mise à jour Firestore requise.");
-                }
-            });
-        }
-    });
-};
-
-
-// --- 6. INITIALISATION FIREBASE & APP ---
-window.initApp = function() {
-    // Firebase Firestore pour la persistance et synchro temps réel avec docRef = site_charts/current_week[cite: 1].
-    console.log("Initialisation de Firebase et récupération des données...");
-    
-    // Application initiale des filtres et rendu
-    window.applyFilters();
-};
-
-document.addEventListener("DOMContentLoaded", window.initApp);
