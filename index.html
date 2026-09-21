@@ -252,8 +252,8 @@
   .db-input:hover { border-color: #cbd5e1; }
   .db-input:focus { border-color: #2563eb; background: white; outline: none; }
 
-  /* BOUTON FLOTTANT DEPLACEMENT MASSE */
-  #fab-move { display:none; position:fixed; bottom:90px; right:30px; background:#2563eb; color:white; padding:16px 24px; border-radius:30px; box-shadow:0 10px 25px rgba(37,99,235,0.4); cursor:pointer; font-weight:800; font-size:15px; z-index:1500; align-items:center; gap:10px; transition: transform 0.2s; }
+  /* BOUTON FLOTTANT DEPLACEMENT MASSE CORRIGÉ POUR SORTABLEJS */
+  #fab-move { display:none; position:fixed; bottom:90px; right:30px; background:#2563eb; color:white; padding:16px 24px; border-radius:30px; box-shadow:0 10px 25px rgba(37,99,235,0.4); cursor:pointer; font-weight:800; font-size:15px; z-index:2500; align-items:center; gap:10px; transition: transform 0.2s; }
   #fab-move:hover { transform: scale(1.05); background:#1d4ed8; }
   #fab-count { background:white; color:#2563eb; padding:2px 8px; border-radius:12px; font-size:14px; }
 
@@ -327,7 +327,8 @@
 <div id="error-banner"></div>
 
 <!-- BOUTONS FLOTTANTS -->
-<div id="fab-move" onmousedown="event.stopPropagation()" onclick="openMultiMoveModal(event)">
+<!-- SOLUTION 1: On capture les clics tactiles et souris AVANT que Sortable n'efface la sélection -->
+<div id="fab-move" onpointerdown="handleFabClick(event)" onmousedown="handleFabClick(event)">
   ➡️ Déplacer <span id="fab-count">0</span> ouvrier(s)
 </div>
 
@@ -340,14 +341,17 @@
   <div class="modal-box xl" style="height: 85vh;">
     <div class="modal-title">🗃️ Base de Données Globale (Éditeur)</div>
     <div style="display:flex; justify-content: space-between; margin-bottom: 10px; align-items:center;">
-       <span style="font-size:12px; color:#64748b;">Modifiez les champs directement. Toute modification est sauvegardée automatiquement.</span>
+       <span style="font-size:12px; color:#64748b;">Modifiez les champs directement. Toute modification est sauvegardée.</span>
+       
        <div style="display:flex; gap:8px;">
+          <!-- SOLUTION 2: Le bouton de nettoyage automatique des doublons -->
+          <button class="btn btn-warning" onclick="cleanDuplicates()" title="Supprime automatiquement les doublons (garde l'ouvrier assigné en priorité)">🧹 Nettoyer Doublons</button>
           <button class="btn btn-outline" onclick="exportWorkersExcel()">💾 Exporter Excel</button>
           <button class="btn btn-outline" onclick="printDB()">🖨️ Imprimer</button>
        </div>
     </div>
     
-    <!-- NOUVEAU : BARRE DE RECHERCHE -->
+    <!-- BARRE DE RECHERCHE -->
     <div style="margin-bottom: 10px;">
         <input type="text" id="db-search-input" class="modal-select" placeholder="🔍 Rechercher un nom, ID ou entreprise..." oninput="filterDBTable(this.value)">
     </div>
@@ -524,7 +528,7 @@
     <button class="btn btn-outline" id="btn-add-sup" onclick="addNewSupervisor()">+ Ajout Timesheet</button>
     <button class="btn btn-black" id="btn-print-ts" onclick="openPrintModal()">📄 Imprimer TS</button>
     
-    <!-- Bouton Paramètres (Cache les outils techniques) -->
+    <!-- Bouton Paramètres -->
     <button class="btn btn-icon" id="btn-settings-menu" onclick="toggleAdminMenu()" title="Outils avancés">⚙️</button>
     
     <div id="admin-dropdown">
@@ -893,6 +897,63 @@ function handleCheck(cIdx, isChecked) {
   else selectedForPrint.delete(cIdx);
 }
 
+// --- NOUVEAU: NETTOYAGE AUTOMATIQUE DES DOUBLONS ---
+window.cleanDuplicates = function() {
+  if (currentRole === 'viewer' || currentRole === 'cfo') return;
+  
+  if (!confirm("Voulez-vous rechercher et supprimer automatiquement tous les doublons de la base de données ?\n\n(L'ouvrier assigné à une équipe de chantier sera conservé en priorité)")) return;
+  
+  let seenIds = new Set();
+  let seenNames = new Set();
+  let removedCount = 0;
+
+  const isDup = (w) => {
+      const normId = String(w.id || '').trim().toUpperCase();
+      const normName = String(w.name || '').trim().toUpperCase();
+      
+      if ((normId !== '' && seenIds.has(normId)) || (normName !== '' && seenNames.has(normName))) {
+          return true; // C'est un doublon
+      }
+      
+      // On l'ajoute à la liste des vus
+      if (normId !== '') seenIds.add(normId);
+      if (normName !== '') seenNames.add(normName);
+      return false; // Pas un doublon, on le garde
+  };
+
+  // 1. On scanne d'abord les cartes assignées (Priorité Haute)
+  cardsData.forEach(c => {
+      if (c.tasks) {
+          c.tasks.forEach(t => {
+              if (t.workerList) {
+                  t.workerList = t.workerList.filter(w => {
+                      if (isDup(w)) { removedCount++; return false; }
+                      return true;
+                  });
+              }
+          });
+      }
+  });
+
+  // 2. On scanne ensuite la base des non assignés (Basse priorité, ils seront effacés en 1er si trouvés)
+  unassignedWorkers = unassignedWorkers.filter(w => {
+      if (isDup(w)) { removedCount++; return false; }
+      return true;
+  });
+
+  if (removedCount > 0) {
+      alert(`✅ Nettoyage terminé : ${removedCount} doublon(s) supprimé(s).`);
+      recalculateTotals();
+      renderCards();
+      renderDrawer();
+      if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
+      syncToFirebase();
+  } else {
+      alert("👌 Aucun doublon n'a été trouvé dans la base de données !");
+  }
+};
+
+
 // --- BASE DE DONNÉES GLOBALE & RECHERCHE ---
 function openDBModal() {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
@@ -905,13 +966,11 @@ function closeDBModal() {
   document.getElementById('db-modal').style.display = 'none';
 }
 
-// NOUVELLE FONCTION DE FILTRE
 function filterDBTable(query) {
   const lowerQuery = query.toLowerCase();
   const rows = document.querySelectorAll('#db-table-body tr');
   
   rows.forEach(row => {
-     // On cherche dans les inputs (value) ou dans le texte des spans/td
      const idText = row.cells[0].querySelector('input').value.toLowerCase();
      const nameText = row.cells[1].querySelector('input').value.toLowerCase();
      const companyText = row.cells[2].querySelector('select').value.toLowerCase();
@@ -955,7 +1014,6 @@ function renderDBTable() {
   });
   tbody.innerHTML = html;
   
-  // Appliquer le filtre si l'input n'est pas vide suite à un rafraîchissement (Firebase par ex)
   const currentQuery = document.getElementById('db-search-input').value;
   if(currentQuery) filterDBTable(currentQuery);
 }
@@ -970,7 +1028,7 @@ function editWorker(oldId, field, newVal, context, cIdx, tIdx, inputEl) {
   if (field === 'id' || field === 'name') {
     const dup = findWorkerDuplicate(testId, testName, oldId);
     if (dup.found) {
-      alert(`⚠️ Erreur Doublon : Un ouvrier correspondant existe déjà ${dup.location} (ID: ${dup.worker.id}, Nom: ${dup.worker.name}). Modification refusée.`);
+      alert(`⚠️ Erreur Doublon : Un ouvrier correspondant existe déjà ${dup.location} (ID: ${dup.worker.id}, Nom: ${dup.worker.name}). Modification refusée. Vous pouvez utiliser le bouton 'Nettoyer Doublons' en haut.`);
       if (inputEl) inputEl.value = w[field];
       return;
     }
@@ -1139,7 +1197,6 @@ function renderCards() {
         if (tsA && !tsB) return -1;
         if (!tsA && tsB) return 1;
 
-        // Si aucun numéro de TS, fallback sur le nom du superviseur
         let nameA = (a.card.name || '').trim();
         let nameB = (b.card.name || '').trim();
         return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
@@ -1438,7 +1495,8 @@ function updateFab() {
   }
 }
 
-window.openMultiMoveModal = function(event) {
+// NOUVELLE FONCTION ROBOUSTE POUR LE BOUTON FLOTTANT
+window.handleFabClick = function(event) {
   if (event) {
     event.preventDefault();
     event.stopPropagation();
@@ -1461,7 +1519,7 @@ window.openMultiMoveModal = function(event) {
   document.getElementById('modal-sup-select').innerHTML = html;
   document.getElementById('modal-worker-name').innerText = `Déplacement de ${count} ouvrier(s) sélectionné(s)`;
   document.getElementById('worker-modal').style.display = 'flex';
-}
+};
 
 function closeWorkerModal() { 
   document.getElementById('worker-modal').style.display = 'none'; 
