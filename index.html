@@ -37,7 +37,7 @@
     .drop-active { border-color: #3b82f6 !important; background-color: rgba(59, 130, 246, 0.12) !important; }
   </style>
 </head>
-<body class="h-full text-slate-100 flex flex-col font-sans overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+<body class="h-full text-slate-100 flex flex-col font-sans select-none overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
 
   <!-- Header Bar -->
   <header class="bg-slate-900/90 border-b border-slate-800 px-6 py-3.5 flex flex-wrap items-center justify-between gap-4 backdrop-blur-md z-20">
@@ -80,17 +80,15 @@
 
       <button 
         id="btn-open-add-modal"
-        onclick="openAddModal()"
-        class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-medium text-xs shadow-md shadow-emerald-950/40 transition-all cursor-pointer">
+        class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-medium text-xs shadow-md shadow-emerald-950/40 transition-all">
         <i class="ph ph-user-plus text-base font-bold"></i>
         <span>Ajouter Ouvrier</span>
       </button>
 
       <button 
         id="btn-reset-demo" 
-        onclick="resetDemoData()"
         title="Réinitialiser les données"
-        class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-all text-xs flex items-center justify-center cursor-pointer">
+        class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-all text-xs flex items-center justify-center">
         <i class="ph ph-arrow-counter-clockwise text-base"></i>
       </button>
     </div>
@@ -125,7 +123,7 @@
   </main>
 
   <!-- MODAL: DÉPLACER -->
-  <div id="modal-move" class="fixed inset-0 z-50 items-center justify-center bg-slate-950/80 backdrop-blur-sm" style="display: none;">
+  <div id="modal-move" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm" style="display: none;">
     <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-5 shadow-2xl shadow-black/80">
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
         <div class="flex items-center gap-2">
@@ -137,7 +135,7 @@
             <p class="text-xs text-slate-400" id="move-modal-worker-name">Sélection de la nouvelle équipe</p>
           </div>
         </div>
-        <button onclick="closeMoveModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer">
+        <button id="btn-close-move-modal" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800">
           <i class="ph ph-x text-lg"></i>
         </button>
       </div>
@@ -151,10 +149,10 @@
       </div>
 
       <div class="pt-3 border-t border-slate-800 flex justify-end gap-2">
-        <button onclick="closeMoveModal()" class="px-4 py-1.5 rounded-lg text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition cursor-pointer">
+        <button id="btn-cancel-move" class="px-4 py-1.5 rounded-lg text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition">
           Annuler
         </button>
-        <button onclick="confirmMoveWorker()" class="px-4 py-1.5 rounded-lg text-xs bg-blue-600 hover:bg-blue-500 text-white font-semibold transition flex items-center gap-1.5 shadow-md shadow-blue-900/40 cursor-pointer">
+        <button id="btn-confirm-move" class="px-4 py-1.5 rounded-lg text-xs bg-blue-600 hover:bg-blue-500 text-white font-semibold transition flex items-center gap-1.5 shadow-md shadow-blue-900/40">
           <i class="ph ph-check font-bold"></i>
           <span>Confirmer le transfert</span>
         </button>
@@ -163,7 +161,7 @@
   </div>
 
   <!-- MODAL: AJOUTER OUVRIER -->
-  <div id="modal-add-worker" class="fixed inset-0 z-50 items-center justify-center bg-slate-950/80 backdrop-blur-sm" style="display: none;">
+  <div id="modal-add-worker" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm" style="display: none;">
     <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-5 shadow-2xl shadow-black/80">
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
         <div class="flex items-center gap-2">
@@ -175,12 +173,12 @@
             <p class="text-xs text-slate-400">Enregistrer un opérateur dans l'organigramme</p>
           </div>
         </div>
-        <button onclick="closeAddModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer">
+        <button id="btn-close-add-modal" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800">
           <i class="ph ph-x text-lg"></i>
         </button>
       </div>
 
-      <form id="form-add-worker" onsubmit="handleAddWorkerSubmit(event)" class="py-4 space-y-3.5 text-xs">
+      <form id="form-add-worker" class="py-4 space-y-3.5 text-xs">
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-slate-300 font-medium mb-1">Nom & Prénom *</label>
@@ -224,8 +222,8 @@
         </div>
 
         <div class="pt-3 border-t border-slate-800 flex justify-end gap-2">
-          <button type="button" onclick="closeAddModal()" class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition cursor-pointer">Annuler</button>
-          <button type="submit" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition flex items-center gap-1.5 shadow-md shadow-emerald-900/40 cursor-pointer">
+          <button type="button" id="btn-cancel-add" class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition">Annuler</button>
+          <button type="submit" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition flex items-center gap-1.5 shadow-md shadow-emerald-900/40">
             <i class="ph ph-plus-circle font-bold"></i>
             <span>Enregistrer</span>
           </button>
@@ -264,14 +262,182 @@
     });
 
     function initApp() {
+      setupGlobalBoardEvents();
       setupHeaderControls();
+      setupModals();
       renderBoard();
       updateMetrics();
       populateAddWorkerZoneSelect();
     }
 
-    // --- FONCTIONS DIRECTES MODALES ET ACTIONS ---
-    window.openMoveModal = function(workerId) {
+    // ÉCOUTEURS GLOBAUX SUR LE DOCUMENT (Résout définitivement le clic sur "Déplacer")
+    function setupGlobalBoardEvents() {
+      // Clics gérés au niveau document
+      document.addEventListener('click', (e) => {
+        // 1. Bouton Déplacer (Bleu)
+        const moveBtn = e.target.closest('.btn-move-worker');
+        if (moveBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          const workerId = moveBtn.getAttribute('data-worker-id');
+          openMoveModal(workerId);
+          return;
+        }
+
+        // 2. Bouton Supprimer
+        const deleteBtn = e.target.closest('.btn-delete-worker');
+        if (deleteBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          const workerId = deleteBtn.getAttribute('data-worker-id');
+          deleteWorker(workerId);
+          return;
+        }
+
+        // 3. Changement de Statut (badge)
+        const statusBadge = e.target.closest('.badge-status');
+        if (statusBadge) {
+          e.preventDefault();
+          e.stopPropagation();
+          const workerId = statusBadge.getAttribute('data-worker-id');
+          cycleWorkerStatus(workerId);
+        }
+      });
+
+      // DRAG & DROP HTML5
+      document.addEventListener('dragstart', (e) => {
+        // Empêche le drag si on clique sur un bouton intérieur
+        if (e.target.closest('button') || e.target.closest('.badge-status')) {
+          e.preventDefault();
+          return;
+        }
+        const card = e.target.closest('.worker-card');
+        if (!card) return;
+
+        draggedWorkerId = card.getAttribute('data-id');
+        card.classList.add('drag-ghost');
+        e.dataTransfer.setData('text/plain', draggedWorkerId);
+        e.dataTransfer.effectAllowed = 'move';
+      });
+
+      document.addEventListener('dragend', (e) => {
+        const card = e.target.closest('.worker-card');
+        if (card) card.classList.remove('drag-ghost');
+        draggedWorkerId = null;
+        document.querySelectorAll('.zone-dropzone').forEach(dz => dz.classList.remove('drop-active'));
+      });
+
+      document.addEventListener('dragover', (e) => {
+        const dropzone = e.target.closest('.zone-dropzone');
+        if (dropzone) {
+          e.preventDefault(); // OBLIGATOIRE pour autoriser le DROP
+          e.dataTransfer.dropEffect = 'move';
+          dropzone.classList.add('drop-active');
+        }
+      });
+
+      document.addEventListener('dragleave', (e) => {
+        const dropzone = e.target.closest('.zone-dropzone');
+        if (dropzone && !dropzone.contains(e.relatedTarget)) {
+          dropzone.classList.remove('drop-active');
+        }
+      });
+
+      document.addEventListener('drop', (e) => {
+        const dropzone = e.target.closest('.zone-dropzone');
+        if (!dropzone) return;
+
+        e.preventDefault();
+        dropzone.classList.remove('drop-active');
+
+        const workerId = e.dataTransfer.getData('text/plain') || draggedWorkerId;
+        const targetZoneId = dropzone.getAttribute('data-zone-id');
+
+        if (workerId && targetZoneId) {
+          moveWorkerToZone(workerId, targetZoneId);
+        }
+      });
+    }
+
+    function setupModals() {
+      // Modal Déplacer
+      const modalMove = document.getElementById('modal-move');
+      const closeMove = document.getElementById('btn-close-move-modal');
+      const cancelMove = document.getElementById('btn-cancel-move');
+      const confirmMove = document.getElementById('btn-confirm-move');
+
+      const hideMoveModal = () => { modalMove.style.display = 'none'; };
+      closeMove.addEventListener('click', hideMoveModal);
+      cancelMove.addEventListener('click', hideMoveModal);
+
+      confirmMove.addEventListener('click', () => {
+        const workerId = document.getElementById('move-worker-id').value;
+        const selectedRadio = document.querySelector('input[name="target-zone"]:checked');
+        if (!selectedRadio) return;
+
+        moveWorkerToZone(workerId, selectedRadio.value);
+        hideMoveModal();
+      });
+
+      // Modal Ajouter Ouvrier
+      const modalAdd = document.getElementById('modal-add-worker');
+      const btnOpenAdd = document.getElementById('btn-open-add-modal');
+      const btnCloseAdd = document.getElementById('btn-close-add-modal');
+      const btnCancelAdd = document.getElementById('btn-cancel-add');
+      const formAdd = document.getElementById('form-add-worker');
+
+      btnOpenAdd.addEventListener('click', () => { modalAdd.style.display = 'flex'; });
+      const hideAddModal = () => {
+        modalAdd.style.display = 'none';
+        formAdd.reset();
+      };
+      btnCloseAdd.addEventListener('click', hideAddModal);
+      btnCancelAdd.addEventListener('click', hideAddModal);
+
+      formAdd.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const formData = new FormData(formAdd);
+        const newWorker = {
+          id: 'w-' + Date.now(),
+          name: formData.get('name').trim(),
+          role: formData.get('role').trim(),
+          contractor: formData.get('contractor').trim(),
+          wbs: formData.get('wbs').trim(),
+          zoneId: formData.get('zoneId'),
+          status: formData.get('status') || 'active',
+          badge: formData.get('badge').trim() || ('RT-' + Math.floor(1000 + Math.random() * 9000))
+        };
+
+        workers.push(newWorker);
+        hideAddModal();
+        renderBoard();
+        updateMetrics();
+      });
+    }
+
+    function setupHeaderControls() {
+      const searchInput = document.getElementById('search-input');
+      const contractorFilter = document.getElementById('filter-contractor');
+      const btnReset = document.getElementById('btn-reset-demo');
+
+      searchInput.addEventListener('input', (e) => {
+        searchQuery = e.target.value.toLowerCase();
+        renderBoard();
+      });
+
+      contractorFilter.addEventListener('change', (e) => {
+        selectedContractor = e.target.value;
+        renderBoard();
+      });
+
+      btnReset.addEventListener('click', () => {
+        workers = JSON.parse(JSON.stringify(initialWorkers));
+        renderBoard();
+        updateMetrics();
+      });
+    }
+
+    function openMoveModal(workerId) {
       const worker = workers.find(w => w.id === workerId);
       if (!worker) return;
 
@@ -290,7 +456,7 @@
 
         div.innerHTML = `
           <div class="flex items-center gap-3">
-            <input type="radio" name="target-zone" value="${zone.id}" ${isCurrent ? 'checked' : ''} class="w-4 h-4 text-blue-600">
+            <input type="radio" name="target-zone" value="${zone.id}" ${isCurrent ? 'checked' : ''} class="w-4 h-4 text-blue-600 focus:ring-0">
             <div>
               <div class="font-semibold text-slate-200 text-xs flex items-center gap-1.5">
                 <i class="ph ${zone.icon} text-sm text-slate-400"></i>
@@ -309,73 +475,7 @@
 
       const modalMove = document.getElementById('modal-move');
       modalMove.style.display = 'flex';
-    };
-
-    window.closeMoveModal = function() {
-      document.getElementById('modal-move').style.display = 'none';
-    };
-
-    window.confirmMoveWorker = function() {
-      const workerId = document.getElementById('move-worker-id').value;
-      const selectedRadio = document.querySelector('input[name="target-zone"]:checked');
-      if (!selectedRadio) return;
-
-      moveWorkerToZone(workerId, selectedRadio.value);
-      closeMoveModal();
-    };
-
-    window.openAddModal = function() {
-      document.getElementById('modal-add-worker').style.display = 'flex';
-    };
-
-    window.closeAddModal = function() {
-      document.getElementById('modal-add-worker').style.display = 'none';
-      document.getElementById('form-add-worker').reset();
-    };
-
-    window.handleAddWorkerSubmit = function(e) {
-      e.preventDefault();
-      const formAdd = document.getElementById('form-add-worker');
-      const formData = new FormData(formAdd);
-      const newWorker = {
-        id: 'w-' + Date.now(),
-        name: formData.get('name').trim(),
-        role: formData.get('role').trim(),
-        contractor: formData.get('contractor').trim(),
-        wbs: formData.get('wbs').trim(),
-        zoneId: formData.get('zoneId'),
-        status: formData.get('status') || 'active',
-        badge: formData.get('badge').trim() || ('RT-' + Math.floor(1000 + Math.random() * 9000))
-      };
-
-      workers.push(newWorker);
-      closeAddModal();
-      renderBoard();
-      updateMetrics();
-    };
-
-    window.deleteWorker = function(workerId) {
-      workers = workers.filter(w => w.id !== workerId);
-      renderBoard();
-      updateMetrics();
-    };
-
-    window.cycleWorkerStatus = function(workerId) {
-      const worker = workers.find(w => w.id === workerId);
-      if (!worker) return;
-
-      const statuses = ['active', 'briefing', 'height'];
-      const nextIndex = (statuses.indexOf(worker.status) + 1) % statuses.length;
-      worker.status = statuses[nextIndex];
-      renderBoard();
-      updateMetrics();
-    };
-
-    window.resetDemoData = function() {
-      workers = JSON.parse(JSON.stringify(initialWorkers));
-      renderBoard();
-      updateMetrics();
-    };
+    }
 
     function moveWorkerToZone(workerId, targetZoneId) {
       const worker = workers.find(w => w.id === workerId);
@@ -386,54 +486,21 @@
       updateMetrics();
     }
 
-    // --- GESTION DU DRAG & DROP ---
-    window.handleDragStart = function(e, workerId) {
-      draggedWorkerId = workerId;
-      e.dataTransfer.setData('text/plain', workerId);
-      e.dataTransfer.effectAllowed = 'move';
-      e.currentTarget.classList.add('drag-ghost');
-    };
+    function deleteWorker(workerId) {
+      workers = workers.filter(w => w.id !== workerId);
+      renderBoard();
+      updateMetrics();
+    }
 
-    window.handleDragEnd = function(e) {
-      e.currentTarget.classList.remove('drag-ghost');
-      draggedWorkerId = null;
-      document.querySelectorAll('.zone-dropzone').forEach(dz => dz.classList.remove('drop-active'));
-    };
+    function cycleWorkerStatus(workerId) {
+      const worker = workers.find(w => w.id === workerId);
+      if (!worker) return;
 
-    window.handleDragOver = function(e) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      e.currentTarget.classList.add('drop-active');
-    };
-
-    window.handleDragLeave = function(e) {
-      if (!e.currentTarget.contains(e.relatedTarget)) {
-        e.currentTarget.classList.remove('drop-active');
-      }
-    };
-
-    window.handleDrop = function(e, targetZoneId) {
-      e.preventDefault();
-      e.currentTarget.classList.remove('drop-active');
-      const workerId = e.dataTransfer.getData('text/plain') || draggedWorkerId;
-      if (workerId && targetZoneId) {
-        moveWorkerToZone(workerId, targetZoneId);
-      }
-    };
-
-    function setupHeaderControls() {
-      const searchInput = document.getElementById('search-input');
-      const contractorFilter = document.getElementById('filter-contractor');
-
-      searchInput.addEventListener('input', (e) => {
-        searchQuery = e.target.value.toLowerCase();
-        renderBoard();
-      });
-
-      contractorFilter.addEventListener('change', (e) => {
-        selectedContractor = e.target.value;
-        renderBoard();
-      });
+      const statuses = ['active', 'briefing', 'height'];
+      const nextIndex = (statuses.indexOf(worker.status) + 1) % statuses.length;
+      worker.status = statuses[nextIndex];
+      renderBoard();
+      updateMetrics();
     }
 
     function populateAddWorkerZoneSelect() {
@@ -480,12 +547,7 @@
             </div>
           </div>
 
-          <div 
-            class="zone-dropzone flex-1 overflow-y-auto p-3 space-y-2.5 min-h-[300px] border-2 border-transparent transition-all rounded-b-2xl" 
-            data-zone-id="${zone.id}"
-            ondragover="handleDragOver(event)"
-            ondragleave="handleDragLeave(event)"
-            ondrop="handleDrop(event, '${zone.id}')">
+          <div class="zone-dropzone flex-1 overflow-y-auto p-3 space-y-2.5 min-h-[300px] border-2 border-transparent transition-all rounded-b-2xl" data-zone-id="${zone.id}">
             ${zoneWorkers.length === 0 ? `
               <div class="h-44 border-2 border-dashed border-slate-800 rounded-xl flex flex-col items-center justify-center text-slate-500 text-xs p-4 text-center pointer-events-none">
                 <i class="ph ph-hand-grabbing text-2xl mb-1 text-slate-600"></i>
@@ -509,21 +571,20 @@
       const card = document.createElement('div');
       card.className = 'worker-card bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 rounded-xl p-3.5 shadow-md shadow-black/30 cursor-grab active:cursor-grabbing transition-all group';
       card.setAttribute('draggable', 'true');
-      card.setAttribute('ondragstart', `handleDragStart(event, '${worker.id}')`);
-      card.setAttribute('ondragend', 'handleDragEnd(event)');
+      card.setAttribute('data-id', worker.id);
 
       let statusBadgeHtml = '';
       if (worker.status === 'active') {
-        statusBadgeHtml = `<span onclick="cycleWorkerStatus('${worker.id}')" class="cursor-pointer inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" title="Cliquer pour changer le statut"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Sur Site</span>`;
+        statusBadgeHtml = `<span class="badge-status cursor-pointer inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" data-worker-id="${worker.id}" title="Cliquer pour changer le statut"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Sur Site</span>`;
       } else if (worker.status === 'briefing') {
-        statusBadgeHtml = `<span onclick="cycleWorkerStatus('${worker.id}')" class="cursor-pointer inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30" title="Cliquer pour changer le statut"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>Briefing</span>`;
+        statusBadgeHtml = `<span class="badge-status cursor-pointer inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30" data-worker-id="${worker.id}" title="Cliquer pour changer le statut"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>Briefing</span>`;
       } else {
-        statusBadgeHtml = `<span onclick="cycleWorkerStatus('${worker.id}')" class="cursor-pointer inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/30" title="Cliquer pour changer le statut"><span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>Hauteur</span>`;
+        statusBadgeHtml = `<span class="badge-status cursor-pointer inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/30" data-worker-id="${worker.id}" title="Cliquer pour changer le statut"><span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>Hauteur</span>`;
       }
 
       card.innerHTML = `
         <div class="flex items-start justify-between gap-2 mb-2">
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 pointer-events-none">
             <div class="w-8 h-8 rounded-lg bg-slate-700/60 border border-slate-600 flex items-center justify-center font-bold text-slate-200 text-xs shadow-inner">
               ${worker.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
             </div>
@@ -532,12 +593,12 @@
               <p class="text-[11px] text-brand-300 font-medium leading-tight">${worker.role}</p>
             </div>
           </div>
-          <button type="button" onclick="deleteWorker('${worker.id}')" class="text-slate-500 hover:text-rose-400 p-1 rounded transition opacity-0 group-hover:opacity-100 cursor-pointer" title="Supprimer">
-            <i class="ph ph-trash text-sm"></i>
+          <button type="button" class="btn-delete-worker text-slate-500 hover:text-rose-400 p-1 rounded transition opacity-0 group-hover:opacity-100" data-worker-id="${worker.id}" title="Supprimer">
+            <i class="ph ph-trash text-sm pointer-events-none"></i>
           </button>
         </div>
 
-        <div class="space-y-1 my-2.5 text-[11px] text-slate-400 bg-slate-900/40 p-2 rounded-lg border border-slate-800">
+        <div class="space-y-1 my-2.5 text-[11px] text-slate-400 bg-slate-900/40 p-2 rounded-lg border border-slate-800 pointer-events-none">
           <div class="flex items-center justify-between">
             <span class="text-slate-500">Entreprise :</span>
             <span class="text-slate-300 font-medium truncate max-w-[140px] text-right">${worker.contractor}</span>
@@ -555,14 +616,14 @@
         <div class="flex items-center justify-between pt-1 gap-2">
           <div>${statusBadgeHtml}</div>
 
-          <!-- BOUTON BLEU DÉPLACER AVEC ONCLICK DIRECT -->
+          <!-- BOUTON DÉPLACER AVEC POINTER-EVENTS CONTROLÉS -->
           <button 
             type="button" 
-            onclick="openMoveModal('${worker.id}')"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-medium text-xs transition shadow shadow-blue-900/50 cursor-pointer"
+            class="btn-move-worker inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-medium text-xs transition shadow shadow-blue-900/50 cursor-pointer"
+            data-worker-id="${worker.id}"
             title="Transférer vers une autre équipe">
-            <i class="ph ph-arrows-left-right text-xs font-bold"></i>
-            <span>Déplacer</span>
+            <i class="ph ph-arrows-left-right text-xs font-bold pointer-events-none"></i>
+            <span class="pointer-events-none">Déplacer</span>
           </button>
         </div>
       `;
