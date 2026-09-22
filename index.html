@@ -183,7 +183,7 @@
   .tree-node.mgr-node { background: #e0f2fe; border-color: #7dd3fc; }
   .tree-node.sup-node { background: #ffffff; border-color: #94a3b8; border-top: 3px solid #2563eb; }
   .tree-node.f-node { background: #f8fafc; border-style: dashed; }
-  .tree-node.w-node { background: white; border-radius: 20px; padding: 4px 10px; border-color: #e2e8f0; font-size: 10px; font-weight: 600; min-width: auto; }
+  .tree-node.w-summary-node { background: white; border-radius: 12px; border-color: #e2e8f0; min-width: auto; }
 
   .source-select { appearance: none; background: #e0f2fe; color: #0284c7; font-size: 10px; font-weight: 800; border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer; outline: none; }
   .source-select.dss { background: #fef3c7; color: #d97706; }
@@ -285,31 +285,31 @@
   @media print {
     @page { size: landscape; margin: 10mm; }
     body { padding: 0; background: white; margin: 0; }
-    body:not(.print-mode-ts):not(.print-mode-db) .top-bar, 
-    body:not(.print-mode-ts):not(.print-mode-db) .btn-add-task, 
-    body:not(.print-mode-ts):not(.print-mode-db) .btn-remove-card, 
-    body:not(.print-mode-ts):not(.print-mode-db) #error-banner, 
-    body:not(.print-mode-ts):not(.print-mode-db) .filter-bar, 
-    body:not(.print-mode-ts):not(.print-mode-db) .btn-delete-task, 
-    body:not(.print-mode-ts):not(.print-mode-db) .drawer, 
-    body:not(.print-mode-ts):not(.print-mode-db) .modal-overlay, 
-    body:not(.print-mode-ts):not(.print-mode-db) .ts-checkbox, 
-    body:not(.print-mode-ts):not(.print-mode-db) .ts-btn-config, 
-    body:not(.print-mode-ts):not(.print-mode-db) #fab-move, 
-    body:not(.print-mode-ts):not(.print-mode-db) #fab-drawer { display: none !important; }
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .top-bar, 
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .btn-add-task, 
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .btn-remove-card, 
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) #error-banner, 
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .filter-bar, 
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .btn-delete-task, 
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .drawer, 
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .modal-overlay, 
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .ts-checkbox, 
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .ts-btn-config, 
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) #fab-move, 
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) #fab-drawer { display: none !important; }
     
-    body:not(.print-mode-ts):not(.print-mode-db) .cards-grid { border: none !important; background: transparent !important; padding: 0 !important; gap: 8px; }
-    body:not(.print-mode-ts):not(.print-mode-db) .category-section { break-inside: avoid; display: block !important; }
-    body:not(.print-mode-ts):not(.print-mode-db) .card { break-inside: avoid; box-shadow: none !important; border: 1px solid #cbd5e1; }
-    body:not(.print-mode-ts):not(.print-mode-db) .count-comparator, 
-    body:not(.print-mode-ts):not(.print-mode-db) .source-select, 
-    body:not(.print-mode-ts):not(.print-mode-db) .cat-select, 
-    body:not(.print-mode-ts):not(.print-mode-db) .payroll-input, 
-    body:not(.print-mode-ts):not(.print-mode-db) .ts-select { border: none; background: transparent; color: #0f172a !important; -webkit-appearance: none; }
-    body:not(.print-mode-ts):not(.print-mode-db) .task-desc { border: none; padding: 0; }
-    body:not(.print-mode-ts):not(.print-mode-db) .task-foreman span { border: none; }
-    body:not(.print-mode-ts):not(.print-mode-db) #orgchart-view { display: block !important; padding: 0; overflow: visible; }
-    body:not(.print-mode-ts):not(.print-mode-db) .org-manager-col { break-inside: avoid; border: 1px solid #94a3b8; }
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .cards-grid { border: none !important; background: transparent !important; padding: 0 !important; gap: 8px; }
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .category-section { break-inside: avoid; display: block !important; }
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .card { break-inside: avoid; box-shadow: none !important; border: 1px solid #cbd5e1; }
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .count-comparator, 
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .source-select, 
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .cat-select, 
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .payroll-input, 
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .ts-select { border: none; background: transparent; color: #0f172a !important; -webkit-appearance: none; }
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .task-desc { border: none; padding: 0; }
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .task-foreman span { border: none; }
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) #orgchart-view { display: block !important; padding: 0; overflow: visible; }
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .org-manager-col { break-inside: avoid; border: 1px solid #94a3b8; }
     
     /* PRINT TS */
     body.print-mode-ts .top-bar, body.print-mode-ts .dashboard-container, body.print-mode-ts #orgchart-view, body.print-mode-ts #tree-view, body.print-mode-ts #workers-drawer, body.print-mode-ts .modal-overlay, body.print-mode-ts #fab-move, body.print-mode-ts #fab-drawer { display: none !important; }
@@ -331,6 +331,11 @@
     .db-print-table { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 12px; }
     .db-print-table th, .db-print-table td { border: 1px solid #000; padding: 6px; text-align: left; }
     .db-print-table th { background-color: #f1f5f9; font-weight: bold; }
+
+    /* PRINT TREE */
+    body.print-mode-tree .top-bar, body.print-mode-tree .dashboard-container, body.print-mode-tree #orgchart-view, body.print-mode-tree #workers-drawer, body.print-mode-tree .modal-overlay, body.print-mode-tree #fab-move, body.print-mode-tree #fab-drawer { display: none !important; }
+    body.print-mode-tree #tree-view { display: block !important; width: 100%; overflow: visible !important; background: white; }
+    body.print-mode-tree .btn-print-tree { display: none !important; }
   }
 </style>
 </head>
@@ -708,6 +713,12 @@ window.setView = function(viewMode) {
 
   if (viewMode === 'orgchart') renderOrgChart();
   if (viewMode === 'tree') renderTreeOrgChart();
+};
+
+window.printTree = function() {
+  document.body.classList.add('print-mode-tree');
+  window.print();
+  setTimeout(() => { document.body.classList.remove('print-mode-tree'); }, 500);
 };
 
 function toggleDrawer() { document.getElementById('workers-drawer').classList.toggle('open'); }
@@ -1444,7 +1455,22 @@ window.renderTreeOrgChart = function() {
     treeData.children[mgr].children.push(c);
   });
 
-  let html = `<div class="tree"><ul><li><div class="tree-node top-node"><div class="node-title">${treeData.name}</div><div class="node-sub">${treeData.role}</div></div><ul>`;
+  // Barre de Légende et Bouton d'impression (ajouté au début du conteneur de l'arbre)
+  let html = `
+    <div style="display:flex; justify-content:center; align-items:center; gap:16px; margin-bottom: 30px; padding: 10px 20px; background: white; border: 1px solid #cbd5e1; border-radius: 8px; display: inline-flex; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+        <div style="font-size:12px; font-weight:800; color:#475569;">LÉGENDE ENTREPRISES :</div>
+        <div style="display:flex; gap:8px;">
+            <span class="worker-pill skybuilding" style="margin:0; cursor:default;">SKYBUILDING</span>
+            <span class="worker-pill dss" style="margin:0; cursor:default;">DSS</span>
+            <span class="worker-pill euroasia" style="margin:0; cursor:default;">EUROASIA</span>
+            <span class="worker-pill other" style="margin:0; cursor:default;">AUTRES</span>
+        </div>
+        <div style="width:1px; height:20px; background:#e2e8f0; margin:0 8px;"></div>
+        <button class="btn btn-black btn-print-tree" onclick="printTree()">🖨️ Imprimer l'Arbre</button>
+    </div>
+  `;
+
+  html += `<div class="tree"><ul><li><div class="tree-node top-node"><div class="node-title">${treeData.name}</div><div class="node-sub">${treeData.role}</div></div><ul>`;
 
   Object.keys(treeData.children).sort().forEach(mgrName => {
     let mgrNode = treeData.children[mgrName];
@@ -1458,13 +1484,47 @@ window.renderTreeOrgChart = function() {
         let fName = (t.foreman || '').trim().toUpperCase() || 'ÉQUIPE DIRECTE';
         html += `<li><div class="tree-node f-node"><div class="node-title">${fName}</div><div class="node-sub">Foreman</div></div>`;
 
-        if (t.workerList && t.workerList.length > 0) {
-          html += `<ul>`;
-          t.workerList.forEach(w => {
-            html += `<li><div class="tree-node w-node">${w.name}</div></li>`;
-          });
-          html += `</ul>`;
+        // Calculer et grouper les ouvriers par entreprise
+        let linkedCount = t.workerList ? t.workerList.length : 0;
+        let hasM = t.workers !== undefined && t.workers !== null && t.workers !== "";
+        let manualCount = hasM ? parseInt(t.workers) : linkedCount;
+        let totalW = Math.max(manualCount, linkedCount);
+
+        if (totalW > 0) {
+            let wCount = { skybuilding: 0, dss: 0, euroasia: 0, other: 0 };
+            
+            if (t.workerList) {
+                t.workerList.forEach(w => {
+                    if(w.company === 'SKYBUILDING') wCount.skybuilding++;
+                    else if(w.company === 'DSS') wCount.dss++;
+                    else if(w.company === 'EUROASIA') wCount.euroasia++;
+                    else wCount.other++;
+                });
+            }
+            
+            // S'il y a un décalage manuel positif, on ajoute la différence au compteur par défaut de la tâche
+            let diff = totalW - linkedCount;
+            if (diff > 0) {
+                if(t.source === 'SKYBUILDING') wCount.skybuilding += diff;
+                else if(t.source === 'DSS') wCount.dss += diff;
+                else if(t.source === 'EUROASIA') wCount.euroasia += diff;
+                else wCount.other += diff;
+            }
+
+            let badgesHtml = '';
+            if(wCount.skybuilding > 0) badgesHtml += `<span class="worker-pill skybuilding" style="margin:0; padding:2px 8px; font-size:11px; cursor:default;">${wCount.skybuilding}</span>`;
+            if(wCount.dss > 0) badgesHtml += `<span class="worker-pill dss" style="margin:0; padding:2px 8px; font-size:11px; cursor:default;">${wCount.dss}</span>`;
+            if(wCount.euroasia > 0) badgesHtml += `<span class="worker-pill euroasia" style="margin:0; padding:2px 8px; font-size:11px; cursor:default;">${wCount.euroasia}</span>`;
+            if(wCount.other > 0) badgesHtml += `<span class="worker-pill other" style="margin:0; padding:2px 8px; font-size:11px; cursor:default;">${wCount.other}</span>`;
+
+            html += `<ul><li>
+                <div class="tree-node w-summary-node" style="padding:6px 10px;">
+                    <div style="display:flex; justify-content:center; gap:4px; flex-wrap:wrap;">${badgesHtml}</div>
+                    <div style="font-size:11px; font-weight:800; color:#0f172a; margin-top:6px; border-top:1px solid #e2e8f0; padding-top:4px;">${totalW} Total</div>
+                </div>
+            </li></ul>`;
         }
+
         html += `</li>`;
       });
       html += `</ul></li>`;
