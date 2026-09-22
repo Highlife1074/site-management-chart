@@ -708,9 +708,11 @@ let unassignedWorkers = [];
 let payrollCounts = {};
 let siteCompanies = ['SKYBUILDING', 'DSS', 'EUROASIA', 'OTHER'];
 let db = null, docRef = null, isSaving = false, currentFilter = 'all';
+let selectedManagersFilter = [];
+let selectedSupervisorsFilter = [];
 
 const DEFAULT_DATA = [
-  { name: "NOUVELLE TIMESHEET", manager: "", category: "civil", timesheetNo: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "Activité à définir", foreman: "", source: "SKYBUILDING", workers: "", workerList: [] }] }
+  { name: "NOUVELLE TIMESHEET", manager: "", category: "civil", timesheetNo: "", timesheetName: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "Activité à définir", foreman: "", source: "SKYBUILDING", workers: "", workerList: [] }] }
 ];
 
 try {
@@ -755,11 +757,23 @@ function findWorkerDuplicate(searchId, searchName, excludeId = null) {
 function initLayout() {
   document.getElementById('role-selector').value = currentRole;
 
-  const filterBar = document.getElementById('filter-bar');
+const filterBar = document.getElementById('filter-bar');
   filterBar.innerHTML = `
-    <button class="filter-btn active" id="filter-all" onclick="setFilter('all')">TOUT AFFICHER</button>
-    <button class="filter-btn" id="filter-alpha" onclick="setFilter('alpha')" style="border-left: 4px solid #2563eb; font-weight:800;">🔤 ALPHABÉTIQUE (A-Z)</button>
-    ${CATEGORY_INFO.map(cat => `<button class="filter-btn" id="filter-${cat.id}" onclick="setFilter('${cat.id}')" style="border-left: 4px solid ${cat.color};">${cat.name}</button>`).join('')}
+    <div style="display:flex; flex-wrap:wrap; gap:8px; width:100%; align-items:center;">
+      <button class="filter-btn active" id="filter-all" onclick="setFilter('all')">TOUT AFFICHER</button>
+      <button class="filter-btn" id="filter-alpha" onclick="setFilter('alpha')" style="border-left: 4px solid #2563eb; font-weight:800;">🔤 ALPHABÉTIQUE (A-Z)</button>
+      ${CATEGORY_INFO.map(cat => `<button class="filter-btn" id="filter-${cat.id}" onclick="setFilter('${cat.id}')" style="border-left: 4px solid ${cat.color};">${cat.name}</button>`).join('')}
+    </div>
+    <div style="display:flex; gap:16px; width:100%; margin-top:8px;" id="multi-filters-container">
+      <div style="display:flex; flex-direction:column; gap:4px; flex:1;">
+        <label style="font-size:11px; font-weight:bold; color:#64748b;">🧑‍💼 FILTRE MANAGERS (Maintenir Ctrl/Cmd pour sélection multiple)</label>
+        <select multiple id="filter-mgr" class="modal-select" style="height:70px;" onchange="updateMultiFilters()"></select>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:4px; flex:1;">
+        <label style="font-size:11px; font-weight:bold; color:#64748b;">👷 FILTRE SUPERVISEURS (Maintenir Ctrl/Cmd pour sélection multiple)</label>
+        <select multiple id="filter-sup" class="modal-select" style="height:70px;" onchange="updateMultiFilters()"></select>
+      </div>
+    </div>
   `;
 
   const board = document.getElementById('categories-board');
@@ -783,6 +797,38 @@ function initLayout() {
     sortableInstances.push(s);
   });
 }
+
+window.updateMultiFilters = function() {
+  const mgrSelect = document.getElementById('filter-mgr');
+  const supSelect = document.getElementById('filter-sup');
+  if (mgrSelect) selectedManagersFilter = Array.from(mgrSelect.selectedOptions).map(o => o.value);
+  if (supSelect) selectedSupervisorsFilter = Array.from(supSelect.selectedOptions).map(o => o.value);
+  renderCards();
+};
+
+window.populateMultiFilters = function() {
+  const mgrSelect = document.getElementById('filter-mgr');
+  const supSelect = document.getElementById('filter-sup');
+  if (!mgrSelect || !supSelect) return;
+
+  const allMgrs = [...new Set(cardsData.map(c => (c.manager || '').trim() || 'SANS RESPONSABLE'))].sort();
+  const allSups = [...new Set(cardsData.map(c => (c.name || '').trim() || 'Inconnu'))].sort();
+
+  const updateSelect = (selectEl, optionsArr, selectedArr) => {
+    const currentOptions = Array.from(selectEl.options).map(o => o.value);
+    if (JSON.stringify(currentOptions) !== JSON.stringify(optionsArr)) {
+      selectEl.innerHTML = '';
+      optionsArr.forEach(opt => {
+        const option = new Option(opt, opt);
+        if (selectedArr.includes(opt)) option.selected = true;
+        selectEl.add(option);
+      });
+    }
+  };
+
+  updateSelect(mgrSelect, allMgrs, selectedManagersFilter);
+  updateSelect(supSelect, allSups, selectedSupervisorsFilter);
+};
 
 function setFilter(catId) {
   currentFilter = catId;
@@ -1216,9 +1262,18 @@ function renderCards() {
       });
     }
 
+    populateMultiFilters();
+
     displayList.forEach(({ card, cIdx }) => {
       if(!card.tasks) card.tasks = [];
       const catId = card.category || 'trades';
+
+      const mgrName = (card.manager || '').trim() || 'SANS RESPONSABLE';
+      const supName = (card.name || '').trim() || 'Inconnu';
+      
+      const hideByMgr = selectedManagersFilter.length > 0 && !selectedManagersFilter.includes(mgrName);
+      const hideBySup = selectedSupervisorsFilter.length > 0 && !selectedSupervisorsFilter.includes(supName);
+      const isHidden = hideByMgr || hideBySup;
       
       let targetGrid;
       if (currentFilter === 'alpha') {
@@ -1230,6 +1285,7 @@ function renderCards() {
       const cardEl = document.createElement("div");
       cardEl.className = `card cat-${catId}`;
       cardEl.dataset.cidx = cIdx; 
+      if (isHidden) cardEl.style.display = 'none';
       
       let tasksHtml = card.tasks.map((t, tIdx) => {
         const linkedCount = t.workerList ? t.workerList.length : 0;
@@ -1316,9 +1372,12 @@ function renderCards() {
             <div class="manager-field">
               Mgr: <span class="manager-name" contenteditable="true" onblur="updateManager(${cIdx}, this.innerText)">${card.manager || ''}</span>
             </div>
-            <div class="sup-name" contenteditable="true" onblur="updateSupName(${cIdx}, this.innerText)">${card.name || 'Inconnu'}</div>
+           <div class="sup-name" contenteditable="true" onblur="updateSupName(${cIdx}, this.innerText)">${card.name || 'Inconnu'}</div>
             <div class="ts-badge-container">
-              <div class="ts-badge" title="Nom/Numéro Timesheet">TS: <span contenteditable="true" data-placeholder="Nom/N°..." onblur="updateTimesheetNo(${cIdx}, this.innerText)">${card.timesheetNo || ''}</span></div>
+              <div class="ts-badge" title="Numéro et Nom de la Timesheet">
+                TS: <span contenteditable="true" data-placeholder="N°..." onblur="updateTimesheetNo(${cIdx}, this.innerText)">${card.timesheetNo || ''}</span>
+                - <span contenteditable="true" data-placeholder="Nom de la TS..." onblur="updateTimesheetName(${cIdx}, this.innerText)">${card.timesheetName || ''}</span>
+              </div>
               <div class="ts-badge">
                 <select class="ts-select" onchange="updateShiftType(${cIdx}, this.value)">
                   <option value="Shift 1" ${sType==='Shift 1'?'selected':''}>Shift 1</option>
@@ -1394,11 +1453,12 @@ function renderOrgChart() {
            foremenHtml += `<div class="org-foreman-card" style="background:#f8fafc; border-style:dashed;"><div class="org-foreman-name" style="color:#64748b;">Équipiers Directs</div><div class="org-foreman-meta" style="background:#e2e8f0; color:#475569;">${directWkrs} wkrs</div></div>`;
         }
 
-        const catColor = CATEGORY_INFO.find(c => c.id === sup.category)?.color || '#94a3b8';
+       const catColor = CATEGORY_INFO.find(c => c.id === sup.category)?.color || '#94a3b8';
         const catName = CATEGORY_INFO.find(c => c.id === sup.category)?.name || sup.category;
         
-        const tsNameDisplay = sup.timesheetNo && sup.timesheetNo.trim() !== '' 
-            ? `<div style="font-size:10px; font-weight:800; color:#2563eb; background:#eff6ff; padding:3px 6px; border-radius:4px; display:inline-block; margin-top:2px; border:1px solid #bfdbfe; margin-bottom:4px;">📄 TS: ${sup.timesheetNo}</div>` 
+        let fullTsName = [sup.timesheetNo, sup.timesheetName].filter(x => x && x.trim() !== '').join(' - ');
+        const tsNameDisplay = fullTsName !== ''
+            ? `<div style="font-size:10px; font-weight:800; color:#2563eb; background:#eff6ff; padding:3px 6px; border-radius:4px; display:inline-block; margin-top:2px; border:1px solid #bfdbfe; margin-bottom:4px;">📄 TS: ${fullTsName}</div>` 
             : '';
 
         supsHtml += `<div class="org-sup-card" style="border-left-color: ${catColor}">
@@ -1658,6 +1718,12 @@ function updateTimesheetNo(cIdx, val) {
   syncToFirebase(); 
   if(currentView === 'orgchart') renderOrgChart(); 
 }
+window.updateTimesheetName = function(cIdx, val) {
+  if (currentRole === 'viewer' || currentRole === 'cfo') return;
+  cardsData[cIdx].timesheetName = val.trim();
+  syncToFirebase();
+  if(currentView === 'orgchart') renderOrgChart();
+};
 function updateShiftType(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].shiftType = val; syncToFirebase(); }
 function updateShiftHours(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].shiftHours = val.trim(); syncToFirebase(); }
 function updateTaskForeman(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].foreman = val.trim(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); }
@@ -1704,8 +1770,9 @@ function addNewSupervisor() {
     manager: "", 
     category: "civil",
     timesheetNo: "", 
+    timesheetName: "",
     shiftType: "Shift 1", 
-    shiftHours: "07:00 - 15:00", 
+    shiftHours: "07:00 - 15:00",
     printTasks: [], 
     tasks: [{ desc: "", foreman: "", source: siteCompanies[0], workers: "", workerList: [] }] 
   }); 
