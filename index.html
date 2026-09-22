@@ -175,8 +175,8 @@
   .tree li:last-child::before { border-right: 2px solid #94a3b8; border-radius: 0 5px 0 0; }
   .tree li:first-child::after { border-radius: 5px 0 0 0; }
   .tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 2px solid #94a3b8; width: 0; height: 20px; }
-  .tree-node { border: 1px solid #cbd5e1; padding: 10px 16px; text-decoration: none; display: inline-block; border-radius: 8px; background: white; z-index: 1; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 120px; }
-  .tree-node .node-title { font-size: 13px; font-weight: 800; color: #0f172a; }
+  .tree-node { border: 1px solid #cbd5e1; padding: 10px 16px; text-decoration: none; display: inline-block; border-radius: 8px; background: white; z-index: 1; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 110px; }
+  .tree-node .node-title { font-size: 13px; font-weight: 800; color: #0f172a; line-height: 1.2; margin-bottom: 2px; }
   .tree-node .node-sub { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-top: 2px; }
   .tree-node.top-node { background: #bae6fd; border-color: #38bdf8; }
   .tree-node.top-node .node-title { color: #0369a1; font-size: 15px; }
@@ -1447,15 +1447,33 @@ function renderCards() {
 // ARBRE HIERARCHIQUE
 window.renderTreeOrgChart = function() {
   const container = document.getElementById('tree-view');
-  let treeData = { name: "Denis NETO", role: "Directeur de Projet", children: {} };
+  let treeData = { name: "Denis NETO", role: "Directeur de Projet", children: {}, total: 0 };
+
+  const formatName = (name) => {
+     let p = name.trim().split(' ');
+     if(p.length > 1) {
+        return `${p[0]}<br>${p.slice(1).join(' ')}`;
+     }
+     return name;
+  };
 
   cardsData.forEach(c => {
     let mgr = (c.manager || '').trim().toUpperCase() || 'SANS RESPONSABLE';
-    if(!treeData.children[mgr]) treeData.children[mgr] = { name: mgr, children: [] };
+    if(!treeData.children[mgr]) treeData.children[mgr] = { name: mgr, children: [], totalWorkers: 0 };
+    
+    let cTotal = 0;
+    c.tasks.forEach(t => {
+       let linked = t.workerList ? t.workerList.length : 0;
+       let hasM = t.workers !== undefined && t.workers !== null && t.workers !== "";
+       let manual = hasM ? parseInt(t.workers) : linked;
+       cTotal += Math.max(manual, linked);
+    });
+    
     treeData.children[mgr].children.push(c);
+    treeData.children[mgr].totalWorkers += cTotal;
+    treeData.total += cTotal;
   });
 
-  // Barre de Légende et Bouton d'impression (ajouté au début du conteneur de l'arbre)
   let html = `
     <div style="display:flex; justify-content:center; align-items:center; gap:16px; margin-bottom: 30px; padding: 10px 20px; background: white; border: 1px solid #cbd5e1; border-radius: 8px; display: inline-flex; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
         <div style="font-size:12px; font-weight:800; color:#475569;">LÉGENDE ENTREPRISES :</div>
@@ -1470,21 +1488,58 @@ window.renderTreeOrgChart = function() {
     </div>
   `;
 
-  html += `<div class="tree"><ul><li><div class="tree-node top-node"><div class="node-title">${treeData.name}</div><div class="node-sub">${treeData.role}</div></div><ul>`;
+  // 1. ARBRE MAITRE (Résumé)
+  html += `<div class="tree" style="margin-bottom: 20px; display:block;"><ul><li>
+     <div class="tree-node top-node">
+        <div class="node-title">${formatName(treeData.name)}</div>
+        <div class="node-sub">${treeData.role}</div>
+        <div style="margin-top:6px; font-size:11px; font-weight:800; color:#0369a1; background:#e0f2fe; border-radius:12px; padding:2px 8px;">${treeData.total} Ouvrier(s)</div>
+     </div>
+     <ul>`;
+     
+  Object.keys(treeData.children).sort().forEach(mgrName => {
+     let mgrNode = treeData.children[mgrName];
+     html += `<li><div class="tree-node mgr-node">
+        <div class="node-title">${formatName(mgrNode.name)}</div>
+        <div class="node-sub">Manager</div>
+        <div style="margin-top:6px; font-size:11px; font-weight:800; color:#0284c7; background:#bae6fd; border-radius:12px; padding:2px 8px;">${mgrNode.totalWorkers} Wkrs</div>
+        <div style="margin-top:4px; font-size:10px; color:#64748b;">(Voir Détails ⬇)</div>
+     </div></li>`;
+  });
+  html += `</ul></li></ul></div>`;
 
+  // 2. SOUS-ARBRES DES MANAGERS EMPILÉS VERTICALEMENT
+  html += `<div style="display:flex; flex-direction:column; gap: 40px; align-items:center; width:100%;">`;
+  
   Object.keys(treeData.children).sort().forEach(mgrName => {
     let mgrNode = treeData.children[mgrName];
-    html += `<li><div class="tree-node mgr-node"><div class="node-title">${mgrNode.name}</div><div class="node-sub">Manager</div></div><ul>`;
+    
+    html += `<div style="width:100%; border-top: 2px dashed #cbd5e1; position:relative; margin-top:20px; padding-top:20px;">
+                <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#f8fafc; padding:0 10px; color:#94a3b8; font-weight:800; font-size:14px; text-transform:uppercase;">⬇ DÉTAILS ÉQUIPE : ${mgrNode.name} ⬇</div>
+             `;
+
+    html += `<div class="tree"><ul><li>
+      <div class="tree-node mgr-node">
+        <div class="node-title">${formatName(mgrNode.name)}</div>
+        <div class="node-sub">Manager</div>
+        <div style="margin-top:6px; font-size:11px; font-weight:800; color:#0284c7; background:#bae6fd; border-radius:12px; padding:2px 8px;">${mgrNode.totalWorkers} Wkrs</div>
+      </div>
+      <ul>`;
 
     mgrNode.children.forEach(sup => {
       let supDisplayName = sup.name || 'Inconnu';
-      html += `<li><div class="tree-node sup-node"><div class="node-title">${supDisplayName}</div><div class="node-sub">Superviseur</div></div><ul>`;
+      html += `<li><div class="tree-node sup-node">
+         <div class="node-title">${formatName(supDisplayName)}</div>
+         <div class="node-sub">Superviseur</div>
+      </div><ul>`;
 
       sup.tasks.forEach(t => {
         let fName = (t.foreman || '').trim().toUpperCase() || 'ÉQUIPE DIRECTE';
-        html += `<li><div class="tree-node f-node"><div class="node-title">${fName}</div><div class="node-sub">Foreman</div></div>`;
+        html += `<li><div class="tree-node f-node">
+           <div class="node-title">${formatName(fName)}</div>
+           <div class="node-sub">Foreman</div>
+        </div>`;
 
-        // Calculer et grouper les ouvriers par entreprise
         let linkedCount = t.workerList ? t.workerList.length : 0;
         let hasM = t.workers !== undefined && t.workers !== null && t.workers !== "";
         let manualCount = hasM ? parseInt(t.workers) : linkedCount;
@@ -1502,7 +1557,6 @@ window.renderTreeOrgChart = function() {
                 });
             }
             
-            // S'il y a un décalage manuel positif, on ajoute la différence au compteur par défaut de la tâche
             let diff = totalW - linkedCount;
             if (diff > 0) {
                 if(t.source === 'SKYBUILDING') wCount.skybuilding += diff;
@@ -1529,10 +1583,11 @@ window.renderTreeOrgChart = function() {
       });
       html += `</ul></li>`;
     });
-    html += `</ul></li>`;
+    html += `</ul></li></ul></div></div>`;
   });
+  
+  html += `</div>`;
 
-  html += `</ul></li></ul></div>`;
   container.innerHTML = html;
 };
 
