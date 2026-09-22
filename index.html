@@ -158,8 +158,34 @@
 
   .task-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 3px; }
   
+  /* DROPZONE NIVEAU TÂCHE/FOREMAN */
+  .task-worker-dropzone { min-height: 30px; border: 2px dashed #bae6fd; border-radius: 6px; padding: 4px; background: #ffffff; margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; transition: background 0.2s; }
+  .task-worker-dropzone:empty::before { content: "📥 Glisser ouvriers ici"; font-size: 9px; color: #94a3b8; font-weight: 600; width: 100%; text-align: center; margin-top: 4px; }
+
+  /* ARBRE HIERARCHIQUE CSS (STYLE ORGANIGRAMME) */
+  .tree-container { width: 100%; overflow-x: auto; padding: 20px; text-align: center; min-height: 60vh; background: #f8fafc; display: none; }
+  .tree { display: inline-block; white-space: nowrap; }
+  .tree ul { padding-top: 20px; position: relative; transition: all 0.5s; display: flex; justify-content: center; padding-left: 0; margin: 0; }
+  .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 20px 8px 0 8px; transition: all 0.5s; }
+  .tree li::before, .tree li::after { content: ''; position: absolute; top: 0; right: 50%; border-top: 2px solid #94a3b8; width: 50%; height: 20px; }
+  .tree li::after { right: auto; left: 50%; border-left: 2px solid #94a3b8; }
+  .tree li:only-child::after, .tree li:only-child::before { display: none; }
+  .tree li:only-child { padding-top: 0; }
+  .tree li:first-child::before, .tree li:last-child::after { border: 0 none; }
+  .tree li:last-child::before { border-right: 2px solid #94a3b8; border-radius: 0 5px 0 0; }
+  .tree li:first-child::after { border-radius: 5px 0 0 0; }
+  .tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 2px solid #94a3b8; width: 0; height: 20px; }
+  .tree-node { border: 1px solid #cbd5e1; padding: 10px 16px; text-decoration: none; display: inline-block; border-radius: 8px; background: white; z-index: 1; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 120px; }
+  .tree-node .node-title { font-size: 13px; font-weight: 800; color: #0f172a; }
+  .tree-node .node-sub { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-top: 2px; }
+  .tree-node.top-node { background: #bae6fd; border-color: #38bdf8; }
+  .tree-node.top-node .node-title { color: #0369a1; font-size: 15px; }
+  .tree-node.mgr-node { background: #e0f2fe; border-color: #7dd3fc; }
+  .tree-node.sup-node { background: #ffffff; border-color: #94a3b8; border-top: 3px solid #2563eb; }
+  .tree-node.f-node { background: #f8fafc; border-style: dashed; }
+  .tree-node.w-node { background: white; border-radius: 20px; padding: 4px 10px; border-color: #e2e8f0; font-size: 10px; font-weight: 600; min-width: auto; }
+
   .source-select { appearance: none; background: #e0f2fe; color: #0284c7; font-size: 10px; font-weight: 800; border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer; outline: none; }
-  .source-select.dss { background: #fef3c7; color: #d97706; }
   .source-select.euroasia { background: #ede9fe; color: #7c3aed; }
   .source-select.other { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
   .source-select:disabled { cursor: not-allowed; opacity: 0.7; }
@@ -525,10 +551,12 @@
         <option value="timekeeper">⏱️ Timekeeper</option>
         <option value="cfo">💰 CFO</option>
         <option value="admin">⚙️ Admin</option>
-      </select>
+     </select>
     </div>
 
-    <button id="btn-toggle-view" class="btn btn-outline" onclick="toggleView()">🗺️ Organigramme</button>
+    <button id="btn-toggle-view" class="btn btn-outline" onclick="setView('orgchart')">🗺️ Vue Équipes</button>
+    <button id="btn-toggle-tree" class="btn btn-outline" onclick="setView('tree')">🌳 Arbre Hiérarchique</button>
+    <button id="btn-toggle-dash" class="btn btn-black" onclick="setView('dashboard')" style="display:none;">📊 Tableau de bord</button>
     <div class="divider"></div>
 
     <button class="btn btn-outline" onclick="openDBModal()" title="Éditer la base de données de tous les ouvriers">🗃️ Base Globale</button>
@@ -600,6 +628,9 @@
 
 <!-- VUE ORGANIGRAMME -->
 <div id="orgchart-view"></div>
+
+<!-- VUE ARBRE CSS -->
+<div id="tree-view" class="tree-container"></div>
 
 <!-- ZONES D'IMPRESSION CACHÉES -->
 <div id="timesheet-print-zone"></div>
@@ -685,20 +716,19 @@ function applyRolePermissions() {
   workerSortables.forEach(s => s.option("disabled", isViewer || isCFO));
 }
 
-function toggleView() {
-  if (currentView === 'dashboard') {
-    currentView = 'orgchart';
-    document.getElementById('dashboard-view').style.display = 'none';
-    document.getElementById('orgchart-view').style.display = 'block';
-    document.getElementById('btn-toggle-view').innerHTML = '📊 Tableau de bord';
-    renderOrgChart();
-  } else {
-    currentView = 'dashboard';
-    document.getElementById('dashboard-view').style.display = 'flex';
-    document.getElementById('orgchart-view').style.display = 'none';
-    document.getElementById('btn-toggle-view').innerHTML = '🗺️ Organigramme';
-  }
-}
+window.setView = function(viewMode) {
+  currentView = viewMode;
+  document.getElementById('dashboard-view').style.display = viewMode === 'dashboard' ? 'flex' : 'none';
+  document.getElementById('orgchart-view').style.display = viewMode === 'orgchart' ? 'block' : 'none';
+  document.getElementById('tree-view').style.display = viewMode === 'tree' ? 'block' : 'none';
+  
+  document.getElementById('btn-toggle-view').style.display = viewMode === 'orgchart' ? 'none' : 'inline-flex';
+  document.getElementById('btn-toggle-tree').style.display = viewMode === 'tree' ? 'none' : 'inline-flex';
+  document.getElementById('btn-toggle-dash').style.display = viewMode === 'dashboard' ? 'none' : 'inline-flex';
+
+  if (viewMode === 'orgchart') renderOrgChart();
+  if (viewMode === 'tree') renderTreeOrgChart();
+};
 
 function toggleDrawer() { document.getElementById('workers-drawer').classList.toggle('open'); }
 
@@ -1353,8 +1383,19 @@ function renderCards() {
               <span class="btn-delete-task" title="Supprimer cette ligne" onclick="removeTask(${cIdx}, ${tIdx})">&times;</span>
             </div>
           </div>
+          <div class="task-worker-dropzone" data-cidx="${cIdx}" data-tidx="${tIdx}">
+            ${(t.workerList || []).map(w => {
+              let colorClass = 'other';
+              if(w.company === 'SKYBUILDING') colorClass = 'skybuilding';
+              else if(w.company === 'DSS') colorClass = 'dss';
+              else if(w.company === 'EUROASIA') colorClass = 'euroasia';
+              return `<div class="worker-pill ${colorClass}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="${cIdx}" data-tidx="${tIdx}">${w.id} -${w.name}</div>`;
+            }).join('')}
+          </div>
         </div>
       `}).join('');
+
+      const sType = card.shiftType || 'Shift 1';
 
       let workersHtml = card.tasks.flatMap((t, tIdx) => (t.workerList || []).map(w => {
         let colorClass = 'other';
@@ -1427,10 +1468,6 @@ function renderCards() {
         <div class="card-body">
           ${tasksHtml}
           <button class="btn-add-task" onclick="addTask(${cIdx})">+ Ajouter Ligne</button>
-          
-          <div class="card-worker-dropzone" data-cidx="${cIdx}">
-            ${workersHtml}
-          </div>
         </div>
       `;
       if (targetGrid) targetGrid.appendChild(cardEl);
@@ -1440,6 +1477,48 @@ function renderCards() {
     initWorkerSortables();
   } catch (err) { console.error("Render error:", err); }
 }
+
+window.renderTreeOrgChart = function() {
+  const container = document.getElementById('tree-view');
+  let treeData = { name: "Denis NETO", role: "Directeur de Projet", children: {} };
+
+  cardsData.forEach(c => {
+    let mgr = (c.manager || '').trim().toUpperCase() || 'SANS RESPONSABLE';
+    if(!treeData.children[mgr]) treeData.children[mgr] = { name: mgr, children: [] };
+    treeData.children[mgr].children.push(c);
+  });
+
+  let html = `<div class="tree"><ul><li><div class="tree-node top-node"><div class="node-title">${treeData.name}</div><div class="node-sub">${treeData.role}</div></div><ul>`;
+
+  Object.keys(treeData.children).sort().forEach(mgrName => {
+    let mgrNode = treeData.children[mgrName];
+    html += `<li><div class="tree-node mgr-node"><div class="node-title">${mgrNode.name}</div><div class="node-sub">Manager</div></div><ul>`;
+
+    mgrNode.children.forEach(sup => {
+      let supDisplayName = sup.name || 'Inconnu';
+      html += `<li><div class="tree-node sup-node"><div class="node-title">${supDisplayName}</div><div class="node-sub">Superviseur</div></div><ul>`;
+
+      sup.tasks.forEach(t => {
+        let fName = (t.foreman || '').trim().toUpperCase() || 'ÉQUIPE DIRECTE';
+        html += `<li><div class="tree-node f-node"><div class="node-title">${fName}</div><div class="node-sub">Foreman</div></div>`;
+
+        if (t.workerList && t.workerList.length > 0) {
+          html += `<ul>`;
+          t.workerList.forEach(w => {
+            html += `<li><div class="tree-node w-node">${w.name}</div></li>`;
+          });
+          html += `</ul>`;
+        }
+        html += `</li>`;
+      });
+      html += `</ul></li>`;
+    });
+    html += `</ul></li>`;
+  });
+
+  html += `</ul></li></ul></div>`;
+  container.innerHTML = html;
+};
 
 // ORGANIGRAMME
 function renderOrgChart() {
@@ -1518,7 +1597,7 @@ function initWorkerSortables() {
   workerSortables = [];
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
 
-  document.querySelectorAll('.card-worker-dropzone, #unassigned-dropzone').forEach(el => {
+  document.querySelectorAll('.task-worker-dropzone, #unassigned-dropzone').forEach(el => {
     const s = new Sortable(el, {
       group: 'workers-pool',
       animation: 150,
@@ -1561,7 +1640,7 @@ function handleWorkerDrop(evt) {
     }
   });
 
-  if (evt.to.id === 'unassigned-dropzone') {
+ if (evt.to.id === 'unassigned-dropzone') {
     workersToMove.forEach(workerObj => {
       if (!unassignedWorkers.find(w => w.id === workerObj.id)) {
         unassignedWorkers.push(workerObj);
@@ -1569,13 +1648,9 @@ function handleWorkerDrop(evt) {
     });
   } else {
     const toCIdx = parseInt(evt.to.dataset.cidx);
+    const toTIdx = parseInt(evt.to.dataset.tidx);
     workersToMove.forEach(workerObj => {
-      let targetTaskIdx = cardsData[toCIdx].tasks.findIndex(t => t.source === workerObj.company);
-      if (targetTaskIdx === -1) {
-        cardsData[toCIdx].tasks.push({ desc: 'Affectation manuelle', source: workerObj.company, workers: "", workerList: [] });
-        targetTaskIdx = cardsData[toCIdx].tasks.length - 1;
-      }
-      let t = cardsData[toCIdx].tasks[targetTaskIdx];
+      let t = cardsData[toCIdx].tasks[toTIdx];
       if (!t.workerList) t.workerList = [];
       t.workerList.push(workerObj);
     });
@@ -2132,9 +2207,11 @@ function importBackup(event) {
         unassignedWorkers = parsed.unassignedWorkers || [];
         if (parsed.companies) siteCompanies = parsed.companies;
         renderCompanySelects();
-        renderPayrollTable();
-        renderCards(); 
-        renderDrawer(); 
+       renderPayrollTable();
+        renderCards();
+        if (currentView === 'orgchart') renderOrgChart();
+        if (currentView === 'tree') renderTreeOrgChart();
+        renderDrawer();
         syncToFirebase();
         alert("Sauvegarde restaurée avec succès !");
       } else { alert("Fichier invalide."); }
