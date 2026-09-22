@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-<!-- Librairies externes (SortableJS complet avec plugin MultiDrag officiel) -->
+<!-- Librairies externes -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 
@@ -88,7 +88,7 @@
   .filter-bar { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 8px; }
   .filter-btn { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; background: #ffffff; color: #64748b; border: 1px solid #cbd5e1; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
   .filter-btn:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
- .filter-btn.active { background: #1e293b; color: white; border-color: #1e293b; }
+  .filter-btn.active { background: #1e293b; color: white; border-color: #1e293b; }
 
   /* COMPOSANT MULTI-SELECT DROPDOWN */
   .multi-select-container { position: relative; width: 100%; }
@@ -158,6 +158,33 @@
 
   .task-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 3px; }
   
+  /* DROPZONE NIVEAU TÂCHE/FOREMAN */
+  .task-worker-dropzone { min-height: 30px; border: 2px dashed #bae6fd; border-radius: 6px; padding: 4px; background: #ffffff; margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; transition: background 0.2s; }
+  .task-worker-dropzone:empty::before { content: "📥 Glisser ouvriers ici"; font-size: 9px; color: #94a3b8; font-weight: 600; width: 100%; text-align: center; margin-top: 4px; }
+
+  /* ARBRE HIERARCHIQUE CSS (STYLE ORGANIGRAMME) */
+  .tree-container { width: 100%; overflow-x: auto; padding: 20px; text-align: center; min-height: 60vh; background: #f8fafc; display: none; }
+  .tree { display: inline-block; white-space: nowrap; }
+  .tree ul { padding-top: 20px; position: relative; transition: all 0.5s; display: flex; justify-content: center; padding-left: 0; margin: 0; }
+  .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 20px 8px 0 8px; transition: all 0.5s; }
+  .tree li::before, .tree li::after { content: ''; position: absolute; top: 0; right: 50%; border-top: 2px solid #94a3b8; width: 50%; height: 20px; }
+  .tree li::after { right: auto; left: 50%; border-left: 2px solid #94a3b8; }
+  .tree li:only-child::after, .tree li:only-child::before { display: none; }
+  .tree li:only-child { padding-top: 0; }
+  .tree li:first-child::before, .tree li:last-child::after { border: 0 none; }
+  .tree li:last-child::before { border-right: 2px solid #94a3b8; border-radius: 0 5px 0 0; }
+  .tree li:first-child::after { border-radius: 5px 0 0 0; }
+  .tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 2px solid #94a3b8; width: 0; height: 20px; }
+  .tree-node { border: 1px solid #cbd5e1; padding: 10px 16px; text-decoration: none; display: inline-block; border-radius: 8px; background: white; z-index: 1; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 120px; }
+  .tree-node .node-title { font-size: 13px; font-weight: 800; color: #0f172a; }
+  .tree-node .node-sub { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-top: 2px; }
+  .tree-node.top-node { background: #bae6fd; border-color: #38bdf8; }
+  .tree-node.top-node .node-title { color: #0369a1; font-size: 15px; }
+  .tree-node.mgr-node { background: #e0f2fe; border-color: #7dd3fc; }
+  .tree-node.sup-node { background: #ffffff; border-color: #94a3b8; border-top: 3px solid #2563eb; }
+  .tree-node.f-node { background: #f8fafc; border-style: dashed; }
+  .tree-node.w-node { background: white; border-radius: 20px; padding: 4px 10px; border-color: #e2e8f0; font-size: 10px; font-weight: 600; min-width: auto; }
+
   .source-select { appearance: none; background: #e0f2fe; color: #0284c7; font-size: 10px; font-weight: 800; border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer; outline: none; }
   .source-select.dss { background: #fef3c7; color: #d97706; }
   .source-select.euroasia { background: #ede9fe; color: #7c3aed; }
@@ -179,30 +206,6 @@
 
   .divider { width: 1px; height: 24px; background: #e2e8f0; margin: 0 4px; }
 
-  /* ZONE PANIER */
-  .card-worker-dropzone { 
-    min-height: 40px; 
-    border: 2px dashed #93c5fd; 
-    border-radius: 6px; 
-    padding: 8px; 
-    background: #f8fafc; 
-    margin-top: 8px; 
-    display: flex; 
-    flex-wrap: wrap; 
-    gap: 4px; 
-    align-content: flex-start; 
-    transition: background 0.2s; 
-  }
-  .card-worker-dropzone:empty::before { 
-    content: "📥 Glissez les ouvriers ici"; 
-    font-size: 10px; 
-    color: #94a3b8; 
-    font-weight: 600; 
-    width: 100%; 
-    text-align: center; 
-    margin-top: 4px; 
-  }
-
   /* WORKER PILLS */
   .worker-pill { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #334155; transition: transform 0.1s, box-shadow 0.1s; user-select: none; margin: 2px; }
   .worker-pill:hover { transform: scale(1.05); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -221,7 +224,7 @@
     box-shadow: 0 4px 10px rgba(37,99,235,0.2) !important;
   }
 
-  /* VUE ORGANIGRAMME */
+  /* VUE ORGANIGRAMME (Blocs) */
   #orgchart-view { display: none; padding: 20px 0; overflow-x: auto; min-height: 60vh; }
   .org-level-top { text-align: center; margin-bottom: 40px; }
   .org-level-top span { background: #1e293b; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 800; font-size: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
@@ -309,7 +312,7 @@
     body:not(.print-mode-ts):not(.print-mode-db) .org-manager-col { break-inside: avoid; border: 1px solid #94a3b8; }
     
     /* PRINT TS */
-    body.print-mode-ts .top-bar, body.print-mode-ts .dashboard-container, body.print-mode-ts #orgchart-view, body.print-mode-ts #workers-drawer, body.print-mode-ts .modal-overlay, body.print-mode-ts #fab-move, body.print-mode-ts #fab-drawer { display: none !important; }
+    body.print-mode-ts .top-bar, body.print-mode-ts .dashboard-container, body.print-mode-ts #orgchart-view, body.print-mode-ts #tree-view, body.print-mode-ts #workers-drawer, body.print-mode-ts .modal-overlay, body.print-mode-ts #fab-move, body.print-mode-ts #fab-drawer { display: none !important; }
     body.print-mode-ts #timesheet-print-zone { display: block !important; width: 100%; }
 
     .ts-page { page-break-after: always; font-family: Arial, sans-serif; color: #000; width: 100%; position: relative; }
@@ -323,7 +326,7 @@
     .ts-sign-box { border-top: 1px solid #000; width: 30%; text-align: center; padding-top: 10px; }
 
     /* PRINT DB */
-    body.print-mode-db .top-bar, body.print-mode-db .dashboard-container, body.print-mode-db #orgchart-view, body.print-mode-db #workers-drawer, body.print-mode-db .modal-overlay, body.print-mode-db #fab-move, body.print-mode-db #fab-drawer { display: none !important; }
+    body.print-mode-db .top-bar, body.print-mode-db .dashboard-container, body.print-mode-db #orgchart-view, body.print-mode-db #tree-view, body.print-mode-db #workers-drawer, body.print-mode-db .modal-overlay, body.print-mode-db #fab-move, body.print-mode-db #fab-drawer { display: none !important; }
     body.print-mode-db #db-print-zone { display: block !important; width: 100%; }
     .db-print-table { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 12px; }
     .db-print-table th, .db-print-table td { border: 1px solid #000; padding: 6px; text-align: left; }
@@ -528,7 +531,9 @@
       </select>
     </div>
 
-    <button id="btn-toggle-view" class="btn btn-outline" onclick="toggleView()">🗺️ Organigramme</button>
+    <button id="btn-toggle-view" class="btn btn-outline" onclick="setView('orgchart')">🗺️ Vue Équipes</button>
+    <button id="btn-toggle-tree" class="btn btn-outline" onclick="setView('tree')">🌳 Arbre Hiérarchique</button>
+    <button id="btn-toggle-dash" class="btn btn-black" onclick="setView('dashboard')" style="display:none;">📊 Tableau de bord</button>
     <div class="divider"></div>
 
     <button class="btn btn-outline" onclick="openDBModal()" title="Éditer la base de données de tous les ouvriers">🗃️ Base Globale</button>
@@ -598,8 +603,11 @@
 
 </div>
 
-<!-- VUE ORGANIGRAMME -->
+<!-- VUE ORGANIGRAMME (Blocs) -->
 <div id="orgchart-view"></div>
+
+<!-- VUE ARBRE CSS -->
+<div id="tree-view" class="tree-container"></div>
 
 <!-- ZONES D'IMPRESSION CACHÉES -->
 <div id="timesheet-print-zone"></div>
@@ -626,6 +634,9 @@ document.addEventListener('click', function(e) {
   const menu = document.getElementById('admin-dropdown');
   if (btn && menu && !btn.contains(e.target) && !menu.contains(e.target)) {
     menu.style.display = 'none';
+  }
+  if (!e.target.closest('.multi-select-container')) {
+    document.querySelectorAll('.multi-select-menu').forEach(m => m.classList.remove('show'));
   }
 });
 
@@ -685,20 +696,19 @@ function applyRolePermissions() {
   workerSortables.forEach(s => s.option("disabled", isViewer || isCFO));
 }
 
-function toggleView() {
-  if (currentView === 'dashboard') {
-    currentView = 'orgchart';
-    document.getElementById('dashboard-view').style.display = 'none';
-    document.getElementById('orgchart-view').style.display = 'block';
-    document.getElementById('btn-toggle-view').innerHTML = '📊 Tableau de bord';
-    renderOrgChart();
-  } else {
-    currentView = 'dashboard';
-    document.getElementById('dashboard-view').style.display = 'flex';
-    document.getElementById('orgchart-view').style.display = 'none';
-    document.getElementById('btn-toggle-view').innerHTML = '🗺️ Organigramme';
-  }
-}
+window.setView = function(viewMode) {
+  currentView = viewMode;
+  document.getElementById('dashboard-view').style.display = viewMode === 'dashboard' ? 'flex' : 'none';
+  document.getElementById('orgchart-view').style.display = viewMode === 'orgchart' ? 'block' : 'none';
+  document.getElementById('tree-view').style.display = viewMode === 'tree' ? 'block' : 'none';
+  
+  document.getElementById('btn-toggle-view').style.display = viewMode === 'orgchart' ? 'none' : 'inline-flex';
+  document.getElementById('btn-toggle-tree').style.display = viewMode === 'tree' ? 'none' : 'inline-flex';
+  document.getElementById('btn-toggle-dash').style.display = viewMode === 'dashboard' ? 'none' : 'inline-flex';
+
+  if (viewMode === 'orgchart') renderOrgChart();
+  if (viewMode === 'tree') renderTreeOrgChart();
+};
 
 function toggleDrawer() { document.getElementById('workers-drawer').classList.toggle('open'); }
 
@@ -766,14 +776,14 @@ function findWorkerDuplicate(searchId, searchName, excludeId = null) {
 function initLayout() {
   document.getElementById('role-selector').value = currentRole;
 
-const filterBar = document.getElementById('filter-bar');
+  const filterBar = document.getElementById('filter-bar');
   filterBar.innerHTML = `
     <div style="display:flex; flex-wrap:wrap; gap:8px; width:100%; align-items:center;">
       <button class="filter-btn active" id="filter-all" onclick="setFilter('all')">TOUT AFFICHER</button>
       <button class="filter-btn" id="filter-alpha" onclick="setFilter('alpha')" style="border-left: 4px solid #2563eb; font-weight:800;">🔤 ALPHABÉTIQUE (A-Z)</button>
       ${CATEGORY_INFO.map(cat => `<button class="filter-btn" id="filter-${cat.id}" onclick="setFilter('${cat.id}')" style="border-left: 4px solid ${cat.color};">${cat.name}</button>`).join('')}
     </div>
-   <div style="display:flex; gap:16px; width:100%; margin-top:8px;" id="multi-filters-container">
+    <div style="display:flex; gap:16px; width:100%; margin-top:8px;" id="multi-filters-container">
       <div style="display:flex; flex-direction:column; gap:4px; flex:1;">
         <label style="font-size:11px; font-weight:bold; color:#64748b;">🧑‍💼 FILTRE MANAGERS</label>
         <div class="multi-select-container" id="dropdown-mgr">
@@ -819,12 +829,6 @@ window.toggleMultiSelect = function(menuId) {
   document.querySelectorAll('.multi-select-menu').forEach(m => m.classList.remove('show'));
   if (!isShown) menu.classList.add('show');
 };
-
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('.multi-select-container')) {
-    document.querySelectorAll('.multi-select-menu').forEach(m => m.classList.remove('show'));
-  }
-});
 
 window.updateMultiFilters = function() {
   const mgrCheckboxes = document.querySelectorAll('#menu-mgr input[type="checkbox"]:checked');
@@ -923,6 +927,7 @@ setTimeout(() => {
         renderPayrollTable();
         renderCards();
         if (currentView === 'orgchart') renderOrgChart();
+        if (currentView === 'tree') renderTreeOrgChart();
         renderDrawer();
         if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
         updateFab(); 
@@ -966,7 +971,7 @@ function handleCheck(cIdx, isChecked) {
   else selectedForPrint.delete(cIdx);
 }
 
-// --- NOUVEAU: NETTOYAGE AUTOMATIQUE DES DOUBLONS ---
+// --- NETTOYAGE AUTOMATIQUE DES DOUBLONS ---
 window.cleanDuplicates = function() {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
   
@@ -981,15 +986,14 @@ window.cleanDuplicates = function() {
       const normName = String(w.name || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase().replace(/\s+/g, ' ');
       
       if ((normId !== '' && seenIds.has(normId)) || (normName !== '' && seenNames.has(normName))) {
-          return true; // C'est un doublon
+          return true;
       }
       
       if (normId !== '') seenIds.add(normId);
       if (normName !== '') seenNames.add(normName);
-      return false; // Pas un doublon, on le garde
+      return false;
   };
 
-  // 1. On scanne d'abord les cartes assignées (Priorité Haute)
   cardsData.forEach(c => {
       if (c.tasks) {
           c.tasks.forEach(t => {
@@ -1003,7 +1007,6 @@ window.cleanDuplicates = function() {
       }
   });
 
-  // 2. On scanne ensuite la base des non assignés (Basse priorité)
   unassignedWorkers = unassignedWorkers.filter(w => {
       if (isDup(w)) { removedCount++; return false; }
       return true;
@@ -1025,7 +1028,7 @@ window.cleanDuplicates = function() {
 // --- BASE DE DONNÉES GLOBALE & RECHERCHE ---
 function openDBModal() {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  document.getElementById('db-search-input').value = ""; // Reset recherche
+  document.getElementById('db-search-input').value = "";
   renderDBTable();
   document.getElementById('db-modal').style.display = 'flex';
 }
@@ -1086,14 +1089,12 @@ function renderDBTable() {
   if(currentQuery) filterDBTable(currentQuery);
 }
 
-// CORRECTION DU BLOCAGE DES DOUBLONS LORS DE L'ÉDITION
 function editWorker(oldId, field, newVal, context, cIdx, tIdx, inputEl) {
   let w = context === 'unassigned' ? unassignedWorkers.find(x => x.id === oldId) : cardsData[cIdx].tasks[tIdx].workerList.find(x => x.id === oldId);
   if (!w) return;
 
   let dup = { found: false };
   
-  // On vérifie le conflit uniquement sur le champ qu'on est en train de modifier
   if (field === 'id') {
     dup = findWorkerDuplicate(newVal.trim(), null, oldId);
   } else if (field === 'name') {
@@ -1101,7 +1102,6 @@ function editWorker(oldId, field, newVal, context, cIdx, tIdx, inputEl) {
   }
 
   if (dup.found) {
-    // NOUVEAU COMPORTEMENT : On propose de SUPPRIMER LA LIGNE FANTÔME (Celle qu'on modifie)
     const msg = `⚠️ DOUBLON DÉTECTÉ !\n\nL'information "${newVal}" est déjà utilisée ${dup.location} par l'ouvrier [${dup.worker.name}].\n\nConserver ces deux lignes va fausser les effectifs du chantier.\n\nVoulez-vous SUPPRIMER définitivement la ligne que vous êtes en train de modifier pour nettoyer la base ?`;
     
     if (confirm(msg)) {
@@ -1118,7 +1118,6 @@ function editWorker(oldId, field, newVal, context, cIdx, tIdx, inputEl) {
        renderDBTable();
        return;
     } else {
-       // Si l'utilisateur refuse la suppression, on annule sa frappe
        if (inputEl) inputEl.value = w[field];
        return;
     }
@@ -1264,7 +1263,7 @@ function renderPayrollTable() {
   document.getElementById('payroll-table-body').innerHTML = html;
 }
 
-// --- AFFICHAGE CARTES (TRI ALPHABÉTIQUE STRICT PAR NUMÉRO DE TIMESHEET) ---
+// --- AFFICHAGE CARTES ---
 function renderCards() {
   try {
     const alphaGrid = document.getElementById('grid-alpha');
@@ -1277,7 +1276,6 @@ function renderCards() {
 
     let displayList = cardsData.map((card, cIdx) => ({ card, cIdx }));
 
-    // Tri strict par numéro de Timesheet
     if (currentFilter === 'alpha') {
       displayList.sort((a, b) => {
         let tsA = (a.card.timesheetNo || '').trim();
@@ -1353,19 +1351,17 @@ function renderCards() {
               <span class="btn-delete-task" title="Supprimer cette ligne" onclick="removeTask(${cIdx}, ${tIdx})">&times;</span>
             </div>
           </div>
+          <div class="task-worker-dropzone" data-cidx="${cIdx}" data-tidx="${tIdx}">
+            ${(t.workerList || []).map(w => {
+              let colorClass = 'other';
+              if(w.company === 'SKYBUILDING') colorClass = 'skybuilding';
+              else if(w.company === 'DSS') colorClass = 'dss';
+              else if(w.company === 'EUROASIA') colorClass = 'euroasia';
+              return `<div class="worker-pill ${colorClass}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="${cIdx}" data-tidx="${tIdx}">${w.id} - ${w.name}</div>`;
+            }).join('')}
+          </div>
         </div>
       `}).join('');
-
-      let workersHtml = card.tasks.flatMap((t, tIdx) => (t.workerList || []).map(w => {
-        let colorClass = 'other';
-        if(w.company === 'SKYBUILDING') colorClass = 'skybuilding';
-        else if(w.company === 'DSS') colorClass = 'dss';
-        else if(w.company === 'EUROASIA') colorClass = 'euroasia';
-        
-        return `<div class="worker-pill ${colorClass}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="${cIdx}" data-tidx="${tIdx}">
-          ${w.id} - ${w.name}
-        </div>`;
-      })).join('');
 
       const sType = card.shiftType || 'Shift 1';
       const sHours = card.shiftHours || '07:00 - 15:00';
@@ -1405,7 +1401,7 @@ function renderCards() {
             <div class="manager-field">
               Mgr: <span class="manager-name" contenteditable="true" onblur="updateManager(${cIdx}, this.innerText)">${card.manager || ''}</span>
             </div>
-           <div class="sup-name" contenteditable="true" onblur="updateSupName(${cIdx}, this.innerText)">${card.name || 'Inconnu'}</div>
+            <div class="sup-name" contenteditable="true" onblur="updateSupName(${cIdx}, this.innerText)">${card.name || 'Inconnu'}</div>
             <div class="ts-badge-container">
               <div class="ts-badge" title="Numéro et Nom de la Timesheet">
                 TS: <span contenteditable="true" data-placeholder="N°..." onblur="updateTimesheetNo(${cIdx}, this.innerText)">${card.timesheetNo || ''}</span>
@@ -1427,10 +1423,6 @@ function renderCards() {
         <div class="card-body">
           ${tasksHtml}
           <button class="btn-add-task" onclick="addTask(${cIdx})">+ Ajouter Ligne</button>
-          
-          <div class="card-worker-dropzone" data-cidx="${cIdx}">
-            ${workersHtml}
-          </div>
         </div>
       `;
       if (targetGrid) targetGrid.appendChild(cardEl);
@@ -1441,7 +1433,51 @@ function renderCards() {
   } catch (err) { console.error("Render error:", err); }
 }
 
-// ORGANIGRAMME
+// ARBRE HIERARCHIQUE
+window.renderTreeOrgChart = function() {
+  const container = document.getElementById('tree-view');
+  let treeData = { name: "Denis NETO", role: "Directeur de Projet", children: {} };
+
+  cardsData.forEach(c => {
+    let mgr = (c.manager || '').trim().toUpperCase() || 'SANS RESPONSABLE';
+    if(!treeData.children[mgr]) treeData.children[mgr] = { name: mgr, children: [] };
+    treeData.children[mgr].children.push(c);
+  });
+
+  let html = `<div class="tree"><ul><li><div class="tree-node top-node"><div class="node-title">${treeData.name}</div><div class="node-sub">${treeData.role}</div></div><ul>`;
+
+  Object.keys(treeData.children).sort().forEach(mgrName => {
+    let mgrNode = treeData.children[mgrName];
+    html += `<li><div class="tree-node mgr-node"><div class="node-title">${mgrNode.name}</div><div class="node-sub">Manager</div></div><ul>`;
+
+    mgrNode.children.forEach(sup => {
+      let supDisplayName = sup.name || 'Inconnu';
+      html += `<li><div class="tree-node sup-node"><div class="node-title">${supDisplayName}</div><div class="node-sub">Superviseur</div></div><ul>`;
+
+      sup.tasks.forEach(t => {
+        let fName = (t.foreman || '').trim().toUpperCase() || 'ÉQUIPE DIRECTE';
+        html += `<li><div class="tree-node f-node"><div class="node-title">${fName}</div><div class="node-sub">Foreman</div></div>`;
+
+        if (t.workerList && t.workerList.length > 0) {
+          html += `<ul>`;
+          t.workerList.forEach(w => {
+            html += `<li><div class="tree-node w-node">${w.name}</div></li>`;
+          });
+          html += `</ul>`;
+        }
+        html += `</li>`;
+      });
+      html += `</ul></li>`;
+    });
+    html += `</ul></li>`;
+  });
+
+  html += `</ul></li></ul></div>`;
+  container.innerHTML = html;
+};
+
+
+// ORGANIGRAMME (Blocs)
 function renderOrgChart() {
   const container = document.getElementById('orgchart-view');
   const groups = {};
@@ -1486,7 +1522,7 @@ function renderOrgChart() {
            foremenHtml += `<div class="org-foreman-card" style="background:#f8fafc; border-style:dashed;"><div class="org-foreman-name" style="color:#64748b;">Équipiers Directs</div><div class="org-foreman-meta" style="background:#e2e8f0; color:#475569;">${directWkrs} wkrs</div></div>`;
         }
 
-       const catColor = CATEGORY_INFO.find(c => c.id === sup.category)?.color || '#94a3b8';
+        const catColor = CATEGORY_INFO.find(c => c.id === sup.category)?.color || '#94a3b8';
         const catName = CATEGORY_INFO.find(c => c.id === sup.category)?.name || sup.category;
         
         let fullTsName = [sup.timesheetNo, sup.timesheetName].filter(x => x && x.trim() !== '').join(' - ');
@@ -1518,7 +1554,7 @@ function initWorkerSortables() {
   workerSortables = [];
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
 
-  document.querySelectorAll('.card-worker-dropzone, #unassigned-dropzone').forEach(el => {
+  document.querySelectorAll('.task-worker-dropzone, #unassigned-dropzone').forEach(el => {
     const s = new Sortable(el, {
       group: 'workers-pool',
       animation: 150,
@@ -1569,13 +1605,9 @@ function handleWorkerDrop(evt) {
     });
   } else {
     const toCIdx = parseInt(evt.to.dataset.cidx);
+    const toTIdx = parseInt(evt.to.dataset.tidx);
     workersToMove.forEach(workerObj => {
-      let targetTaskIdx = cardsData[toCIdx].tasks.findIndex(t => t.source === workerObj.company);
-      if (targetTaskIdx === -1) {
-        cardsData[toCIdx].tasks.push({ desc: 'Affectation manuelle', source: workerObj.company, workers: "", workerList: [] });
-        targetTaskIdx = cardsData[toCIdx].tasks.length - 1;
-      }
-      let t = cardsData[toCIdx].tasks[targetTaskIdx];
+      let t = cardsData[toCIdx].tasks[toTIdx];
       if (!t.workerList) t.workerList = [];
       t.workerList.push(workerObj);
     });
@@ -1743,30 +1775,32 @@ function reorderCardsBasedOnDOM() {
   renderCards(); syncToFirebase();
 }
 
-function updateManager(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].manager = val.trim(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); }
-function updateSupName(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].name = val.trim(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); }
+function updateManager(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].manager = val.trim(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); if(currentView==='tree') renderTreeOrgChart();}
+function updateSupName(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].name = val.trim(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); if(currentView==='tree') renderTreeOrgChart();}
 function updateTimesheetNo(cIdx, val) { 
   if (currentRole === 'viewer' || currentRole === 'cfo') return; 
   cardsData[cIdx].timesheetNo = val.trim(); 
   syncToFirebase(); 
   if(currentView === 'orgchart') renderOrgChart(); 
+  if(currentView === 'tree') renderTreeOrgChart();
 }
 window.updateTimesheetName = function(cIdx, val) {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
   cardsData[cIdx].timesheetName = val.trim();
   syncToFirebase();
   if(currentView === 'orgchart') renderOrgChart();
+  if(currentView === 'tree') renderTreeOrgChart();
 };
 function updateShiftType(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].shiftType = val; syncToFirebase(); }
 function updateShiftHours(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].shiftHours = val.trim(); syncToFirebase(); }
-function updateTaskForeman(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].foreman = val.trim(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); }
+function updateTaskForeman(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].foreman = val.trim(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); if(currentView==='tree') renderTreeOrgChart();}
 function updateTaskDesc(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].desc = val.trim(); syncToFirebase(); }
 function updateTaskSource(cIdx, tIdx, val, el) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].source = val; recalculateTotals(); syncToFirebase(); }
 
 function updateWorkerCount(cIdx, tIdx, val) { 
   if (currentRole === 'viewer' || currentRole === 'cfo') return; 
   cardsData[cIdx].tasks[tIdx].workers = (val.trim() === "") ? "" : parseInt(val); 
-  renderCards(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); 
+  renderCards(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); if(currentView==='tree') renderTreeOrgChart();
 }
 
 function changeCategory(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].category = val; renderCards(); syncToFirebase(); }
@@ -1794,6 +1828,7 @@ function removeTask(cIdx, tIdx) {
   renderDrawer();
   syncToFirebase(); 
   if(currentView==='orgchart') renderOrgChart(); 
+  if(currentView==='tree') renderTreeOrgChart();
 }
 
 function addNewSupervisor() { 
@@ -1805,7 +1840,7 @@ function addNewSupervisor() {
     timesheetNo: "", 
     timesheetName: "",
     shiftType: "Shift 1", 
-    shiftHours: "07:00 - 15:00",
+    shiftHours: "07:00 - 15:00", 
     printTasks: [], 
     tasks: [{ desc: "", foreman: "", source: siteCompanies[0], workers: "", workerList: [] }] 
   }); 
@@ -1836,6 +1871,7 @@ function removeSupervisor(cIdx) {
       renderDrawer();
       syncToFirebase(); 
       if(currentView==='orgchart') renderOrgChart(); 
+      if(currentView==='tree') renderTreeOrgChart();
   } 
 }
 
@@ -2293,7 +2329,7 @@ function importExcelFile(event) {
           else if (sUp.includes("AHMED") || sUp.includes("FRED")) cat = "indirect";
           else if (sUp.includes("TASSOS")) cat = "facade";
 
-          cardsData.push({ name: supName, manager: "", category: cat, timesheetNo: supData.timesheetNo, shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: newTaskList });
+          cardsData.push({ name: supName, manager: "", category: cat, timesheetNo: supData.timesheetNo, timesheetName: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: newTaskList });
         }
       });
 
