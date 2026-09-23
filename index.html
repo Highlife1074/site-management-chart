@@ -700,6 +700,7 @@ function changeRole(newRole) {
   localStorage.setItem('app_role', currentRole);
   document.getElementById('role-selector').value = currentRole;
   applyRolePermissions();
+  initWorkerSortables(); 
 }
 
 function applyRolePermissions() {
@@ -730,8 +731,9 @@ function applyRolePermissions() {
     if(el.classList.contains('ts-btn-config')) el.style.display = isViewer || isCFO ? 'none' : 'inline-block';
   });
 
-  sortableInstances.forEach(s => s.option("disabled", isViewer || isCFO));
-  workerSortables.forEach(s => s.option("disabled", isViewer || isCFO));
+  const isDisabled = (isViewer || isCFO);
+  sortableInstances.forEach(s => s.option("disabled", isDisabled));
+  workerSortables.forEach(s => s.option("disabled", isDisabled));
 }
 
 window.setView = function(viewMode) {
@@ -780,7 +782,6 @@ const DEFAULT_DATA = [
   { name: "NEW TIMESHEET", manager: "", supervisorRole: "SUPERVISOR", category: "civil", timesheetNo: "", timesheetName: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "Task description", foreman: "", source: "SKYBUILDING BRANCH", workers: "", workerList: [] }] }
 ];
 
-// Fonction de migration (SKYBUILDING -> SKYBUILDING BRANCH)
 function migrateSkybuilding(worker) {
   if (worker.company === 'SKYBUILDING') worker.company = 'SKYBUILDING BRANCH';
 }
@@ -799,7 +800,6 @@ try {
   } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 } catch(e) { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 
-// AUTO-AJOUT DES SUPERVISEURS DEPUIS LES CARTES (Mode Local)
 cardsData.forEach(c => {
     let n = (c.name || '').trim().toUpperCase();
     if (n && n !== 'NEW TIMESHEET' && n !== 'UNKNOWN' && n !== 'UNDEFINED') {
@@ -1064,11 +1064,11 @@ function handleCheck(cIdx, isChecked) {
   else selectedForPrint.delete(cIdx);
 }
 
-// --- NETTOYAGE AUTOMATIQUE DES DOUBLONS ---
-window.cleanDuplicates = function() {
-  if (currentRole === 'viewer' || currentRole === 'cfo') return;
+// --- NETTOYAGE AUTOMATIQUE DES DOUBLONS (AVEC NORMALISATION STRICTE) ---
+window.cleanDuplicates = function(silent = false) {
+  if (currentRole === 'viewer' || currentRole === 'cfo') return 0;
   
-  if (!confirm("Voulez-vous rechercher et supprimer automatiquement tous les doublons de la base de données ?\n\n(L'ouvrier assigné à une équipe de chantier sera conservé en priorité)")) return;
+  if (!silent && !confirm("Voulez-vous rechercher et supprimer automatiquement tous les doublons de la base de données ?\n\n(L'ouvrier assigné à une équipe de chantier sera conservé en priorité)")) return 0;
   
   let seenIds = new Set();
   let seenNames = new Set();
@@ -1076,13 +1076,15 @@ window.cleanDuplicates = function() {
 
   const isDup = (w) => {
       const normId = String(w.id || '').trim().toUpperCase();
-      const normName = String(w.name || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase().replace(/\s+/g, ' ');
+      // Normalisation stricte : enlève accents, majuscules et espaces multiples
+      const normName = String(w.name || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, ' ').trim().toUpperCase();
       
-      if ((normId !== '' && seenIds.has(normId)) || (normName !== '' && seenNames.has(normName))) {
-          return true;
-      }
+      let idIsDup = (normId !== '' && !normId.startsWith('W-') && seenIds.has(normId));
+      let nameIsDup = (normName !== '' && seenNames.has(normName));
+
+      if (idIsDup || nameIsDup) return true;
       
-      if (normId !== '') seenIds.add(normId);
+      if (normId !== '' && !normId.startsWith('W-')) seenIds.add(normId);
       if (normName !== '') seenNames.add(normName);
       return false;
   };
@@ -1105,16 +1107,22 @@ window.cleanDuplicates = function() {
       return true;
   });
 
+  if (!silent) {
+      if (removedCount > 0) {
+          alert(`✅ Nettoyage terminé : ${removedCount} doublon(s) supprimé(s).`);
+      } else {
+          alert("👌 Aucun doublon n'a été trouvé dans la base de données !");
+      }
+  }
+
   if (removedCount > 0) {
-      alert(`✅ Nettoyage terminé : ${removedCount} doublon(s) supprimé(s).`);
       recalculateTotals();
       renderCards();
       renderDrawer();
       if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
       syncToFirebase();
-  } else {
-      alert("👌 Aucun doublon n'a été trouvé dans la base de données !");
   }
+  return removedCount;
 };
 
 
@@ -1256,23 +1264,25 @@ window.verifyImportCoherence = function() {
       return;
   }
 
+  // Normalisation stricte pour la vérification
+  const norm = (str) => String(str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, ' ').trim().toUpperCase();
+
   let allCurrentWorkers = new Map();
-  unassignedWorkers.forEach(w => allCurrentWorkers.set(w.id, w));
-  cardsData.forEach(c => c.tasks.forEach(t => (t.workerList || []).forEach(w => allCurrentWorkers.set(w.id, w))));
+  unassignedWorkers.forEach(w => allCurrentWorkers.set(norm(w.name), w));
+  cardsData.forEach(c => c.tasks.forEach(t => (t.workerList || []).forEach(w => allCurrentWorkers.set(norm(w.name), w))));
 
   let missingInApp = [];
   let extraInApp = [];
 
-  // Chercher ceux qui sont dans l'Excel mais pas dans l'App
+  let excelMap = new Map();
   window.rawImportedDB.forEach(wExcel => {
-      if (!allCurrentWorkers.has(wExcel.id)) missingInApp.push(`${wExcel.id} - ${wExcel.name}`);
+      let n = norm(wExcel.name);
+      excelMap.set(n, wExcel);
+      if (!allCurrentWorkers.has(n)) missingInApp.push(`${wExcel.id} - ${wExcel.name}`);
   });
 
-  // Chercher ceux qui sont dans l'App mais plus dans l'Excel
-  let excelMap = new Map();
-  window.rawImportedDB.forEach(w => excelMap.set(w.id, w));
-  allCurrentWorkers.forEach((w, id) => {
-      if (!excelMap.has(id)) extraInApp.push(`${id} - ${w.name}`);
+  allCurrentWorkers.forEach((w, n) => {
+      if (!excelMap.has(n)) extraInApp.push(`${w.id} - ${w.name}`);
   });
 
   let msg = "📊 RAPPORT DE COHÉRENCE IMPORT EXCEL\n\n";
@@ -1355,7 +1365,7 @@ window.renderSupervisorsList = function() {
     </div>
   `).join('');
   
-  // Effets visuels au focus pour indiquer que le champ est éditable
+  // Effets visuels au focus
   list.querySelectorAll('input').forEach(inp => {
       inp.addEventListener('focus', function() { this.style.borderColor = '#2563eb'; this.style.background = 'white'; });
       inp.addEventListener('blur', function() { this.style.borderColor = 'transparent'; this.style.background = 'transparent'; });
@@ -1935,7 +1945,8 @@ function renderOrgChart() {
 function initWorkerSortables() {
   workerSortables.forEach(s => s.destroy());
   workerSortables = [];
-  if (currentRole === 'viewer' || currentRole === 'cfo') return;
+  
+  const isDisabled = (currentRole === 'viewer' || currentRole === 'cfo');
 
   document.querySelectorAll('.task-worker-dropzone, #unassigned-dropzone').forEach(el => {
     const s = new Sortable(el, {
@@ -1944,6 +1955,7 @@ function initWorkerSortables() {
       multiDrag: true,
       selectedClass: 'selected-pill',
       fallbackTolerance: 3,
+      disabled: isDisabled,
       onSelect: function() { updateFab(); },
       onDeselect: function() { updateFab(); },
       onEnd: function(evt) { handleWorkerDrop(evt); }
@@ -1966,13 +1978,15 @@ function handleWorkerDrop(evt) {
     const wId = item.dataset.wid;
     const wName = item.dataset.wname;
     const wComp = item.dataset.wcomp;
+    const cIdx = item.dataset.cidx;
+    const tIdx = item.dataset.tidx;
     workersToMove.push({ id: wId, name: wName, company: wComp });
 
-    if (evt.from.id === 'unassigned-dropzone') {
+    if (cIdx === 'unassigned') {
       unassignedWorkers = unassignedWorkers.filter(w => w.id !== wId);
     } else {
-      const fromCIdx = parseInt(evt.from.dataset.cidx);
-      const oldTIdx = parseInt(item.dataset.tidx);
+      const fromCIdx = parseInt(cIdx);
+      const oldTIdx = parseInt(tIdx);
       if (cardsData[fromCIdx] && cardsData[fromCIdx].tasks[oldTIdx]) {
         let t = cardsData[fromCIdx].tasks[oldTIdx];
         t.workerList = t.workerList.filter(w => w.id !== wId);
@@ -2260,7 +2274,7 @@ function removeSupervisor(cIdx) {
   } 
 }
 
-// --- IMPORTATION EXCEL GLOBALE POINTAGE (AVEC DÉDUPLICATION) ---
+// --- IMPORTATION EXCEL GLOBALE POINTAGE ET BASE RH (FUSION & DÉDUPLICATION) ---
 function importExcelFile(event) {
   if (currentRole === 'viewer' || currentRole === 'cfo') return; 
   const file = event.target.files[0];
@@ -2275,9 +2289,11 @@ function importExcelFile(event) {
       let newWorkersCount = 0;
       let updatedWorkersCount = 0;
       
+      const normalizeName = (str) => String(str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, ' ').trim().toUpperCase();
+
       // Stockage dans une Map pour éviter la duplication des IDs de la base arrière
       let rawDbMap = new Map();
-      window.rawImportedDB.forEach(w => rawDbMap.set(w.id, w));
+      window.rawImportedDB.forEach(w => rawDbMap.set(normalizeName(w.name), w));
 
       workbook.SheetNames.forEach(sheetName => {
         if (!sheetName) return;
@@ -2356,19 +2372,21 @@ function importExcelFile(event) {
 
           if (!siteCompanies.includes(workerComp)) siteCompanies.push(workerComp);
 
-          // Stocker dans la base arrière officielle (écrase si l'ID existe déjà)
-          rawDbMap.set(workerId, { id: workerId, name: workerName, company: workerComp });
+          const normWorkerName = normalizeName(workerName);
+
+          // Stocker dans la base arrière officielle (écrase les doublons de noms pour ne pas gonfler les chiffres)
+          rawDbMap.set(normWorkerName, { id: workerId, name: workerName, company: workerComp });
 
           let matchFound = false;
 
-          // 1. Chercher dans les assignés et mettre à jour si trouvé (Fusion intelligente)
+          // 1. Chercher dans les assignés et mettre à jour si trouvé
           cardsData.forEach(c => {
             if (c.tasks) {
               c.tasks.forEach(t => {
                 if (t.workerList) {
-                  let existing = t.workerList.find(w => w.id === workerId || w.name.toUpperCase() === workerName.toUpperCase());
+                  let existing = t.workerList.find(w => normalizeName(w.name) === normWorkerName || (w.id !== "" && !w.id.startsWith("W-") && w.id === workerId));
                   if (existing) {
-                     existing.id = workerId; 
+                     if (workerId && workerId !== existing.id && !workerId.startsWith("W-")) existing.id = workerId; // Met à jour vers le vrai ID
                      existing.name = workerName; 
                      existing.company = workerComp;
                      existing.isDeleted = false; 
@@ -2380,11 +2398,13 @@ function importExcelFile(event) {
           });
           
           // 2. Chercher dans les non-assignés et mettre à jour
-          let existingUnassigned = unassignedWorkers.find(w => w.id === workerId || w.name.toUpperCase() === workerName.toUpperCase());
-          if (existingUnassigned) {
-             existingUnassigned.id = workerId;
-             existingUnassigned.name = workerName;
-             existingUnassigned.company = workerComp;
+          let existingUnassigned = unassignedWorkers.filter(w => normalizeName(w.name) === normWorkerName || (w.id !== "" && !w.id.startsWith("W-") && w.id === workerId));
+          if (existingUnassigned.length > 0) {
+             existingUnassigned.forEach(eu => {
+                 if (workerId && workerId !== eu.id && !workerId.startsWith("W-")) eu.id = workerId;
+                 eu.name = workerName;
+                 eu.company = workerComp;
+             });
              matchFound = true;
           }
 
@@ -2398,8 +2418,11 @@ function importExcelFile(event) {
         }
       });
 
-      // Recréer le tableau de la base arrière
+      // Recréer le tableau de la base arrière à partir de la Map unique
       window.rawImportedDB = Array.from(rawDbMap.values());
+      
+      // On lance un nettoyage silencieux automatique pour effacer les fantômes liés aux changements d'ID
+      let removedDuplicates = window.cleanDuplicates(true);
 
       renderCompanySelects();
       renderPayrollTable();
@@ -2407,7 +2430,7 @@ function importExcelFile(event) {
       if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
       syncToFirebase();
       
-      alert(`Import et Fusion terminés avec succès !\n\n📥 Nouveaux ouvriers ajoutés : ${newWorkersCount}\n🔄 Ouvriers existants mis à jour (Fusionnés) : ${updatedWorkersCount}\n\nLes assignations dans l'organigramme ont été conservées.`);
+      alert(`Import et Fusion terminés avec succès !\n\n📥 Nouveaux ouvriers ajoutés : ${newWorkersCount}\n🔄 Ouvriers existants mis à jour (Fusionnés) : ${updatedWorkersCount}\n🧹 Doublons nettoyés automatiquement : ${removedDuplicates}\n\nLes assignations dans l'organigramme ont été conservées.`);
 
     } catch (err) { alert("Erreur technique : " + err.message); }
     event.target.value = "";
