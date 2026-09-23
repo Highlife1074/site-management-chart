@@ -703,6 +703,74 @@ try {
   }
 } catch(e) { console.warn("Sortable MultiDrag init error:", e); }
 
+// Fonction fantôme pour éviter l'erreur de référence sur des environnements en cache.
+window.migrateSkybuilding = function() {
+    console.log("Migration Skybuilding traitée (Silencieux)");
+};
+
+// Sauvegarde JSON manuelle complète de l'application
+window.exportBackup = function() {
+    try {
+        const data = {
+            cardsData: cardsData,
+            payrollCounts: payrollCounts,
+            unassignedWorkers: unassignedWorkers,
+            companies: siteCompanies,
+            rawImportedDB: window.rawImportedDB,
+            supervisors: siteSupervisors
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Riviera_Tower_Backup_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        alert("Erreur lors de l'exportation de la sauvegarde : " + err.message);
+    }
+};
+
+// Restauration JSON complète de l'application
+window.importBackup = function(event) {
+    if (currentRole === 'viewer' || currentRole === 'cfo') {
+        alert("Permission refusée. Seul un Admin ou Timekeeper peut restaurer une sauvegarde.");
+        return;
+    }
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const parsed = JSON.parse(e.target.result);
+            if (parsed.cardsData) cardsData = parsed.cardsData;
+            if (parsed.payrollCounts) payrollCounts = parsed.payrollCounts;
+            if (parsed.unassignedWorkers) unassignedWorkers = parsed.unassignedWorkers;
+            if (parsed.companies) siteCompanies = parsed.companies;
+            if (parsed.rawImportedDB) window.rawImportedDB = parsed.rawImportedDB;
+            if (parsed.supervisors) siteSupervisors = parsed.supervisors;
+
+            syncToFirebase();
+            renderCompanySelects();
+            renderPayrollTable();
+            renderCards();
+            if (currentView === 'orgchart') renderOrgChart();
+            if (currentView === 'tree') renderTreeOrgChart();
+            renderDrawer();
+            if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
+            updateFab();
+            alert("✅ Sauvegarde JSON restaurée avec succès !");
+        } catch (err) {
+            alert("❌ Erreur lors de la lecture du fichier de sauvegarde. Fichier corrompu ou invalide. Détails : " + err.message);
+        }
+        event.target.value = ""; // Réinitialiser le champ d'input
+    };
+    reader.readAsText(file);
+};
+
 // Menus
 function toggleAdminMenu() {
   const menu = document.getElementById('admin-dropdown');
