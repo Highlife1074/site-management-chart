@@ -2719,8 +2719,12 @@ function importExcelFile(event) {
         for (let r = 0; r < rawRows.length; r++) {
           const rowArray = rawRows[r];
           if (!Array.isArray(rowArray)) continue;
-          const lineStr = rowArray.map(cell => String(cell || "").toUpperCase()).join(" ");
-          if (lineStr.includes("NAME") || lineStr.includes("SURNAME") || lineStr.includes("NOM")) { headerRowIdx = r; break; }
+          // Détection ultra-stricte des en-têtes pour ne pas aspirer "Father's Name" ou "Subcontractor's Name"
+          const hasNameHeader = rowArray.some(cell => {
+             const exact = String(cell || "").trim().toUpperCase().replace(/[^A-Z]/g, '');
+             return ["NAME", "SURNAME", "NOM", "PRENOM", "FIRSTNAME", "LASTNAME", "FULLNAME"].includes(exact);
+          });
+          if (hasNameHeader) { headerRowIdx = r; break; }
         }
         if (headerRowIdx === -1) return;
 
@@ -2747,34 +2751,44 @@ function importExcelFile(event) {
              let dynIdCol = -1, dynWorkerCols = [];
              const headerRow = rawRows[headerRowIdx] || [];
              
-             // 1. Détection dynamique des colonnes (s'adapte aux changements RH)
              for (let c = 0; c < headerRow.length; c++) {
                const colName = String(headerRow[c] || "").trim().toUpperCase();
-               if ((colName.includes("COMET") || colName === "NO." || colName === "ID" || colName.includes("NEOAXESS")) && dynIdCol === -1) dynIdCol = c;
-               if (colName.includes("NAME") || colName.includes("SURNAME") || colName.includes("NOM")) dynWorkerCols.push(c);
+               const exactCol = colName.replace(/[^A-Z]/g, '');
+               
+               if ((exactCol === "ID" || exactCol === "NO" || colName.includes("COMET") || colName.includes("NEOAXESS")) && dynIdCol === -1) {
+                   dynIdCol = c;
+               }
+               if (["NAME", "SURNAME", "NOM", "PRENOM", "FIRSTNAME", "LASTNAME", "FULLNAME"].includes(exactCol)) {
+                   dynWorkerCols.push(c);
+               }
              }
              
-             // 2. Sécurité : si aucun en-tête n'est détecté, on garde tes colonnes historiques par défaut
-             if (dynIdCol === -1) dynIdCol = 2; // Colonne C
-             if (dynWorkerCols.length === 0) dynWorkerCols = [4, 5]; // Colonnes E et F
+             if (dynIdCol === -1) dynIdCol = 2; // Col C par défaut
+             if (dynWorkerCols.length === 0) dynWorkerCols = [4, 5]; // Col E et F par défaut
 
-             // 3. Extraction et fusion des données
              workerId = dynIdCol !== -1 ? String(row[dynIdCol] || "").trim() : "";
              let dynName = "";
              dynWorkerCols.forEach(wc => { let val = String(row[wc] || "").trim(); if(val) dynName += val + " "; });
              workerName = dynName.trim();
              
-             // 4. Attribution de l'entreprise
              workerComp = isSkyBranch ? "SKYBUILDING BRANCH" : "SKYBUILDING GREECE";
-          }
+          } 
           else {
              let dynIdCol = -1, dynCompCol = -1, dynWorkerCols = [];
              const headerRow = rawRows[headerRowIdx] || [];
              for (let c = 0; c < headerRow.length; c++) {
                const colName = String(headerRow[c] || "").trim().toUpperCase();
-               if ((colName.includes("COMET") || colName === "NO." || colName === "ID" || colName.includes("NEOAXESS")) && dynIdCol === -1) dynIdCol = c;
-               if (colName.includes("NAME") || colName.includes("SURNAME") || colName.includes("NOM")) dynWorkerCols.push(c);
-               if (colName.includes("COMPANY") || colName.includes("SUBCON") || colName === "CO." || colName.includes("ENTREPRISE")) dynCompCol = c;
+               const exactCol = colName.replace(/[^A-Z]/g, '');
+               
+               if ((exactCol === "ID" || exactCol === "NO" || colName.includes("COMET") || colName.includes("NEOAXESS")) && dynIdCol === -1) {
+                   dynIdCol = c;
+               }
+               if (["NAME", "SURNAME", "NOM", "PRENOM", "FIRSTNAME", "LASTNAME", "FULLNAME"].includes(exactCol)) {
+                   dynWorkerCols.push(c);
+               }
+               if (colName.includes("COMPANY") || colName.includes("SUBCON") || colName === "CO." || colName.includes("ENTREPRISE")) {
+                   dynCompCol = c;
+               }
              }
              if (dynWorkerCols.length > 0) {
                  workerId = dynIdCol !== -1 ? String(row[dynIdCol] || "").trim() : "";
