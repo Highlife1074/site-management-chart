@@ -160,7 +160,7 @@
   
   /* DROPZONE NIVEAU TÂCHE/FOREMAN */
   .task-worker-dropzone { min-height: 30px; border: 2px dashed #bae6fd; border-radius: 6px; padding: 4px; background: #ffffff; margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; transition: background 0.2s; }
-  .task-worker-dropzone:empty::before { content: "📥 Glisser ouvriers ici"; font-size: 9px; color: #94a3b8; font-weight: 600; width: 100%; text-align: center; margin-top: 4px; }
+  .task-worker-dropzone:empty::before { content: "📥 Drop workers here"; font-size: 9px; color: #94a3b8; font-weight: 600; width: 100%; text-align: center; margin-top: 4px; }
 
   /* ARBRE HIERARCHIQUE CSS (STYLE ORGANIGRAMME) */
   .tree-container { width: 100%; overflow-x: auto; padding: 20px; text-align: center; min-height: 60vh; background: #f8fafc; display: none; }
@@ -688,7 +688,7 @@ function applyRolePermissions() {
 
   document.querySelectorAll('.payroll-input').forEach(el => { el.disabled = isViewer || isTK; });
   
-  document.querySelectorAll('.sup-name, .manager-name, .task-desc, .task-foreman span, .ts-badge span, .title-editable').forEach(el => { 
+  document.querySelectorAll('.sup-name, .sup-role, .manager-name, .task-desc, .task-foreman span, .ts-badge span, .title-editable').forEach(el => { 
     el.setAttribute('contenteditable', isViewer || isCFO ? 'false' : 'true'); 
   });
 
@@ -751,7 +751,7 @@ const CATEGORY_INFO = [
 ];
 
 const DEFAULT_DATA = [
-  { name: "NOUVELLE TIMESHEET", manager: "", category: "civil", timesheetNo: "", timesheetName: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "Activité à définir", foreman: "", source: "SKYBUILDING BRANCH", workers: "", workerList: [] }] }
+  { name: "NEW TIMESHEET", manager: "", supervisorRole: "SUPERVISOR", category: "civil", timesheetNo: "", timesheetName: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "Task description", foreman: "", source: "SKYBUILDING BRANCH", workers: "", workerList: [] }] }
 ];
 
 // Fonction de migration (SKYBUILDING -> SKYBUILDING BRANCH)
@@ -1426,9 +1426,9 @@ function renderCards() {
         const isDiff = hasManualOverride && (linkedCount !== manualCount);
         const compClass = isDiff ? 'diff-warn' : 'diff-ok';
         
-        let compTitle = "Calcul automatique basé sur les noms";
+        let compTitle = "Automatic calculation based on names";
         if (hasManualOverride) {
-            compTitle = isDiff ? `Alerte: ${linkedCount} noms assignés pour ${manualCount} saisis` : `Effectifs équilibrés manuellement`;
+            compTitle = isDiff ? `Alert: ${linkedCount} names assigned vs ${manualCount} entered` : `Manually balanced workforce`;
         }
 
         const companyOpts = siteCompanies.map(comp => `<option value="${comp}" ${t.source === comp ? 'selected' : ''}>${comp}</option>`).join('');
@@ -1507,7 +1507,8 @@ function renderCards() {
             <div class="manager-field">
               Mgr: <span class="manager-name" contenteditable="true" onblur="updateManager(${cIdx}, this.innerText)">${card.manager || ''}</span>
             </div>
-            <div class="sup-name" contenteditable="true" onblur="updateSupName(${cIdx}, this.innerText)">${card.name || 'Inconnu'}</div>
+            <div class="sup-name" contenteditable="true" onblur="updateSupName(${cIdx}, this.innerText)">${card.name || 'Unknown'}</div>
+            <div class="sup-role" contenteditable="true" onblur="updateSupRole(${cIdx}, this.innerText)" style="font-size:10px; font-weight:700; color:#64748b; text-transform:uppercase; margin-top:2px;">${card.supervisorRole || 'SUPERVISOR'}</div>
             <div class="ts-badge-container">
               <div class="ts-badge" title="Numéro et Nom de la Timesheet">
                 TS: <span contenteditable="true" data-placeholder="N°..." onblur="updateTimesheetNo(${cIdx}, this.innerText)">${card.timesheetNo || ''}</span>
@@ -1542,7 +1543,7 @@ function renderCards() {
 // ARBRE HIERARCHIQUE
 window.renderTreeOrgChart = function() {
   const container = document.getElementById('tree-view');
-  let treeData = { name: "Denis NETO", role: "Directeur de Projet", children: {}, total: 0 };
+  let treeData = { name: "Denis NETO", role: "General Site Superintendent", children: {}, total: 0 };
 
   const formatName = (name) => {
      let p = name.trim().split(' ');
@@ -1553,7 +1554,7 @@ window.renderTreeOrgChart = function() {
   };
 
   cardsData.forEach(c => {
-    let mgr = (c.manager || '').trim().toUpperCase() || 'SANS RESPONSABLE';
+    let mgr = (c.manager || '').trim().toUpperCase() || 'NO MANAGER';
     if(!treeData.children[mgr]) treeData.children[mgr] = { name: mgr, children: [], totalWorkers: 0 };
     
     let cTotal = 0;
@@ -1570,8 +1571,17 @@ window.renderTreeOrgChart = function() {
   });
 
   let html = `
-    <div style="display:flex; justify-content:center; align-items:center; margin-bottom: 30px;">
-        <button class="btn btn-black btn-print-tree" onclick="printTree()">🖨️ Imprimer l'Arbre</button>
+    <div style="display:flex; justify-content:center; align-items:center; gap:16px; margin-bottom: 30px; padding: 10px 20px; background: white; border: 1px solid #cbd5e1; border-radius: 8px; display: inline-flex; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+        <div style="font-size:12px; font-weight:800; color:#475569;">COMPANIES LEGEND :</div>
+        <div style="display:flex; gap:8px;">
+            <span class="worker-pill skybuilding-branch" style="margin:0; cursor:default;">SKYBUILDING B.</span>
+            <span class="worker-pill skybuilding-greece" style="margin:0; cursor:default;">SKYBUILDING G.</span>
+            <span class="worker-pill dss" style="margin:0; cursor:default;">DSS</span>
+            <span class="worker-pill euroasia" style="margin:0; cursor:default;">EUROASIA</span>
+            <span class="worker-pill other" style="margin:0; cursor:default;">OTHERS</span>
+        </div>
+        <div style="width:1px; height:20px; background:#e2e8f0; margin:0 8px;"></div>
+        <button class="btn btn-black btn-print-tree" onclick="printTree()">🖨️ Print Tree</button>
     </div>
   `;
 
@@ -1580,7 +1590,7 @@ window.renderTreeOrgChart = function() {
      <div class="tree-node top-node">
         <div class="node-title">${formatName(treeData.name)}</div>
         <div class="node-sub">${treeData.role}</div>
-        <div style="margin-top:6px; font-size:11px; font-weight:800; color:#0369a1; background:#e0f2fe; border-radius:12px; padding:2px 8px;">${treeData.total} Ouvrier(s)</div>
+        <div style="margin-top:6px; font-size:11px; font-weight:800; color:#0369a1; background:#e0f2fe; border-radius:12px; padding:2px 8px;">${treeData.total} Worker(s)</div>
      </div>
      <ul>`;
      
@@ -1590,7 +1600,7 @@ window.renderTreeOrgChart = function() {
         <div class="node-title">${formatName(mgrNode.name)}</div>
         <div class="node-sub">Manager</div>
         <div style="margin-top:6px; font-size:11px; font-weight:800; color:#0284c7; background:#bae6fd; border-radius:12px; padding:2px 8px;">${mgrNode.totalWorkers} Wkrs</div>
-        <div style="margin-top:4px; font-size:10px; color:#64748b;">(Voir Détails ⬇)</div>
+        <div style="margin-top:4px; font-size:10px; color:#64748b;">(See Details ⬇)</div>
      </div></li>`;
   });
   html += `</ul></li></ul></div>`;
@@ -1602,7 +1612,7 @@ window.renderTreeOrgChart = function() {
     let mgrNode = treeData.children[mgrName];
     
     html += `<div style="width:100%; border-top: 2px dashed #cbd5e1; position:relative; margin-top:20px; padding-top:20px;">
-                <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#f8fafc; padding:0 10px; color:#94a3b8; font-weight:800; font-size:14px; text-transform:uppercase;">⬇ DÉTAILS ÉQUIPE : ${mgrNode.name} ⬇</div>
+                <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#f8fafc; padding:0 10px; color:#94a3b8; font-weight:800; font-size:14px; text-transform:uppercase;">⬇ TEAM DETAILS : ${mgrNode.name} ⬇</div>
              `;
 
     html += `<div class="tree"><ul><li>
@@ -1614,14 +1624,15 @@ window.renderTreeOrgChart = function() {
       <ul>`;
 
     mgrNode.children.forEach(sup => {
-      let supDisplayName = sup.name || 'Inconnu';
-      
+      let supDisplayName = sup.name || 'Unknown';
+      let supRole = (sup.supervisorRole || 'SUPERVISOR').toUpperCase();
       let tsInfoArray = [sup.timesheetNo, sup.timesheetName].filter(x => x && x.trim() !== '');
-      let tsSub = tsInfoArray.length > 0 ? tsInfoArray.join(' - ') : 'Superviseur';
+      let tsSub = tsInfoArray.length > 0 ? tsInfoArray.join(' - ') : '';
+      let displaySub = `<span style="color:#64748b;">${supRole}</span>` + (tsSub ? `<br><span style="color:#2563eb;">${tsSub}</span>` : '');
 
       html += `<li><div class="tree-node sup-node">
          <div class="node-title">${formatName(supDisplayName)}</div>
-         <div class="node-sub">${tsSub}</div>
+         <div class="node-sub">${displaySub}</div>
       </div><ul>`;
 
       sup.tasks.forEach(t => {
@@ -1631,13 +1642,13 @@ window.renderTreeOrgChart = function() {
         let totalW = Math.max(manualCount, linkedCount);
 
         if (totalW > 0) {
-            let fName = (t.foreman || '').trim().toUpperCase() || 'ÉQUIPE DIRECTE';
+            let fName = (t.foreman || '').trim().toUpperCase() || 'DIRECT TEAM';
             let taskDesc = (t.desc || '').trim();
             let fSub = taskDesc ? taskDesc : 'Foreman';
 
             html += `<li><div class="tree-node f-node">
                <div class="node-title">${formatName(fName)}</div>
-               <div class="node-sub">${fSub}</div>
+               <div class="node-sub" style="color:#059669;">${fSub}</div>
             </div><ul><li>
                 <div style="background:white; border:2px solid #e2e8f0; color:#0f172a; font-weight:800; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; margin:0 auto; font-size:12px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">${totalW}</div>
             </li></ul></li>`;
@@ -1659,12 +1670,12 @@ function renderOrgChart() {
   const groups = {};
   
   cardsData.forEach(c => {
-     let mgr = (c.manager && c.manager.trim() !== '') ? c.manager.trim().toUpperCase() : 'SANS RESPONSABLE';
+     let mgr = (c.manager && c.manager.trim() !== '') ? c.manager.trim().toUpperCase() : 'NO MANAGER';
      if(!groups[mgr]) groups[mgr] = [];
      groups[mgr].push(c);
   });
   
-  let html = `<div class="org-level-top"><span>CHANTIER RIVIERA TOWER</span></div><div class="org-managers-grid">`;
+  let html = `<div class="org-level-top"><span>RIVIERA TOWER SITE</span></div><div class="org-managers-grid">`;
   
   Object.keys(groups).sort().forEach(mgr => {
      let mgrTotalWorkers = 0;
@@ -1695,7 +1706,7 @@ function renderOrgChart() {
            foremenHtml += `<div class="org-foreman-card"><div class="org-foreman-name">👷‍♂️ ${fName}</div><div class="org-foreman-meta">${foremenGroups[fName]} wkrs</div></div>`;
         });
         if (directWkrs > 0) {
-           foremenHtml += `<div class="org-foreman-card" style="background:#f8fafc; border-style:dashed;"><div class="org-foreman-name" style="color:#64748b;">Équipiers Directs</div><div class="org-foreman-meta" style="background:#e2e8f0; color:#475569;">${directWkrs} wkrs</div></div>`;
+           foremenHtml += `<div class="org-foreman-card" style="background:#f8fafc; border-style:dashed;"><div class="org-foreman-name" style="color:#64748b;">Direct Team</div><div class="org-foreman-meta" style="background:#e2e8f0; color:#475569;">${directWkrs} wkrs</div></div>`;
         }
 
         const catColor = CATEGORY_INFO.find(c => c.id === sup.category)?.color || '#94a3b8';
@@ -1715,8 +1726,8 @@ function renderOrgChart() {
      });
 
      html += `<div class="org-manager-col">
-        <div class="org-manager-name">${mgr === 'SANS RESPONSABLE' ? '⚠️ SANS RESPONSABLE' : '👔 ' + mgr}</div>
-        <div class="org-manager-total">${mgrTotalWorkers} Ouvrier(s) supervisé(s)</div>
+        <div class="org-manager-name">${mgr === 'NO MANAGER' ? '⚠️ NO MANAGER' : '👔 ' + mgr}</div>
+        <div class="org-manager-total">${mgrTotalWorkers} Supervised worker(s)</div>
         <div class="org-sups-list">${supsHtml}</div>
      </div>`;
   });
@@ -1954,6 +1965,13 @@ function reorderCardsBasedOnDOM() {
 
 function updateManager(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].manager = val.trim(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); if(currentView==='tree') renderTreeOrgChart();}
 function updateSupName(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].name = val.trim(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); if(currentView==='tree') renderTreeOrgChart();}
+window.updateSupRole = function(cIdx, val) {
+  if (currentRole === 'viewer' || currentRole === 'cfo') return;
+  cardsData[cIdx].supervisorRole = val.trim();
+  syncToFirebase();
+  if(currentView==='orgchart') renderOrgChart();
+  if(currentView==='tree') renderTreeOrgChart();
+};
 function updateTimesheetNo(cIdx, val) { 
   if (currentRole === 'viewer' || currentRole === 'cfo') return; 
   cardsData[cIdx].timesheetNo = val.trim(); 
@@ -2011,8 +2029,9 @@ function removeTask(cIdx, tIdx) {
 function addNewSupervisor() { 
   if (currentRole === 'viewer' || currentRole === 'cfo') return; 
   cardsData.unshift({ 
-    name: "NOUVELLE TIMESHEET", 
+    name: "NEW TIMESHEET", 
     manager: "", 
+    supervisorRole: "SUPERVISOR",
     category: "civil",
     timesheetNo: "", 
     timesheetName: "",
@@ -2473,7 +2492,7 @@ function importExcelFile(event) {
           else if (sUp.includes("AHMED") || sUp.includes("FRED")) cat = "indirect";
           else if (sUp.includes("TASSOS")) cat = "facade";
 
-          cardsData.push({ name: supName, manager: "", category: cat, timesheetNo: supData.timesheetNo, timesheetName: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: newTaskList });
+          cardsData.push({ name: supName, manager: "", supervisorRole: "SUPERVISOR", category: cat, timesheetNo: supData.timesheetNo, timesheetName: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: newTaskList });
         }
       });
 
