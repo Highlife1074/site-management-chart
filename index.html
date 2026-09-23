@@ -128,7 +128,10 @@
   .manager-name { color: #64748b; outline: none; border-bottom: 1px dotted #cbd5e1; min-width: 60px; display: inline-block; cursor: text; text-transform: uppercase; font-weight: 700; }
   .manager-name:empty:before { content: "NOM N+1"; color: #94a3b8; }
   
-  .sup-name { font-size: 13px; font-weight: 800; color: #0f172a; outline: none; width: 100%; display: block; margin-top: 2px; }
+  .sup-name-select { font-size: 13px; font-weight: 800; color: #0f172a; outline: none; width: 100%; display: block; margin-top: 2px; border: 1px dashed transparent; background: transparent; cursor: pointer; padding-bottom: 2px; border-bottom: 1px dotted #cbd5e1; text-transform: uppercase; }
+  .sup-name-select:hover { border-color: #cbd5e1; }
+  .sup-name-select:focus { border-style: solid; border-color: #2563eb; background: #eff6ff; }
+  .sup-name-select:disabled { cursor: default; border-bottom: none; appearance: none; -webkit-appearance: none; }
   
   .ts-badge-container { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; align-items: center; }
   .ts-badge { font-size: 10px; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 1px 4px; color: #475569; display: inline-flex; align-items: center; gap: 4px; }
@@ -481,6 +484,25 @@
   </div>
 </div>
 
+<!-- MODAL GESTION SUPERVISEURS -->
+<div id="supervisors-modal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">🧑‍💼 Gérer les Superviseurs</div>
+    <p style="font-size:12px; color:#64748b; margin-top:-8px;">Définissez la liste des superviseurs et leurs rôles pour les assigner aux Timesheets.</p>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+       <input type="text" id="new-sup-name-input" class="modal-select" placeholder="Nom du superviseur (ex: NELSON AZURIAS)...">
+       <div style="display:flex; gap:8px;">
+         <input type="text" id="new-sup-role-input" class="modal-select" placeholder="Rôle (ex: SENIOR SUPERVISOR)..." value="SUPERVISOR">
+         <button class="btn btn-black" onclick="addSupervisorToDB()">Ajouter</button>
+       </div>
+    </div>
+    <div id="supervisors-list" style="margin-top:12px; display:flex; flex-direction:column; gap:8px; max-height:200px; overflow-y:auto;"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-outline" onclick="closeSupervisorsModal()">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL GESTION ENTREPRISES -->
 <div id="companies-modal" class="modal-overlay">
   <div class="modal-box">
@@ -559,6 +581,7 @@
     <div id="admin-dropdown">
       <span style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase;">Configuration</span>
       <button class="btn btn-outline" style="width:100%; justify-content:left;" onclick="openCompaniesModal()">🏢 Gérer Entreprises</button>
+      <button class="btn btn-outline" style="width:100%; justify-content:left; margin-top:4px;" onclick="openSupervisorsModal()">🧑‍💼 Gérer Superviseurs</button>
       <hr style="border:0; border-top:1px solid #e2e8f0; margin:4px 0;">
       <span style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase;">Données</span>
       <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display:none" onchange="importExcelFile(event)">
@@ -688,11 +711,11 @@ function applyRolePermissions() {
 
   document.querySelectorAll('.payroll-input').forEach(el => { el.disabled = isViewer || isTK; });
   
-  document.querySelectorAll('.sup-name, .sup-role, .manager-name, .task-desc, .task-foreman span, .ts-badge span, .title-editable').forEach(el => { 
+  document.querySelectorAll('.manager-name, .task-desc, .task-foreman span, .ts-badge span, .title-editable').forEach(el => { 
     el.setAttribute('contenteditable', isViewer || isCFO ? 'false' : 'true'); 
   });
 
-  document.querySelectorAll('.worker-count-input, .source-select, .cat-select, .ts-select').forEach(el => { 
+  document.querySelectorAll('.worker-count-input, .source-select, .cat-select, .ts-select, .sup-name-select').forEach(el => { 
     el.disabled = isViewer || isCFO; 
   });
 
@@ -736,6 +759,7 @@ let unassignedWorkers = [];
 let payrollCounts = {};
 window.rawImportedDB = []; // Stockage arrière-plan de l'Excel
 let siteCompanies = ['SKYBUILDING BRANCH', 'SKYBUILDING GREECE', 'DSS', 'EUROASIA', 'OTHER'];
+let siteSupervisors = []; // Tableau d'objets {name: "Nom", role: "Rôle"}
 let db = null, docRef = null, isSaving = false, currentFilter = 'all';
 let selectedManagersFilter = [];
 let selectedSupervisorsFilter = [];
@@ -768,6 +792,7 @@ try {
       payrollCounts = parsed.payrollCounts || {};
       unassignedWorkers = parsed.unassignedWorkers || [];
       if (parsed.companies && Array.isArray(parsed.companies)) siteCompanies = parsed.companies;
+      if (parsed.supervisors) siteSupervisors = parsed.supervisors;
     } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
   } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 } catch(e) { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
@@ -947,6 +972,7 @@ setTimeout(() => {
         if (data.payrollCounts) payrollCounts = data.payrollCounts;
         if (data.unassignedWorkers) unassignedWorkers = data.unassignedWorkers;
         if (data.rawImportedDB) window.rawImportedDB = data.rawImportedDB;
+        if (data.supervisors) siteSupervisors = data.supervisors;
         if (data.companies) {
             // Migration douce si SKYBUILDING existe encore dans la db
             siteCompanies = data.companies.map(c => c === 'SKYBUILDING' ? 'SKYBUILDING BRANCH' : c);
@@ -985,13 +1011,13 @@ setTimeout(() => {
 // --- 3. FONCTIONS CLÉS & SYNCHRONISATION ---
 function syncToFirebase() {
   if (currentRole === 'viewer') return; 
-  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB})); } catch(e){}
+  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors})); } catch(e){}
   if (!docRef) return;
   isSaving = true;
   document.getElementById("sync-text").innerText = "Enregistrement...";
 
   docRef.set({
-    cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB,
+    cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   }, { merge: true }).then(() => {
     document.getElementById("sync-dot").style.background = "#16a34a";
@@ -1275,6 +1301,75 @@ function printDB() {
   setTimeout(() => { document.body.classList.remove('print-mode-db'); }, 500);
 }
 
+// --- GESTION DES SUPERVISEURS DYNAMIQUE ---
+window.openSupervisorsModal = function() {
+  if (currentRole === 'viewer' || currentRole === 'cfo') return;
+  // Migration initiale si vide
+  if (siteSupervisors.length === 0) {
+     const uniqueSups = new Map();
+     cardsData.forEach(c => {
+        const n = (c.name || '').trim();
+        if (n && n !== 'NOUVELLE TIMESHEET' && n !== 'NEW TIMESHEET') {
+           uniqueSups.set(n, c.supervisorRole || 'SUPERVISOR');
+        }
+     });
+     uniqueSups.forEach((role, name) => siteSupervisors.push({ name, role }));
+     syncToFirebase();
+  }
+  renderSupervisorsList();
+  document.getElementById('supervisors-modal').style.display = 'flex';
+};
+
+window.closeSupervisorsModal = function() { document.getElementById('supervisors-modal').style.display = 'none'; };
+
+window.renderSupervisorsList = function() {
+  const list = document.getElementById('supervisors-list');
+  list.innerHTML = siteSupervisors.map((s, idx) => `
+    <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+      <div>
+         <div style="font-size:12px; font-weight:800; color:#0f172a;">${s.name}</div>
+         <div style="font-size:10px; font-weight:600; color:#64748b;">${s.role}</div>
+      </div>
+      <button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5; padding:2px 6px;" onclick="removeSupervisorFromDB(${idx})">&times;</button>
+    </div>
+  `).join('');
+};
+
+window.addSupervisorToDB = function() {
+  const name = document.getElementById('new-sup-name-input').value.trim().toUpperCase();
+  const role = document.getElementById('new-sup-role-input').value.trim().toUpperCase();
+  if (name && !siteSupervisors.find(s => s.name === name)) {
+     siteSupervisors.push({ name, role });
+     siteSupervisors.sort((a, b) => a.name.localeCompare(b.name));
+     document.getElementById('new-sup-name-input').value = '';
+     renderSupervisorsList();
+     renderCards();
+     syncToFirebase();
+  }
+};
+
+window.removeSupervisorFromDB = function(idx) {
+  if (confirm(`Supprimer ce superviseur de la base ? (Les Timesheets existantes conserveront son nom en archive)`)) {
+     siteSupervisors.splice(idx, 1);
+     renderSupervisorsList();
+     renderCards();
+     syncToFirebase();
+  }
+};
+
+window.changeSupervisorData = function(cIdx, selectedName) {
+  if (currentRole === 'viewer' || currentRole === 'cfo') return;
+  const supObj = siteSupervisors.find(s => s.name === selectedName);
+  cardsData[cIdx].name = selectedName;
+  if (supObj) {
+     cardsData[cIdx].supervisorRole = supObj.role;
+  }
+  syncToFirebase();
+  renderCards();
+  if(currentView==='orgchart') renderOrgChart();
+  if(currentView==='tree') renderTreeOrgChart();
+};
+
 // --- GESTION ENTREPRISES DYNAMIQUE ---
 function renderCompanySelects() {
   const opts = siteCompanies.map(c => `<option value="${c}">${c}</option>`).join('');
@@ -1507,8 +1602,12 @@ function renderCards() {
             <div class="manager-field">
               Mgr: <span class="manager-name" contenteditable="true" onblur="updateManager(${cIdx}, this.innerText)">${card.manager || ''}</span>
             </div>
-            <div class="sup-name" contenteditable="true" onblur="updateSupName(${cIdx}, this.innerText)">${card.name || 'Unknown'}</div>
-            <div class="sup-role" contenteditable="true" onblur="updateSupRole(${cIdx}, this.innerText)" style="font-size:10px; font-weight:700; color:#64748b; text-transform:uppercase; margin-top:2px;">${card.supervisorRole || 'SUPERVISOR'}</div>
+            <select class="sup-name-select" onchange="changeSupervisorData(${cIdx}, this.value)" ${currentRole === 'viewer' || currentRole === 'cfo' ? 'disabled' : ''}>
+               <option value="">-- SÉLECTIONNER SUPERVISEUR --</option>
+               ${siteSupervisors.map(s => `<option value="${s.name}" ${card.name === s.name ? 'selected' : ''}>${s.name}</option>`).join('')}
+               ${card.name && !siteSupervisors.find(s => s.name === card.name) ? `<option value="${card.name}" selected>${card.name} (Archivé)</option>` : ''}
+            </select>
+            <div class="sup-role" style="font-size:10px; font-weight:700; color:#64748b; text-transform:uppercase; margin-top:2px;">${card.supervisorRole || 'SUPERVISOR'}</div>
             <div class="ts-badge-container">
               <div class="ts-badge" title="Numéro et Nom de la Timesheet">
                 TS: <span contenteditable="true" data-placeholder="N°..." onblur="updateTimesheetNo(${cIdx}, this.innerText)">${card.timesheetNo || ''}</span>
@@ -1964,14 +2063,6 @@ function reorderCardsBasedOnDOM() {
 }
 
 function updateManager(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].manager = val.trim(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); if(currentView==='tree') renderTreeOrgChart();}
-function updateSupName(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].name = val.trim(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); if(currentView==='tree') renderTreeOrgChart();}
-window.updateSupRole = function(cIdx, val) {
-  if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  cardsData[cIdx].supervisorRole = val.trim();
-  syncToFirebase();
-  if(currentView==='orgchart') renderOrgChart();
-  if(currentView==='tree') renderTreeOrgChart();
-};
 function updateTimesheetNo(cIdx, val) { 
   if (currentRole === 'viewer' || currentRole === 'cfo') return; 
   cardsData[cIdx].timesheetNo = val.trim(); 
@@ -1989,7 +2080,7 @@ window.updateTimesheetName = function(cIdx, val) {
 function updateShiftType(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].shiftType = val; syncToFirebase(); }
 function updateShiftHours(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].shiftHours = val.trim(); syncToFirebase(); }
 function updateTaskForeman(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].foreman = val.trim(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); if(currentView==='tree') renderTreeOrgChart();}
-function updateTaskDesc(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].desc = val.trim(); syncToFirebase(); }
+function updateTaskDesc(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].desc = val.trim(); syncToFirebase(); if(currentView==='tree') renderTreeOrgChart();}
 function updateTaskSource(cIdx, tIdx, val, el) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].source = val; recalculateTotals(); syncToFirebase(); }
 
 function updateWorkerCount(cIdx, tIdx, val) { 
@@ -2340,6 +2431,41 @@ function executePrint() {
   document.body.classList.add('print-mode-ts');
   window.print();
   setTimeout(() => { document.body.classList.remove('print-mode-ts'); }, 500);
+}
+
+function exportBackup() {
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors}, null, 2));
+  const dlAnchorElem = document.createElement('a');
+  dlAnchorElem.setAttribute("href", dataStr);
+  dlAnchorElem.setAttribute("download", `site_backup_${new Date().toISOString().split('T')[0]}.json`);
+  document.body.appendChild(dlAnchorElem); dlAnchorElem.click(); dlAnchorElem.remove();
+}
+
+function importBackup(event) {
+  if (currentRole === 'viewer') return;
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (parsed.cardsData) {
+        cardsData = parsed.cardsData;
+        payrollCounts = parsed.payrollCounts || {};
+        unassignedWorkers = parsed.unassignedWorkers || [];
+        if (parsed.companies) siteCompanies = parsed.companies;
+        if (parsed.supervisors) siteSupervisors = parsed.supervisors;
+        renderCompanySelects();
+        renderPayrollTable();
+        renderCards(); 
+        renderDrawer(); 
+        syncToFirebase();
+        alert("Sauvegarde restaurée avec succès !");
+      } else { alert("Fichier invalide."); }
+    } catch (err) { alert("Erreur : " + err.message); }
+    event.target.value = "";
+  };
+  reader.readAsText(file);
 }
 
 // --- IMPORTATION EXCEL GLOBALE POINTAGE ---
