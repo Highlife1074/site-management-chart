@@ -406,7 +406,7 @@
   <div class="modal-box xl" style="height: 85vh;">
     <div class="modal-title">🗃️ Base de Données Globale (Éditeur)</div>
     <div style="display:flex; justify-content: space-between; margin-bottom: 10px; align-items:center;">
-       <span style="font-size:12px; color:#64748b;">La Base Globale contient tous les ouvriers importés d'Excel + ceux créés manuellement.</span>
+       <span style="font-size:12px; color:#64748b;">Modifiez les champs directement. Toute modification est sauvegardée.</span>
        
        <div style="display:flex; gap:8px;">
           <button class="btn btn-blue" onclick="verifyImportCoherence()" title="Vérifier les écarts entre la base Excel arrière-plan et le chantier">🔍 Vérifier Cohérence Import</button>
@@ -835,7 +835,8 @@ const DEFAULT_DATA = [
 const normalizeName = (str) => {
     let s = String(str || '');
     try { s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); } catch(e){}
-    return s.replace(/\s+/g, ' ').trim().toUpperCase();
+    s = s.replace(/[^A-Z0-9\s]/gi, ' ').replace(/\s+/g, ' ').trim().toUpperCase();
+    return s.split(' ').filter(w => w.length > 0).sort().join(' ');
 };
 
 try {
@@ -864,7 +865,7 @@ cardsData.forEach(c => {
 });
 siteSupervisors.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
 
-// --- INITIALISATION DE L'INTERFACE ---
+// --- 1. INITIALISATION DE L'INTERFACE ---
 function initLayout() {
   document.getElementById('role-selector').value = currentRole;
 
@@ -1005,7 +1006,7 @@ setTimeout(() => {
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
     db.settings({ experimentalAutoDetectLongPolling: true });
-    docRef = db.collection("site_charts").doc("current_week");
+    docRef = collection("site_charts").doc("current_week");
 
     docRef.onSnapshot((doc) => {
       if (isSaving) return;
@@ -1021,12 +1022,6 @@ setTimeout(() => {
             if(!siteCompanies.includes('SKYBUILDING GREECE')) siteCompanies.push('SKYBUILDING GREECE');
             siteCompanies = [...new Set(siteCompanies)];
         }
-        
-        unassignedWorkers.forEach(migrateSkybuilding);
-        cardsData.forEach(c => c.tasks.forEach(t => {
-            if(t.source === 'SKYBUILDING') t.source = 'SKYBUILDING BRANCH';
-            (t.workerList || []).forEach(migrateSkybuilding);
-        }));
 
         let supsAdded = false;
         cardsData.forEach(c => {
@@ -1092,6 +1087,72 @@ function handleCheck(cIdx, isChecked) {
   else selectedForPrint.delete(cIdx);
 }
 
+// --- NETTOYAGE AUTOMATIQUE DES DOUBLONS (NORMALISATION STRICTE) ---
+window.cleanDuplicates = function(silent = false) {
+  if (typeof silent !== 'boolean') silent = false;
+  if (currentRole === 'viewer' || currentRole === 'cfo') return 0;
+  
+  if (!silent && !confirm("Voulez-vous rechercher et supprimer automatiquement tous les doublons de la base de données ?\n\n(L'ouvrier assigné à une équipe de chantier sera conservé en priorité)")) return 0;
+  
+  let seenIds = new Set();
+  let seenNames = new Set();
+  let removedCount = 0;
+
+  const isDup = (w, isAssigned) => {
+      const normId = String(w.id || '').trim().toUpperCase();
+      let normName = normalizeName(w.name);
+      
+      let hasValidId = (normId !== '' && !normId.startsWith('W-'));
+      
+      if (isAssigned) {
+          if (hasValidId) seenIds.add(normId);
+          if (normName !== '') seenNames.add(normName);
+          return false; // JAMAIS on ne supprime un ouvrier assigné
+      } else {
+          if ((hasValidId && seenIds.has(normId)) || (normName !== '' && seenNames.has(normName))) return true;
+          if (hasValidId) seenIds.add(normId);
+          if (normName !== '') seenNames.add(normName);
+          return false;
+      }
+  };
+
+  cardsData.forEach(c => {
+      if (c.tasks) {
+          c.tasks.forEach(t => {
+              if (t.workerList) {
+                  t.workerList = t.workerList.filter(w => {
+                      if (isDup(w, true)) { removedCount++; return false; }
+                      return true;
+                  });
+              }
+          });
+      }
+  });
+
+  unassignedWorkers = unassignedWorkers.filter(w => {
+      if (isDup(w, false)) { removedCount++; return false; }
+      return true;
+  });
+
+  if (!silent) {
+      if (removedCount > 0) {
+          alert(`✅ Nettoyage terminé : ${removedCount} doublon(s) supprimé(s) de la base Non Assignée.`);
+      } else {
+          alert("👌 Aucun doublon n'a été trouvé dans la base de données !");
+      }
+  }
+
+  if (removedCount > 0) {
+      recalculateTotals();
+      renderCards();
+      renderDrawer();
+      if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
+      syncToFirebase();
+  }
+  return removedCount;
+};
+
+
 // --- BASE DE DONNÉES GLOBALE & RECHERCHE ---
 function openDBModal() {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
@@ -1127,9 +1188,10 @@ function renderDBTable() {
   
   const addRow = (w, context, cIdx, tIdx, supName) => {
      const isUnassigned = context === 'unassigned';
+     let warningIcon = w.isMissing ? `<span title="Absent du fichier Excel RH" style="color:#ef4444; margin-right:4px;">⚠️</span>` : '';
      html += `<tr>
         <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9;"><input type="text" class="db-input" value="${w.id}" onchange="editWorker('${w.id}', 'id', this.value, '${context}', ${cIdx}, ${tIdx}, this)"></td>
-        <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9;"><input type="text" class="db-input" value="${w.name}" onchange="editWorker('${w.id}', 'name', this.value, '${context}', ${cIdx}, ${tIdx}, this)"></td>
+        <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center;">${warningIcon}<input type="text" class="db-input" value="${w.name}" onchange="editWorker('${w.id}', 'name', this.value, '${context}', ${cIdx}, ${tIdx}, this)"></td>
         <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9;">
           <select class="db-input" onchange="editWorker('${w.id}', 'company', this.value, '${context}', ${cIdx}, ${tIdx}, this)">
             ${siteCompanies.map(c => `<option value="${c}" ${w.company===c?'selected':''}>${c}</option>`).join('')}
@@ -1195,6 +1257,44 @@ function deleteWorkerFromDB(wId, context, cIdx, tIdx) {
   renderDrawer();
   renderDBTable();
 }
+
+window.verifyImportCoherence = function() {
+  if (window.rawImportedDB.length === 0) {
+      alert("Aucune base Excel importée en arrière-plan pour effectuer la vérification.");
+      return;
+  }
+
+  let allCurrentWorkers = new Map();
+  unassignedWorkers.forEach(w => allCurrentWorkers.set(normalizeName(w.name), w));
+  cardsData.forEach(c => c.tasks.forEach(t => (t.workerList || []).forEach(w => allCurrentWorkers.set(normalizeName(w.name), w))));
+
+  let missingInApp = [];
+  let extraInApp = [];
+
+  let excelMap = new Map();
+  window.rawImportedDB.forEach(wExcel => {
+      let n = normalizeName(wExcel.name);
+      excelMap.set(n, wExcel);
+      if (!allCurrentWorkers.has(n)) missingInApp.push(`${wExcel.id} - ${wExcel.name}`);
+  });
+
+  allCurrentWorkers.forEach((w, n) => {
+      if (!excelMap.has(n)) extraInApp.push(`${w.id} - ${w.name}`);
+  });
+
+  let msg = "📊 RAPPORT DE COHÉRENCE IMPORT EXCEL\n\n";
+  if (missingInApp.length === 0 && extraInApp.length === 0) {
+      msg += "✅ Tout est parfait ! La webapp correspond exactement au fichier Excel.";
+  } else {
+      if (missingInApp.length > 0) {
+          msg += `⚠️ ${missingInApp.length} ouvrier(s) de l'Excel non présent(s) dans l'application (Non importés ou supprimés) :\n` + missingInApp.slice(0, 5).join('\n') + (missingInApp.length > 5 ? '\n...' : '') + "\n\n";
+      }
+      if (extraInApp.length > 0) {
+          msg += `❓ ${extraInApp.length} ouvrier(s) dans l'application introuvable(s) dans l'Excel (Ajouts manuels ou non supprimés) :\n` + extraInApp.slice(0, 5).join('\n') + (extraInApp.length > 5 ? '\n...' : '') + "\n";
+      }
+  }
+  alert(msg);
+};
 
 function exportWorkersExcel() {
   let exportData = [];
@@ -2532,12 +2632,6 @@ function importExcelFile(event) {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
       
-      const normalizeName = (str) => {
-          let s = String(str || '');
-          try { s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); } catch(e){}
-          return s.replace(/\s+/g, ' ').trim().toUpperCase();
-      };
-
       pendingImportUpdates = [];
       pendingExcelWorkersMap = new Map();
 
