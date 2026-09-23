@@ -1074,7 +1074,9 @@ setTimeout(() => {
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
     db.settings({ experimentalAutoDetectLongPolling: true });
-    docRef = collection("site_charts").doc("current_week");
+    
+    // CORRECTION : Il faut utiliser db.collection pour Firebase Compat
+    docRef = db.collection("site_charts").doc("current_week");
 
     docRef.onSnapshot((doc) => {
       if (isSaving) return;
