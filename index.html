@@ -2744,12 +2744,29 @@ function importExcelFile(event) {
              else workerComp = "BIK";
           } 
           else if (isSkyBranch || isSkyGreece) {
-             workerId = String(row[2] || "").trim(); // Col C
-             let surname = String(row[4] || "").trim(); // Col E
-             let name = String(row[5] || "").trim(); // Col F
-             workerName = (surname + " " + name).trim();
+             let dynIdCol = -1, dynWorkerCols = [];
+             const headerRow = rawRows[headerRowIdx] || [];
+             
+             // 1. Détection dynamique des colonnes (s'adapte aux changements RH)
+             for (let c = 0; c < headerRow.length; c++) {
+               const colName = String(headerRow[c] || "").trim().toUpperCase();
+               if ((colName.includes("COMET") || colName === "NO." || colName === "ID" || colName.includes("NEOAXESS")) && dynIdCol === -1) dynIdCol = c;
+               if (colName.includes("NAME") || colName.includes("SURNAME") || colName.includes("NOM")) dynWorkerCols.push(c);
+             }
+             
+             // 2. Sécurité : si aucun en-tête n'est détecté, on garde tes colonnes historiques par défaut
+             if (dynIdCol === -1) dynIdCol = 2; // Colonne C
+             if (dynWorkerCols.length === 0) dynWorkerCols = [4, 5]; // Colonnes E et F
+
+             // 3. Extraction et fusion des données
+             workerId = dynIdCol !== -1 ? String(row[dynIdCol] || "").trim() : "";
+             let dynName = "";
+             dynWorkerCols.forEach(wc => { let val = String(row[wc] || "").trim(); if(val) dynName += val + " "; });
+             workerName = dynName.trim();
+             
+             // 4. Attribution de l'entreprise
              workerComp = isSkyBranch ? "SKYBUILDING BRANCH" : "SKYBUILDING GREECE";
-          } 
+          }
           else {
              let dynIdCol = -1, dynCompCol = -1, dynWorkerCols = [];
              const headerRow = rawRows[headerRowIdx] || [];
