@@ -792,10 +792,21 @@ try {
       payrollCounts = parsed.payrollCounts || {};
       unassignedWorkers = parsed.unassignedWorkers || [];
       if (parsed.companies && Array.isArray(parsed.companies)) siteCompanies = parsed.companies;
-      if (parsed.supervisors) siteSupervisors = parsed.supervisors;
+      if (parsed.supervisors) siteSupervisors = parsed.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
     } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
   } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 } catch(e) { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
+
+// AUTO-AJOUT DES SUPERVISEURS DEPUIS LES CARTES (Mode Local)
+cardsData.forEach(c => {
+    let n = (c.name || '').trim().toUpperCase();
+    if (n && n !== 'NEW TIMESHEET' && n !== 'UNKNOWN' && n !== 'UNDEFINED') {
+        if (!siteSupervisors.find(s => s && s.name && String(s.name).toUpperCase() === n)) {
+            siteSupervisors.push({ name: n, role: c.supervisorRole || 'SUPERVISOR' });
+        }
+    }
+});
+siteSupervisors.sort((a, b) => a.name.localeCompare(b.name));
 
 // --- FONCTION UTILITAIRE : VÉRIFICATION DOUBLONS ---
 function findWorkerDuplicate(searchId, searchName, excludeId = null) {
@@ -972,7 +983,7 @@ setTimeout(() => {
         if (data.payrollCounts) payrollCounts = data.payrollCounts;
         if (data.unassignedWorkers) unassignedWorkers = data.unassignedWorkers;
         if (data.rawImportedDB) window.rawImportedDB = data.rawImportedDB;
-        if (data.supervisors) siteSupervisors = data.supervisors;
+        if (data.supervisors) siteSupervisors = data.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
         if (data.companies) {
             // Migration douce si SKYBUILDING existe encore dans la db
             siteCompanies = data.companies.map(c => c === 'SKYBUILDING' ? 'SKYBUILDING BRANCH' : c);
@@ -986,6 +997,22 @@ setTimeout(() => {
             if(t.source === 'SKYBUILDING') t.source = 'SKYBUILDING BRANCH';
             (t.workerList || []).forEach(migrateSkybuilding);
         }));
+
+        // AUTO-AJOUT DES SUPERVISEURS DEPUIS LES CARTES (Firebase)
+        let supsAdded = false;
+        cardsData.forEach(c => {
+            let n = (c.name || '').trim().toUpperCase();
+            if (n && n !== 'NEW TIMESHEET' && n !== 'UNKNOWN' && n !== 'UNDEFINED') {
+                if (!siteSupervisors.find(s => s && s.name && String(s.name).toUpperCase() === n)) {
+                    siteSupervisors.push({ name: n, role: c.supervisorRole || 'SUPERVISOR' });
+                    supsAdded = true;
+                }
+            }
+        });
+        if (supsAdded) {
+            siteSupervisors.sort((a, b) => a.name.localeCompare(b.name));
+            syncToFirebase(); // On sauvegarde l'ajout automatique dans Firebase
+        }
 
         renderCompanySelects();
         renderPayrollTable();
@@ -1304,18 +1331,10 @@ function printDB() {
 // --- GESTION DES SUPERVISEURS DYNAMIQUE ---
 window.openSupervisorsModal = function() {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  // Migration initiale si vide
-  if (siteSupervisors.length === 0) {
-     const uniqueSups = new Map();
-     cardsData.forEach(c => {
-        const n = (c.name || '').trim();
-        if (n && n !== 'NOUVELLE TIMESHEET' && n !== 'NEW TIMESHEET') {
-           uniqueSups.set(n, c.supervisorRole || 'SUPERVISOR');
-        }
-     });
-     uniqueSups.forEach((role, name) => siteSupervisors.push({ name, role }));
-     syncToFirebase();
-  }
+  
+  // Nettoyage de sécurité
+  siteSupervisors = siteSupervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
+
   renderSupervisorsList();
   document.getElementById('supervisors-modal').style.display = 'flex';
 };
@@ -1338,7 +1357,7 @@ window.renderSupervisorsList = function() {
 window.addSupervisorToDB = function() {
   const name = document.getElementById('new-sup-name-input').value.trim().toUpperCase();
   const role = document.getElementById('new-sup-role-input').value.trim().toUpperCase();
-  if (name && !siteSupervisors.find(s => s.name === name)) {
+  if (name && name !== 'UNDEFINED' && !siteSupervisors.find(s => s && s.name && String(s.name).toUpperCase() === name)) {
      siteSupervisors.push({ name, role });
      siteSupervisors.sort((a, b) => a.name.localeCompare(b.name));
      document.getElementById('new-sup-name-input').value = '';
@@ -1359,7 +1378,7 @@ window.removeSupervisorFromDB = function(idx) {
 
 window.changeSupervisorData = function(cIdx, selectedName) {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  const supObj = siteSupervisors.find(s => s.name === selectedName);
+  const supObj = siteSupervisors.find(s => s && s.name && String(s.name).toUpperCase() === String(selectedName).toUpperCase());
   cardsData[cIdx].name = selectedName;
   if (supObj) {
      cardsData[cIdx].supervisorRole = supObj.role;
@@ -1604,8 +1623,12 @@ function renderCards() {
             </div>
             <select class="sup-name-select" onchange="changeSupervisorData(${cIdx}, this.value)" ${currentRole === 'viewer' || currentRole === 'cfo' ? 'disabled' : ''}>
                <option value="">-- SÉLECTIONNER SUPERVISEUR --</option>
-               ${siteSupervisors.map(s => `<option value="${s.name}" ${card.name === s.name ? 'selected' : ''}>${s.name}</option>`).join('')}
-               ${card.name && !siteSupervisors.find(s => s.name === card.name) ? `<option value="${card.name}" selected>${card.name} (Archivé)</option>` : ''}
+               ${siteSupervisors.map(s => {
+                  const sName = String(s.name).toUpperCase();
+                  const cName = String(card.name || '').toUpperCase();
+                  return `<option value="${s.name}" ${cName === sName ? 'selected' : ''}>${s.name}</option>`;
+               }).join('')}
+               ${card.name && !siteSupervisors.find(s => s && s.name && String(s.name).toUpperCase() === String(card.name || '').toUpperCase()) ? `<option value="${card.name}" selected>${card.name} (Archivé)</option>` : ''}
             </select>
             <div class="sup-role" style="font-size:10px; font-weight:700; color:#64748b; text-transform:uppercase; margin-top:2px;">${card.supervisorRole || 'SUPERVISOR'}</div>
             <div class="ts-badge-container">
@@ -2454,7 +2477,7 @@ function importBackup(event) {
         payrollCounts = parsed.payrollCounts || {};
         unassignedWorkers = parsed.unassignedWorkers || [];
         if (parsed.companies) siteCompanies = parsed.companies;
-        if (parsed.supervisors) siteSupervisors = parsed.supervisors;
+        if (parsed.supervisors) siteSupervisors = parsed.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
         renderCompanySelects();
         renderPayrollTable();
         renderCards(); 
