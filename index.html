@@ -274,12 +274,14 @@
   .db-input:hover { border-color: #cbd5e1; }
   .db-input:focus { border-color: #2563eb; background: white; outline: none; }
 
-  /* BOUTON FLOTTANT DEPLACEMENT MASSE */
+  /* BOUTONS FLOTTANTS */
   #fab-move { display:none; position:fixed; bottom:90px; right:30px; background:#2563eb; color:white; padding:16px 24px; border-radius:30px; box-shadow:0 10px 25px rgba(37,99,235,0.4); cursor:pointer; font-weight:800; font-size:15px; z-index:2500; align-items:center; gap:10px; transition: transform 0.2s; }
   #fab-move:hover { transform: scale(1.05); background:#1d4ed8; }
   #fab-count { background:white; color:#2563eb; padding:2px 8px; border-radius:12px; font-size:14px; }
 
-  /* BOUTON FLOTTANT BASE OUVRIERS PERMANENT */
+  #fab-merge { display:none; position:fixed; bottom:90px; right:30px; background:#10b981; color:white; padding:16px 24px; border-radius:30px; box-shadow:0 10px 25px rgba(16,185,129,0.4); cursor:pointer; font-weight:800; font-size:15px; z-index:2500; align-items:center; gap:10px; transition: transform 0.2s; }
+  #fab-merge:hover { transform: scale(1.05); background:#059669; }
+
   #fab-drawer { display:flex; position:fixed; bottom:30px; right:30px; background:#7c3aed; color:white; padding:14px 20px; border-radius:30px; box-shadow:0 10px 25px rgba(124,58,237,0.4); cursor:pointer; font-weight:800; font-size:14px; z-index:900; align-items:center; gap:8px; transition: transform 0.2s; }
   #fab-drawer:hover { transform: scale(1.05); background:#6d28d9; }
   #fab-drawer-count { background:white; color:#7c3aed; padding:2px 8px; border-radius:12px; font-size:12px; }
@@ -306,6 +308,7 @@
     body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .ts-checkbox, 
     body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .ts-btn-config, 
     body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) #fab-move, 
+    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) #fab-merge, 
     body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) #fab-drawer { display: none !important; }
     
     body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .cards-grid { border: none !important; background: transparent !important; padding: 0 !important; gap: 8px; }
@@ -322,7 +325,7 @@
     body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .org-manager-col { break-inside: avoid; border: 1px solid #94a3b8; }
     
     /* PRINT TS */
-    body.print-mode-ts .top-bar, body.print-mode-ts .dashboard-container, body.print-mode-ts #orgchart-view, body.print-mode-ts #tree-view, body.print-mode-ts #workers-drawer, body.print-mode-ts .modal-overlay, body.print-mode-ts #fab-move, body.print-mode-ts #fab-drawer { display: none !important; }
+    body.print-mode-ts .top-bar, body.print-mode-ts .dashboard-container, body.print-mode-ts #orgchart-view, body.print-mode-ts #tree-view, body.print-mode-ts #workers-drawer, body.print-mode-ts .modal-overlay, body.print-mode-ts #fab-move, body.print-mode-ts #fab-merge, body.print-mode-ts #fab-drawer { display: none !important; }
     body.print-mode-ts #timesheet-print-zone { display: block !important; width: 100%; }
 
     .ts-page { page-break-after: always; font-family: Arial, sans-serif; color: #000; width: 100%; position: relative; }
@@ -336,19 +339,18 @@
     .ts-sign-box { border-top: 1px solid #000; width: 30%; text-align: center; padding-top: 10px; }
 
     /* PRINT DB */
-    body.print-mode-db .top-bar, body.print-mode-db .dashboard-container, body.print-mode-db #orgchart-view, body.print-mode-db #tree-view, body.print-mode-db #workers-drawer, body.print-mode-db .modal-overlay, body.print-mode-db #fab-move, body.print-mode-db #fab-drawer { display: none !important; }
+    body.print-mode-db .top-bar, body.print-mode-db .dashboard-container, body.print-mode-db #orgchart-view, body.print-mode-db #tree-view, body.print-mode-db #workers-drawer, body.print-mode-db .modal-overlay, body.print-mode-db #fab-move, body.print-mode-db #fab-merge, body.print-mode-db #fab-drawer { display: none !important; }
     body.print-mode-db #db-print-zone { display: block !important; width: 100%; }
     .db-print-table { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 12px; }
     .db-print-table th, .db-print-table td { border: 1px solid #000; padding: 6px; text-align: left; }
     .db-print-table th { background-color: #f1f5f9; font-weight: bold; }
 
     /* PRINT TREE */
-    body.print-mode-tree .top-bar, body.print-mode-tree .dashboard-container, body.print-mode-tree #orgchart-view, body.print-mode-tree #workers-drawer, body.print-mode-tree .modal-overlay, body.print-mode-tree #fab-move, body.print-mode-tree #fab-drawer { display: none !important; }
+    body.print-mode-tree .top-bar, body.print-mode-tree .dashboard-container, body.print-mode-tree #orgchart-view, body.print-mode-tree #workers-drawer, body.print-mode-tree .modal-overlay, body.print-mode-tree #fab-move, body.print-mode-tree #fab-merge, body.print-mode-tree #fab-drawer { display: none !important; }
     body.print-mode-tree #tree-view { display: block !important; width: 100%; overflow: visible !important; background: white; }
     body.print-mode-tree .btn-print-tree { display: none !important; }
   }
 </style>
-<!-- Inclusion explicite du plugin MultiDrag pour assurer la compatibilité complète -->
 <script>
   try { if(window.Sortable) Sortable.mount(new Sortable.MultiDrag()); } catch(e){}
 </script>
@@ -357,9 +359,12 @@
 
 <div id="error-banner"></div>
 
-<!-- BOUTONS FLOTTANTS -->
 <div id="fab-move" onpointerdown="handleFabClick(event)" onmousedown="handleFabClick(event)">
   ➡️ Déplacer <span id="fab-count">0</span> ouvrier(s)
+</div>
+
+<div id="fab-merge" onclick="executeManualMerge()">
+  🔗 Fusionner (Excel ➡️ Chantier)
 </div>
 
 <div id="fab-drawer" onclick="toggleDrawer()">
@@ -388,15 +393,45 @@
              <th style="padding:8px;">Entreprise ➡️ Nouvelle Ent.</th>
            </tr>
          </thead>
-         <tbody id="import-validation-list">
-           <!-- Généré en JS -->
-         </tbody>
+         <tbody id="import-validation-list"></tbody>
       </table>
     </div>
     
     <div class="modal-actions" style="margin-top:16px;">
       <button class="btn btn-outline" onclick="cancelImportUpdates()">Ignorer toutes ces modifications</button>
       <button class="btn btn-success" onclick="confirmImportUpdates()">✅ Appliquer la sélection</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL VALIDATION FUSION IA / FLOUE -->
+<div id="merge-validation-modal" class="modal-overlay">
+  <div class="modal-box xl">
+    <div class="modal-title">🤖 Rapprochement Intelligent (Propositions)</div>
+    <p style="font-size:12px; color:#64748b; margin-top:-8px; line-height:1.4;">
+      L'algorithme a trouvé des correspondances probables (fautes de frappe, inversions).<br>
+      <b>Cochez</b> les fusions que vous validez. La donnée Excel (gauche) écrasera la donnée du Chantier (droite).
+    </p>
+    
+    <div style="overflow-y:auto; max-height: 50vh; border: 1px solid #cbd5e1; border-radius: 8px; margin-top: 10px;">
+      <table class="payroll-table" style="width:100%; text-align:left;">
+         <thead style="background:#f1f5f9; position:sticky; top:0; z-index:10;">
+           <tr>
+             <th style="padding:8px; text-align:center; width:40px;">
+                <input type="checkbox" id="merge-select-all" checked onchange="toggleAllMergeUpdates(this.checked)" style="cursor:pointer; width:14px; height:14px;">
+             </th>
+             <th style="padding:8px; color:#10b981;">📥 Base Excel (À conserver)</th>
+             <th style="padding:8px; color:#dc2626;">👷 Chantier (À remplacer)</th>
+             <th style="padding:8px;">Timesheet</th>
+           </tr>
+         </thead>
+         <tbody id="merge-validation-list"></tbody>
+      </table>
+    </div>
+    
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-outline" onclick="cancelFuzzyMerges()">Annuler</button>
+      <button class="btn btn-success" onclick="confirmFuzzyMerges()">✅ Appliquer la sélection</button>
     </div>
   </div>
 </div>
@@ -410,13 +445,12 @@
        
        <div style="display:flex; gap:8px;">
           <button class="btn btn-blue" onclick="verifyImportCoherence()" title="Vérifier les écarts entre la base Excel arrière-plan et le chantier">🔍 Vérifier Cohérence Import</button>
-          <button class="btn btn-warning" onclick="cleanDuplicates()" title="Supprime automatiquement les doublons (garde l'ouvrier assigné en priorité)">🧹 Nettoyer Doublons</button>
+          <button class="btn btn-warning" onclick="cleanDuplicates()" title="Nettoyer les doublons et lancer le rapprochement intelligent">🧹 Nettoyer Doublons</button>
           <button class="btn btn-outline" onclick="exportWorkersExcel()">💾 Exporter Excel</button>
           <button class="btn btn-outline" onclick="printDB()">🖨️ Imprimer</button>
        </div>
     </div>
     
-    <!-- BARRE DE RECHERCHE -->
     <div style="margin-bottom: 10px;">
         <input type="text" id="db-search-input" class="modal-select" placeholder="🔍 Rechercher un nom, ID ou entreprise..." oninput="filterDBTable(this.value)">
     </div>
@@ -432,9 +466,7 @@
              <th style="padding:8px 12px; border-bottom:2px solid #cbd5e1; width:50px;">Action</th>
            </tr>
          </thead>
-         <tbody id="db-table-body">
-           <!-- Généré en JS -->
-         </tbody>
+         <tbody id="db-table-body"></tbody>
        </table>
     </div>
     <div class="modal-actions">
@@ -449,20 +481,17 @@
     <div class="modal-title">📖 Timesheet Management Guide</div>
     <div class="guide-content">
       <p>Welcome! Your primary goal as the Timekeeper is to make sure every worker is assigned to the correct supervisor, all numbers match, and the official Timesheets are printed and ready every Friday afternoon for the upcoming week.</p>
-      
       <h2>Step 1: Log in to Your Profile</h2>
       <ul>
         <li>In the top right corner, find the <strong>Profil</strong> drop-down menu.</li>
         <li>Select <strong>⏱️ Timekeeper</strong> and enter your password. This unlocks your ability to move workers and print documents.</li>
       </ul>
-
       <h2>Step 2: Clear the "Unassigned" List</h2>
       <ul>
         <li>Click the floating <strong>👷 Base Ouvriers</strong> button at the bottom right.</li>
         <li>Look at the <strong>"Ouvriers Non Assignés"</strong> box. If there are names here, they are not on any Timesheet.</li>
         <li>Click on several workers (or drag them simultaneously) to assign them directly into the Supervisor's box.</li>
       </ul>
-
       <h2>Step 3: Check for Red Warnings ⚠️</h2>
       <ul>
         <li>On every task, there is a counter: <strong>👥 12 / 12</strong> (Actual names assigned / Manual planned number).</li>
@@ -470,7 +499,6 @@
         <li>Find the missing workers and assign them into the correct box.</li>
         <li><strong>If you cannot fix it:</strong> Alert the <strong>Cost Control Team</strong> immediately so they can investigate.</li>
       </ul>
-
       <h2>Step 4: The Friday Printing Routine</h2>
       <ul>
         <li>Check the small <strong>square box (☑)</strong> for every Supervisor who needs a Timesheet.</li>
@@ -614,7 +642,6 @@
     <button class="btn btn-outline" id="btn-add-sup" onclick="addNewSupervisor()">+ Ajout Timesheet</button>
     <button class="btn btn-black" id="btn-print-ts" onclick="openPrintModal()">📄 Imprimer TS</button>
     
-    <!-- Bouton Paramètres -->
     <button class="btn btn-icon" id="btn-settings-menu" onclick="toggleAdminMenu()" title="Outils avancés">⚙️</button>
     
     <div id="admin-dropdown">
@@ -635,7 +662,6 @@
 
 <!-- VUE TABLEAU DE BORD -->
 <div class="dashboard-container" id="dashboard-view">
-  
   <div class="kpi-board">
     <div class="kpi-header">
       <div>
@@ -652,9 +678,7 @@
       <div class="summary-box">
         <div class="summary-title">Effectifs : Pointage (TS) vs Payroll HR</div>
         <table class="payroll-table">
-          <tbody id="payroll-table-body">
-            <!-- Rendu dynamiquement -->
-          </tbody>
+          <tbody id="payroll-table-body"></tbody>
         </table>
       </div>
 
@@ -675,7 +699,6 @@
 
   <div class="filter-bar" id="filter-bar"></div>
   <div id="categories-board"></div>
-
 </div>
 
 <!-- VUE ORGANIGRAMME (Blocs) -->
@@ -696,29 +719,11 @@ window.onerror = function(msg, url, line) {
   return false;
 };
 
-// MONTAGE MULTIDRAG (SÉCURISÉ)
-try {
-  if (typeof Sortable !== 'undefined' && Sortable.MultiDrag) {
-      Sortable.mount(new Sortable.MultiDrag());
-  }
-} catch(e) { console.warn("Sortable MultiDrag init error:", e); }
+window.migrateSkybuilding = function() { console.log("Migration Skybuilding traitée (Silencieux)"); };
 
-// Fonction fantôme pour éviter l'erreur de référence sur des environnements en cache.
-window.migrateSkybuilding = function() {
-    console.log("Migration Skybuilding traitée (Silencieux)");
-};
-
-// Sauvegarde JSON manuelle complète de l'application
 window.exportBackup = function() {
     try {
-        const data = {
-            cardsData: cardsData,
-            payrollCounts: payrollCounts,
-            unassignedWorkers: unassignedWorkers,
-            companies: siteCompanies,
-            rawImportedDB: window.rawImportedDB,
-            supervisors: siteSupervisors
-        };
+        const data = { cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -728,17 +733,11 @@ window.exportBackup = function() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-    } catch (err) {
-        alert("Erreur lors de l'exportation de la sauvegarde : " + err.message);
-    }
+    } catch (err) { alert("Erreur d'exportation : " + err.message); }
 };
 
-// Restauration JSON complète de l'application
 window.importBackup = function(event) {
-    if (currentRole === 'viewer' || currentRole === 'cfo') {
-        alert("Permission refusée. Seul un Admin ou Timekeeper peut restaurer une sauvegarde.");
-        return;
-    }
+    if (currentRole === 'viewer' || currentRole === 'cfo') return;
     const file = event.target.files[0];
     if (!file) return;
 
@@ -762,16 +761,13 @@ window.importBackup = function(event) {
             renderDrawer();
             if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
             updateFab();
-            alert("✅ Sauvegarde JSON restaurée avec succès !");
-        } catch (err) {
-            alert("❌ Erreur lors de la lecture du fichier de sauvegarde. Fichier corrompu ou invalide. Détails : " + err.message);
-        }
-        event.target.value = ""; // Réinitialiser le champ d'input
+            alert("✅ Sauvegarde JSON restaurée !");
+        } catch (err) { alert("❌ Erreur de lecture : " + err.message); }
+        event.target.value = ""; 
     };
     reader.readAsText(file);
 };
 
-// Menus
 function toggleAdminMenu() {
   const menu = document.getElementById('admin-dropdown');
   menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
@@ -790,7 +786,6 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// --- GESTION DES RÔLES / PROFILS ---
 const PASSWORDS = { viewer: '', timekeeper: 'timekeeper', cfo: 'cfo', admin: 'admin' };
 let currentRole = localStorage.getItem('app_role') || 'viewer';
 let currentView = 'dashboard';
@@ -870,7 +865,6 @@ window.printTree = function() {
 
 function toggleDrawer() { document.getElementById('workers-drawer').classList.toggle('open'); }
 
-// --- VARIABLES GLOBALES DE DONNÉES ---
 let cardsData = [];
 let unassignedWorkers = [];
 let payrollCounts = {};
@@ -880,10 +874,10 @@ let siteSupervisors = [];
 let db = null, docRef = null, isSaving = false, currentFilter = 'all';
 let selectedManagersFilter = [];
 let selectedSupervisorsFilter = [];
-
-// VARIABLES TEMPORAIRES POUR LA VALIDATION DE L'IMPORT
 let pendingImportUpdates = [];
 let pendingExcelWorkersMap = new Map();
+let pendingMergeProposals = [];
+window.pendingMergeData = null; 
 
 const CATEGORY_INFO = [
   { id: 'civil', name: 'CIVIL WORKS', color: '#ea580c' },
@@ -899,7 +893,6 @@ const DEFAULT_DATA = [
   { name: "NEW TIMESHEET", manager: "", supervisorRole: "SUPERVISOR", category: "civil", timesheetNo: "", timesheetName: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "Task description", foreman: "", source: "SKYBUILDING BRANCH", workers: "", workerList: [] }] }
 ];
 
-// --- NORMALISATION GLOBALE STRICTE ---
 const normalizeName = (str) => {
     let s = String(str || '');
     try { s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); } catch(e){}
@@ -933,7 +926,6 @@ cardsData.forEach(c => {
 });
 siteSupervisors.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
 
-// --- 1. INITIALISATION DE L'INTERFACE ---
 function initLayout() {
   document.getElementById('role-selector').value = currentRole;
 
@@ -1074,8 +1066,6 @@ setTimeout(() => {
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
     db.settings({ experimentalAutoDetectLongPolling: true });
-    
-    // CORRECTION : Il faut utiliser db.collection pour Firebase Compat
     docRef = db.collection("site_charts").doc("current_week");
 
     docRef.onSnapshot((doc) => {
@@ -1120,10 +1110,12 @@ setTimeout(() => {
       document.getElementById("sync-dot").style.background = "#16a34a";
       document.getElementById("sync-text").innerText = "Connecté à Firebase";
     }, (err) => {
+      console.error(err);
       document.getElementById("sync-dot").style.background = "#eab308";
       document.getElementById("sync-text").innerText = "Mode local / Hors-ligne";
     });
   } catch (err) {
+    console.error(err);
     document.getElementById("sync-dot").style.background = "#eab308";
     document.getElementById("sync-text").innerText = "Mode local actif";
   }
@@ -1157,73 +1149,141 @@ function handleCheck(cIdx, isChecked) {
   else selectedForPrint.delete(cIdx);
 }
 
-// --- NETTOYAGE AUTOMATIQUE DES DOUBLONS (NORMALISATION STRICTE) ---
+// --- NETTOYAGE AUTOMATIQUE & RAPPROCHEMENT FLOUE (AVEC VALIDATION HUMAINE) ---
 window.cleanDuplicates = function(silent = false) {
-  if (typeof silent !== 'boolean') silent = false;
   if (currentRole === 'viewer' || currentRole === 'cfo') return 0;
   
-  if (!silent && !confirm("Voulez-vous rechercher et supprimer automatiquement tous les doublons de la base de données ?\n\n(L'ouvrier assigné à une équipe de chantier sera conservé en priorité)")) return 0;
+  if (!silent && !confirm("Voulez-vous rechercher les doublons et lancer le rapprochement intelligent ?\n\n(L'IA identifiera les fautes de frappe et les prénoms inversés/manquants pour mettre à jour vos Timesheets avec la Bible Excel).")) return 0;
   
-  let seenIds = new Set();
-  let seenNames = new Set();
-  let removedCount = 0;
-
-  const isDup = (w, isAssigned) => {
-      const normId = String(w.id || '').trim().toUpperCase();
-      let normName = normalizeName(w.name);
-      
-      let hasValidId = (normId !== '' && !normId.startsWith('W-'));
-      
-      if (isAssigned) {
-          if (hasValidId) seenIds.add(normId);
-          if (normName !== '') seenNames.add(normName);
-          return false; // JAMAIS on ne supprime un ouvrier assigné
-      } else {
-          if ((hasValidId && seenIds.has(normId)) || (normName !== '' && seenNames.has(normName))) return true;
-          if (hasValidId) seenIds.add(normId);
-          if (normName !== '') seenNames.add(normName);
-          return false;
+  function getSimilarity(s1, s2) {
+      if(!s1 || !s2) return 0;
+      function getBigrams(str) {
+          let bg = new Set();
+          for(let i=0; i<str.length-1; i++) bg.add(str.substring(i, i+2));
+          return bg;
       }
-  };
+      let bg1 = getBigrams(s1), bg2 = getBigrams(s2);
+      if (bg1.size === 0 || bg2.size === 0) return 0;
+      let intersect = 0;
+      bg1.forEach(b => { if(bg2.has(b)) intersect++; });
+      return (2 * intersect) / (bg1.size + bg2.size);
+  }
 
-  cardsData.forEach(c => {
+  function isSubset(n1, n2) {
+      let w1 = n1.split(' '), w2 = n2.split(' ');
+      if(w1.length < 2 || w2.length < 2) return false;
+      let matchCount = 0;
+      w1.forEach(word => { if(word.length > 2 && w2.includes(word)) matchCount++; });
+      return matchCount >= Math.min(w1.length, w2.length);
+  }
+
+  let assignedList = [];
+  cardsData.forEach((c, cIdx) => {
       if (c.tasks) {
-          c.tasks.forEach(t => {
+          c.tasks.forEach((t, tIdx) => {
               if (t.workerList) {
-                  t.workerList = t.workerList.filter(w => {
-                      if (isDup(w, true)) { removedCount++; return false; }
-                      return true;
-                  });
+                  t.workerList.forEach(w => assignedList.push({ worker: w, tsName: c.name, cIdx: cIdx, tIdx: tIdx }));
               }
           });
       }
   });
 
-  unassignedWorkers = unassignedWorkers.filter(w => {
-      if (isDup(w, false)) { removedCount++; return false; }
-      return true;
+  pendingMergeProposals = [];
+
+  unassignedWorkers.forEach((uW, uIdx) => {
+      const normUId = String(uW.id || '').trim().toUpperCase();
+      const normUName = normalizeName(uW.name);
+      const hasValidId = (normUId !== '' && !normUId.startsWith('W-'));
+
+      let matchFound = null;
+
+      for (let aObj of assignedList) {
+          let aW = aObj.worker;
+          const normAId = String(aW.id || '').trim().toUpperCase();
+          const normAName = normalizeName(aW.name);
+
+          let isDup = false;
+
+          if (hasValidId && normAId === normUId) { isDup = true; }
+          else if (normUName !== '' && normAName === normUName) { isDup = true; }
+          else if (normUName !== '' && normAName !== '' && isSubset(normUName, normAName)) { isDup = true; }
+          else if (normUName !== '' && normAName !== '') {
+              let sim = getSimilarity(normUName.replace(/ /g,''), normAName.replace(/ /g,''));
+              if (sim > 0.82) { isDup = true; }
+          }
+
+          if (isDup) {
+              matchFound = { uWorker: uW, aWorker: aW, cIdx: aObj.cIdx, tIdx: aObj.tIdx, tsName: aObj.tsName };
+              break;
+          }
+      }
+
+      if (matchFound) {
+          pendingMergeProposals.push(matchFound);
+      }
   });
 
-  if (!silent) {
-      if (removedCount > 0) {
-          alert(`✅ Nettoyage terminé : ${removedCount} doublon(s) supprimé(s) de la base Non Assignée.`);
-      } else {
-          alert("👌 Aucun doublon n'a été trouvé dans la base de données !");
-      }
+  if (pendingMergeProposals.length > 0) {
+      const tbody = document.getElementById('merge-validation-list');
+      tbody.innerHTML = pendingMergeProposals.map((prop, i) => {
+          return `<tr>
+              <td style="text-align:center; padding:8px;"><input type="checkbox" class="merge-update-cb" value="${i}" checked style="cursor:pointer; width:14px; height:14px;"></td>
+              <td style="padding:8px; font-weight:800; color:#10b981;">${prop.uWorker.name} <br><span style="font-size:10px; color:#64748b;">${prop.uWorker.id} - ${prop.uWorker.company}</span></td>
+              <td style="padding:8px; font-weight:800; color:#dc2626;">${prop.aWorker.name} <br><span style="font-size:10px; color:#64748b;">${prop.aWorker.id} - ${prop.aWorker.company}</span></td>
+              <td style="padding:8px; color:#64748b; font-size:11px;">${prop.tsName}</td>
+          </tr>`;
+      }).join('');
+      document.getElementById('merge-select-all').checked = true;
+      document.getElementById('merge-validation-modal').style.display = 'flex';
+  } else {
+      if (!silent) alert("👌 Aucun doublon ou rapprochement possible trouvé dans la base !");
   }
-
-  if (removedCount > 0) {
-      recalculateTotals();
-      renderCards();
-      renderDrawer();
-      if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
-      syncToFirebase();
-  }
-  return removedCount;
+  return pendingMergeProposals.length;
 };
 
+window.toggleAllMergeUpdates = function(checked) {
+    document.querySelectorAll('.merge-update-cb').forEach(cb => cb.checked = checked);
+};
 
-// --- BASE DE DONNÉES GLOBALE & RECHERCHE ---
+window.cancelFuzzyMerges = function() {
+    document.getElementById('merge-validation-modal').style.display = 'none';
+    pendingMergeProposals = [];
+};
+
+window.confirmFuzzyMerges = function() {
+    const checkboxes = document.querySelectorAll('.merge-update-cb');
+    let count = 0;
+    let uIdsToRemove = new Set();
+
+    checkboxes.forEach(cb => {
+        if (cb.checked) {
+            const prop = pendingMergeProposals[cb.value];
+            const aW = cardsData[prop.cIdx].tasks[prop.tIdx].workerList.find(w => w.id === prop.aWorker.id);
+            if (aW) {
+                aW.id = prop.uWorker.id;
+                aW.name = prop.uWorker.name;
+                aW.company = prop.uWorker.company;
+                aW.isMissing = false;
+                count++;
+                uIdsToRemove.add(prop.uWorker.id);
+            }
+        }
+    });
+
+    if (count > 0) {
+        unassignedWorkers = unassignedWorkers.filter(w => !uIdsToRemove.has(w.id));
+        recalculateTotals();
+        renderCards();
+        renderDrawer();
+        if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
+        syncToFirebase();
+        alert(`✅ ${count} ouvriers fusionnés avec succès !`);
+    }
+    
+    document.getElementById('merge-validation-modal').style.display = 'none';
+    pendingMergeProposals = [];
+};
+
 function openDBModal() {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
   document.getElementById('db-search-input').value = "";
@@ -1300,7 +1360,6 @@ function editWorker(oldId, field, newVal, context, cIdx, tIdx, inputEl) {
   if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
 }
 
-// SOFT DELETE CONFIRMATION
 window.confirmSoftDelete = function(cIdx, tIdx, wId) {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
   if (confirm("Cet ouvrier a été supprimé de la base globale. Voulez-vous le retirer définitivement de cette équipe de travail ?")) {
@@ -1320,7 +1379,7 @@ function deleteWorkerFromDB(wId, context, cIdx, tIdx) {
      if(index !== -1) unassignedWorkers.splice(index, 1);
   } else {
      const worker = cardsData[cIdx].tasks[tIdx].workerList.find(x => x.id === wId);
-     if (worker) worker.isDeleted = true; // SOFT DELETE
+     if (worker) worker.isDeleted = true;
   }
   syncToFirebase();
   renderCards();
@@ -1407,12 +1466,9 @@ function printDB() {
   setTimeout(() => { document.body.classList.remove('print-mode-db'); }, 500);
 }
 
-// --- GESTION DES SUPERVISEURS DYNAMIQUE ---
 window.openSupervisorsModal = function() {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  
   siteSupervisors = siteSupervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
-
   renderSupervisorsList();
   document.getElementById('supervisors-modal').style.display = 'flex';
 };
@@ -1440,16 +1496,12 @@ window.renderSupervisorsList = function() {
 window.updateSupervisorInDB = function(idx, field, newVal) {
   const oldName = siteSupervisors[idx].name;
   const val = String(newVal || '').trim().toUpperCase();
-  if (!val) {
-     renderSupervisorsList(); 
-     return;
-  }
+  if (!val) { renderSupervisorsList(); return; }
   
   if (field === 'name') {
      if (siteSupervisors.find((s, i) => i !== idx && s.name === val)) {
         alert("Ce nom de superviseur existe déjà.");
-        renderSupervisorsList();
-        return;
+        renderSupervisorsList(); return;
      }
      siteSupervisors[idx].name = val;
      cardsData.forEach(c => { if (c.name === oldName) c.name = val; });
@@ -1492,16 +1544,12 @@ window.changeSupervisorData = function(cIdx, selectedName) {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
   const supObj = siteSupervisors.find(s => s && s.name && String(s.name).toUpperCase() === String(selectedName).toUpperCase());
   cardsData[cIdx].name = selectedName;
-  if (supObj) {
-     cardsData[cIdx].supervisorRole = supObj.role;
-  }
-  syncToFirebase();
-  renderCards();
+  if (supObj) { cardsData[cIdx].supervisorRole = supObj.role; }
+  syncToFirebase(); renderCards();
   if(currentView==='orgchart') renderOrgChart();
   if(currentView==='tree') renderTreeOrgChart();
 };
 
-// --- GESTION ENTREPRISES DYNAMIQUE ---
 function renderCompanySelects() {
   const opts = siteCompanies.map(c => `<option value="${c}">${c}</option>`).join('');
   document.querySelectorAll('.dynamic-comp-select').forEach(el => {
@@ -1535,22 +1583,14 @@ function addCompany() {
   if (val && !siteCompanies.includes(val)) {
      siteCompanies.push(val);
      document.getElementById('new-comp-input').value = '';
-     renderCompaniesList();
-     renderCompanySelects();
-     renderPayrollTable();
-     renderCards();
-     syncToFirebase();
+     renderCompaniesList(); renderCompanySelects(); renderPayrollTable(); renderCards(); syncToFirebase();
   }
 }
 
 function removeCompany(comp) {
   if (confirm(`Supprimer définitivement l'entreprise ${comp} ?`)) {
      siteCompanies = siteCompanies.filter(c => c !== comp);
-     renderCompaniesList();
-     renderCompanySelects();
-     renderPayrollTable();
-     renderCards();
-     syncToFirebase();
+     renderCompaniesList(); renderCompanySelects(); renderPayrollTable(); renderCards(); syncToFirebase();
   }
 }
 
@@ -1615,11 +1655,7 @@ function recalculateTotals() {
     if (b) {
       const mismatchIcon = cardHasDiff ? `<span title="Alerte: ${cardLinkedSum} nommés vs ${cardEffectiveSum} saisis" style="color:#dc2626; margin-right:4px;">⚠️</span>` : '';
       b.innerHTML = `${mismatchIcon}${cardEffectiveSum} Wkrs`;
-      if(cardHasDiff){
-        b.classList.add('error');
-      } else {
-        b.classList.remove('error');
-      }
+      if(cardHasDiff){ b.classList.add('error'); } else { b.classList.remove('error'); }
     }
     if (cats.hasOwnProperty(card.category)) cats[card.category] += cardEffectiveSum;
   });
@@ -1657,7 +1693,6 @@ function recalculateTotals() {
         elDiff.className = `diff-badge ${diff === 0 ? 'diff-ok' : 'diff-warn'}`;
      }
   });
-
   applyRolePermissions();
 }
 
@@ -1696,12 +1731,10 @@ function renderPayrollTable() {
   document.getElementById('payroll-table-body').innerHTML = html;
 }
 
-// --- AFFICHAGE CARTES ---
 function renderCards() {
   try {
     const alphaGrid = document.getElementById('grid-alpha');
     if (alphaGrid) alphaGrid.innerHTML = "";
-
     CATEGORY_INFO.forEach(cat => {
       const grid = document.getElementById(`grid-${cat.id}`);
       if(grid) grid.innerHTML = "";
@@ -1713,13 +1746,9 @@ function renderCards() {
       displayList.sort((a, b) => {
         let tsA = String(a.card.timesheetNo || '').trim();
         let tsB = String(b.card.timesheetNo || '').trim();
-
-        if (tsA && tsB) {
-          return tsA.localeCompare(tsB, undefined, { numeric: true, sensitivity: 'base' });
-        }
+        if (tsA && tsB) { return tsA.localeCompare(tsB, undefined, { numeric: true, sensitivity: 'base' }); }
         if (tsA && !tsB) return -1;
         if (!tsA && tsB) return 1;
-
         let nameA = String(a.card.name || '').trim();
         let nameB = String(b.card.name || '').trim();
         return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
@@ -1740,11 +1769,8 @@ function renderCards() {
       const isHidden = hideByMgr || hideBySup;
       
       let targetGrid;
-      if (currentFilter === 'alpha') {
-        targetGrid = document.getElementById('grid-alpha');
-      } else {
-        targetGrid = document.getElementById(`grid-${catId}`) || document.getElementById('grid-trades');
-      }
+      if (currentFilter === 'alpha') { targetGrid = document.getElementById('grid-alpha'); }
+      else { targetGrid = document.getElementById(`grid-${catId}`) || document.getElementById('grid-trades'); }
       
       const cardEl = document.createElement("div");
       cardEl.className = `card cat-${catId}`;
@@ -1755,14 +1781,11 @@ function renderCards() {
         const linkedCount = t.workerList ? t.workerList.length : 0;
         const hasManualOverride = t.workers !== undefined && t.workers !== null && String(t.workers) !== "";
         const manualCount = hasManualOverride ? parseInt(t.workers) : linkedCount;
-        
         const isDiff = hasManualOverride && (linkedCount !== manualCount);
         const compClass = isDiff ? 'diff-warn' : 'diff-ok';
         
         let compTitle = "Automatic calculation based on names";
-        if (hasManualOverride) {
-            compTitle = isDiff ? `Alert: ${linkedCount} names assigned vs ${manualCount} entered` : `Manually balanced workforce`;
-        }
+        if (hasManualOverride) { compTitle = isDiff ? `Alert: ${linkedCount} names assigned vs ${manualCount} entered` : `Manually balanced workforce`; }
 
         const companyOpts = siteCompanies.map(comp => `<option value="${comp}" ${t.source === comp ? 'selected' : ''}>${comp}</option>`).join('');
 
@@ -1797,7 +1820,6 @@ function renderCards() {
               if (w.isDeleted) {
                 return `<div class="worker-pill deleted-worker" onclick="confirmSoftDelete(${cIdx}, ${tIdx}, '${w.id}')" title="Cet ouvrier a été supprimé de la base. Cliquez pour confirmer son retrait de la tâche.">⚠️ ${w.id} - ${w.name}</div>`;
               }
-              
               return `<div class="worker-pill ${colorClass}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="${cIdx}" data-tidx="${tIdx}">${warningIcon}${w.id} - ${w.name}</div>`;
             }).join('')}
           </div>
@@ -1883,16 +1905,13 @@ function renderCards() {
   } catch (err) { console.error("Render error:", err); }
 }
 
-// ARBRE HIERARCHIQUE
 window.renderTreeOrgChart = function() {
   const container = document.getElementById('tree-view');
   let treeData = { name: "Denis NETO", role: "General Site Superintendent", children: {}, total: 0 };
 
   const formatName = (name) => {
      let p = String(name).trim().split(' ');
-     if(p.length > 1) {
-        return `${p[0]}<br>${p.slice(1).join(' ')}`;
-     }
+     if(p.length > 1) { return `${p[0]}<br>${p.slice(1).join(' ')}`; }
      return String(name);
   };
 
@@ -1929,7 +1948,6 @@ window.renderTreeOrgChart = function() {
     </div>
   `;
 
-  // 1. ARBRE MAITRE (Résumé)
   html += `<div class="tree" style="margin-bottom: 20px; display:block;"><ul><li>
      <div class="tree-node top-node">
         <div class="node-title">${formatName(treeData.name)}</div>
@@ -1949,7 +1967,6 @@ window.renderTreeOrgChart = function() {
   });
   html += `</ul></li></ul></div>`;
 
-  // 2. SOUS-ARBRES DES MANAGERS EMPILÉS VERTICALEMENT
   html += `<div style="display:flex; flex-direction:column; gap: 40px; align-items:center; width:100%;">`;
   
   Object.keys(treeData.children).sort().forEach(mgrName => {
@@ -1989,7 +2006,6 @@ window.renderTreeOrgChart = function() {
             let fName = String(t.foreman || '').trim().toUpperCase() || 'DIRECT TEAM';
             let taskDesc = String(t.desc || '').trim();
             let fSub = taskDesc ? taskDesc : 'Foreman';
-
             let wCount = { skybuildingB: 0, skybuildingG: 0, dss: 0, euroasia: 0, bik: 0, other: 0 };
             
             if (t.workerList) {
@@ -2036,13 +2052,10 @@ window.renderTreeOrgChart = function() {
     });
     html += `</ul></li></ul></div></div>`;
   });
-  
   html += `</div>`;
-
   container.innerHTML = html;
 };
 
-// ORGANIGRAMME (Blocs)
 function renderOrgChart() {
   const container = document.getElementById('orgchart-view');
   const groups = {};
@@ -2116,7 +2129,6 @@ function renderOrgChart() {
   container.innerHTML = html;
 }
 
-// --- GESTION DU MULTI-SELECT ET DRAG DROP ---
 function initWorkerSortables() {
   workerSortables.forEach(s => s.destroy());
   workerSortables = [];
@@ -2196,14 +2208,79 @@ function updateFab() {
   const selected = document.querySelectorAll('.worker-pill.sortable-selected, .worker-pill.selected-pill');
   const fabMove = document.getElementById('fab-move');
   const fabCount = document.getElementById('fab-count');
+  const fabMerge = document.getElementById('fab-merge');
   
-  if (selected.length > 0) {
-    fabMove.style.display = 'flex';
-    fabCount.innerText = selected.length;
+  let hasUnassigned = false;
+  let hasAssigned = false;
+  let unassignedPill = null;
+  let assignedPill = null;
+
+  selected.forEach(pill => {
+      if (pill.dataset.cidx === 'unassigned') {
+          hasUnassigned = true;
+          unassignedPill = pill;
+      } else {
+          hasAssigned = true;
+          assignedPill = pill;
+      }
+  });
+
+  if (selected.length === 2 && hasUnassigned && hasAssigned) {
+     fabMerge.style.display = 'flex';
+     fabMove.style.display = 'none';
+     window.pendingMergeData = { unassigned: unassignedPill, assigned: assignedPill };
+  } else if (selected.length > 0) {
+     fabMerge.style.display = 'none';
+     fabMove.style.display = 'flex';
+     fabCount.innerText = selected.length;
+     window.pendingMergeData = null;
   } else {
-    fabMove.style.display = 'none';
+     fabMerge.style.display = 'none';
+     fabMove.style.display = 'none';
+     window.pendingMergeData = null;
   }
 }
+
+window.executeManualMerge = function() {
+    if (!window.pendingMergeData) return;
+    if (currentRole === 'viewer' || currentRole === 'cfo') return;
+
+    const pillU = window.pendingMergeData.unassigned;
+    const pillA = window.pendingMergeData.assigned;
+
+    const uId = pillU.dataset.wid;
+    const aId = pillA.dataset.wid;
+    const aCidx = parseInt(pillA.dataset.cidx);
+    const aTidx = parseInt(pillA.dataset.tidx);
+
+    const unassignedWorker = unassignedWorkers.find(w => w.id === uId);
+    const assignedWorker = cardsData[aCidx].tasks[aTidx].workerList.find(w => w.id === aId);
+
+    if (!unassignedWorker || !assignedWorker) return;
+
+    if (confirm(`Voulez-vous fusionner ces deux ouvriers ?\n\n[La Bible Excel] : ${unassignedWorker.name} (${unassignedWorker.id})\n\nva écraser et mettre à jour ⬇️\n\n[Le Chantier] : ${assignedWorker.name} (${assignedWorker.id})`)) {
+        assignedWorker.id = unassignedWorker.id;
+        assignedWorker.name = unassignedWorker.name;
+        assignedWorker.company = unassignedWorker.company;
+        assignedWorker.isMissing = false; 
+
+        unassignedWorkers = unassignedWorkers.filter(w => w.id !== uId);
+
+        document.querySelectorAll('.worker-pill.sortable-selected').forEach(el => {
+            el.classList.remove('sortable-selected');
+            el.classList.remove('selected-pill');
+        });
+
+        recalculateTotals();
+        renderCards();
+        renderDrawer();
+        if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
+        updateFab();
+        syncToFirebase();
+
+        alert("✅ Fusion réussie ! Le profil a été mis à jour avec les informations RH officielles.");
+    }
+};
 
 window.handleFabClick = function(event) {
   if (event) {
@@ -2214,10 +2291,7 @@ window.handleFabClick = function(event) {
   const selectedPills = document.querySelectorAll('.worker-pill.sortable-selected, .worker-pill.selected-pill');
   const count = selectedPills.length;
   
-  if (count === 0) {
-      alert("Aucun ouvrier n'est actuellement sélectionné.");
-      return;
-  }
+  if (count === 0) { return; }
   
   let html = `<option value="-1">👷 Renvoyer à la Base (Non assigné)</option>`;
   cardsData.forEach((c, idx) => {
@@ -2313,12 +2387,6 @@ function addManualWorker() {
 
   if (!name) {
     alert("Veuillez saisir au moins le Nom de l'ouvrier.");
-    return;
-  }
-
-  const dup = findWorkerDuplicate(id, name);
-  if (dup.found) {
-    alert(`⚠️ DOUBLON DÉTECTÉ !\n\nL'ouvrier "${name}" (ID: ${id}) existe déjà ${dup.location}.\n\nNom existant : ${dup.worker.name}\nID existant : ${dup.worker.id}\nEntreprise : ${dup.worker.company}\n\nAjout annulé.`);
     return;
   }
 
@@ -2637,59 +2705,6 @@ function executePrint() {
   setTimeout(() => { document.body.classList.remove('print-mode-ts'); }, 500);
 }
 
-window.toggleAllImportUpdates = function(checked) {
-    document.querySelectorAll('.import-update-cb').forEach(cb => cb.checked = checked);
-};
-
-window.confirmImportUpdates = function() {
-    const checkboxes = document.querySelectorAll('.import-update-cb');
-    let count = 0;
-    checkboxes.forEach(cb => {
-        if (cb.checked) {
-            const u = pendingImportUpdates[cb.value];
-            u.worker.id = u.newId;
-            u.worker.company = u.newComp;
-            count++;
-        }
-    });
-    
-    document.getElementById('import-validation-modal').style.display = 'none';
-    finalizeImport(count);
-};
-
-window.cancelImportUpdates = function() {
-    document.getElementById('import-validation-modal').style.display = 'none';
-    finalizeImport(0);
-};
-
-function finalizeImport(updatedCount = 0) {
-    let newWorkersCount = 0;
-    let unmatchedExcelWorkers = [];
-    
-    pendingExcelWorkersMap.forEach((exW) => {
-        if (!exW.matched) {
-            unmatchedExcelWorkers.push({ id: exW.id, name: exW.name, company: exW.company });
-        }
-    });
-    
-    unassignedWorkers.push(...unmatchedExcelWorkers);
-    newWorkersCount = unmatchedExcelWorkers.length;
-
-    window.rawImportedDB = Array.from(pendingExcelWorkersMap.values()).map(w => ({id: w.id, name: w.name, company: w.company}));
-    
-    let removedDuplicates = window.cleanDuplicates(true);
-
-    renderCompanySelects();
-    recalculateTotals();
-    renderCards();
-    renderDrawer(); 
-    if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
-    syncToFirebase();
-    
-    alert(`Import et Fusion terminés avec succès !\n\n🔄 Mises à jour validées : ${updatedCount}\n📥 Nouveaux ouvriers envoyés dans la base "Non Assignés" : ${newWorkersCount}\n🧹 Doublons nettoyés automatiquement : ${removedDuplicates}\n\nLes assignations dans l'organigramme ont été conservées.`);
-}
-
-// --- IMPORTATION EXCEL GLOBALE POINTAGE ET BASE RH (FUSION & DÉDUPLICATION) ---
 function importExcelFile(event) {
   if (currentRole === 'viewer' || currentRole === 'cfo') return; 
   const file = event.target.files[0];
@@ -2721,7 +2736,7 @@ function importExcelFile(event) {
         for (let r = 0; r < rawRows.length; r++) {
           const rowArray = rawRows[r];
           if (!Array.isArray(rowArray)) continue;
-          // Détection ultra-stricte des en-têtes pour ne pas aspirer "Father's Name" ou "Subcontractor's Name"
+          
           const hasNameHeader = rowArray.some(cell => {
              const exact = String(cell || "").trim().toUpperCase().replace(/[^A-Z]/g, '');
              return ["NAME", "SURNAME", "NOM", "PRENOM", "FIRSTNAME", "LASTNAME", "FULLNAME"].includes(exact);
@@ -2739,12 +2754,12 @@ function importExcelFile(event) {
           let workerComp = "OTHER";
 
           if (isForeign) {
-             workerId = String(row[3] || "").trim(); // Col D
-             let surname = String(row[4] || "").trim(); // Col E
-             let name = String(row[5] || "").trim(); // Col F
+             workerId = String(row[3] || "").trim(); 
+             let surname = String(row[4] || "").trim(); 
+             let name = String(row[5] || "").trim(); 
              workerName = (surname + " " + name).trim();
              
-             let nationality = String(row[6] || "").trim().toUpperCase(); // Col G
+             let nationality = String(row[6] || "").trim().toUpperCase(); 
              if (nationality.includes("PHILIPPINE") || nationality.includes("FILIPINO")) workerComp = "EUROASIA";
              else if (nationality.includes("GHAN") || nationality.includes("INDIA") || nationality.includes("INDIAN")) workerComp = "DSS";
              else workerComp = "BIK";
@@ -2765,8 +2780,8 @@ function importExcelFile(event) {
                }
              }
              
-             if (dynIdCol === -1) dynIdCol = 2; // Col C par défaut
-             if (dynWorkerCols.length === 0) dynWorkerCols = [4, 5]; // Col E et F par défaut
+             if (dynIdCol === -1) dynIdCol = 2; 
+             if (dynWorkerCols.length === 0) dynWorkerCols = [4, 5]; 
 
              workerId = dynIdCol !== -1 ? String(row[dynIdCol] || "").trim() : "";
              let dynName = "";
@@ -2813,7 +2828,6 @@ function importExcelFile(event) {
         }
       });
 
-      // 1. Détection des changements dans les cartes (Timesheets)
       cardsData.forEach((c, cIdx) => {
         if (c.tasks) {
           c.tasks.forEach((t, tIdx) => {
@@ -2846,7 +2860,7 @@ function importExcelFile(event) {
                              tsName: c.name
                          });
                      } else {
-                         w.name = exW.name; // Silent casing update
+                         w.name = exW.name; 
                      }
                  } else {
                      w.isMissing = true;
@@ -2857,7 +2871,6 @@ function importExcelFile(event) {
         }
       });
 
-      // 2. Mise à jour silencieuse de la Base Non Assignée
       unassignedWorkers.forEach(eu => {
          const normName = normalizeName(eu.name);
          if (pendingExcelWorkersMap.has(normName)) {
@@ -2875,7 +2888,6 @@ function importExcelFile(event) {
          }
       });
 
-      // 3. Ouvrir la modale ou finaliser directement
       if (pendingImportUpdates.length > 0) {
           const tbody = document.getElementById('import-validation-list');
           tbody.innerHTML = pendingImportUpdates.map((u, i) => {
