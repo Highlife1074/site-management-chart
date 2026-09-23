@@ -274,7 +274,7 @@
   .db-input:hover { border-color: #cbd5e1; }
   .db-input:focus { border-color: #2563eb; background: white; outline: none; }
 
-  /* BOUTON FLOTTANT DEPLACEMENT MASSE CORRIGÉ POUR SORTABLEJS */
+  /* BOUTON FLOTTANT DEPLACEMENT MASSE */
   #fab-move { display:none; position:fixed; bottom:90px; right:30px; background:#2563eb; color:white; padding:16px 24px; border-radius:30px; box-shadow:0 10px 25px rgba(37,99,235,0.4); cursor:pointer; font-weight:800; font-size:15px; z-index:2500; align-items:center; gap:10px; transition: transform 0.2s; }
   #fab-move:hover { transform: scale(1.05); background:#1d4ed8; }
   #fab-count { background:white; color:#2563eb; padding:2px 8px; border-radius:12px; font-size:14px; }
@@ -366,12 +366,47 @@
   👷 Base Ouvriers <span id="fab-drawer-count">0</span>
 </div>
 
+<!-- MODAL VALIDATION IMPORT -->
+<div id="import-validation-modal" class="modal-overlay">
+  <div class="modal-box xl">
+    <div class="modal-title">⚠️ Validation des Mises à Jour (Ouvriers Assignés)</div>
+    <p style="font-size:12px; color:#64748b; margin-top:-8px; line-height:1.4;">
+      Le fichier Excel contient de nouveaux numéros d'ID ou d'entreprises pour des ouvriers <b>déjà assignés</b> dans vos Timesheets.<br>
+      Cochez les modifications que vous souhaitez appliquer. Les ouvriers resteront dans leurs équipes respectives.
+    </p>
+    
+    <div style="overflow-y:auto; max-height: 50vh; border: 1px solid #cbd5e1; border-radius: 8px; margin-top: 10px;">
+      <table class="payroll-table" style="width:100%; text-align:left;">
+         <thead style="background:#f1f5f9; position:sticky; top:0; z-index:10;">
+           <tr>
+             <th style="padding:8px; text-align:center; width:40px;">
+                <input type="checkbox" id="import-select-all" checked onchange="toggleAllImportUpdates(this.checked)" style="cursor:pointer; width:14px; height:14px;">
+             </th>
+             <th style="padding:8px;">Ouvrier</th>
+             <th style="padding:8px;">Timesheet</th>
+             <th style="padding:8px;">ID Actuel ➡️ Nouvel ID</th>
+             <th style="padding:8px;">Entreprise ➡️ Nouvelle Ent.</th>
+           </tr>
+         </thead>
+         <tbody id="import-validation-list">
+           <!-- Généré en JS -->
+         </tbody>
+      </table>
+    </div>
+    
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-outline" onclick="cancelImportUpdates()">Ignorer toutes ces modifications</button>
+      <button class="btn btn-success" onclick="confirmImportUpdates()">✅ Appliquer la sélection</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL BASE GLOBALE ÉDITABLE -->
 <div id="db-modal" class="modal-overlay">
   <div class="modal-box xl" style="height: 85vh;">
     <div class="modal-title">🗃️ Base de Données Globale (Éditeur)</div>
     <div style="display:flex; justify-content: space-between; margin-bottom: 10px; align-items:center;">
-       <span style="font-size:12px; color:#64748b;">Modifiez les champs directement. Toute modification est sauvegardée.</span>
+       <span style="font-size:12px; color:#64748b;">La Base Globale contient tous les ouvriers importés d'Excel + ceux créés manuellement.</span>
        
        <div style="display:flex; gap:8px;">
           <button class="btn btn-blue" onclick="verifyImportCoherence()" title="Vérifier les écarts entre la base Excel arrière-plan et le chantier">🔍 Vérifier Cohérence Import</button>
@@ -531,7 +566,7 @@
   </div>
   
   <div style="display: flex; gap: 8px; margin-top: 4px;">
-    <input type="file" id="db-file-input" accept=".xlsx, .xls" style="display:none" onchange="importWorkersDB(event)">
+    <input type="file" id="db-file-input" accept=".xlsx, .xls" style="display:none" onchange="importExcelFile(event)">
     <button class="btn btn-success" id="btn-import-db" style="font-size:11px; padding:6px 10px; width:100%;" onclick="document.getElementById('db-file-input').click()">📥 Importer Fichier RH</button>
   </div>
 
@@ -575,7 +610,7 @@
     <button id="btn-toggle-dash" class="btn btn-black" onclick="setView('dashboard')" style="display:none;">📊 Tableau de bord</button>
     <div class="divider"></div>
 
-    <button class="btn btn-outline" onclick="openDBModal()" title="Éditer la base de données de tous les ouvriers">🗃️ Base Globale</button>
+    <button class="btn btn-outline" onclick="openDBModal()" title="La Base de données Globale contient tous les ouvriers Excel + les manuels.">🗃️ Base Globale</button>
     <button class="btn btn-outline" id="btn-add-sup" onclick="addNewSupervisor()">+ Ajout Timesheet</button>
     <button class="btn btn-black" id="btn-print-ts" onclick="openPrintModal()">📄 Imprimer TS</button>
     
@@ -589,7 +624,7 @@
       <hr style="border:0; border-top:1px solid #e2e8f0; margin:4px 0;">
       <span style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase;">Données</span>
       <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display:none" onchange="importExcelFile(event)">
-      <button class="btn btn-outline" style="width:100%; justify-content:left;" id="btn-import" onclick="document.getElementById('excel-file-input').click()" title="Importation base ouvriers depuis un fichier Excel RH">📥 Import Fichier RH</button>
+      <button class="btn btn-outline" style="width:100%; justify-content:left;" id="btn-import" onclick="document.getElementById('excel-file-input').click()" title="Importation intelligente de votre fichier Excel RH">📥 Import Fichier RH</button>
       <button class="btn btn-outline" style="width:100%; justify-content:left;" onclick="exportBackup()">💾 Sauvegarder (JSON)</button>
       <input type="file" id="backup-file-input" accept=".json" style="display:none" onchange="importBackup(event)">
       <button class="btn btn-outline" style="width:100%; justify-content:left;" onclick="document.getElementById('backup-file-input').click()">📂 Restaurer (JSON)</button>
@@ -767,6 +802,7 @@ window.printTree = function() {
 
 function toggleDrawer() { document.getElementById('workers-drawer').classList.toggle('open'); }
 
+// --- VARIABLES GLOBALES DE DONNÉES ---
 let cardsData = [];
 let unassignedWorkers = [];
 let payrollCounts = {};
@@ -776,6 +812,10 @@ let siteSupervisors = [];
 let db = null, docRef = null, isSaving = false, currentFilter = 'all';
 let selectedManagersFilter = [];
 let selectedSupervisorsFilter = [];
+
+// VARIABLES TEMPORAIRES POUR LA VALIDATION DE L'IMPORT
+let pendingImportUpdates = [];
+let pendingExcelWorkersMap = new Map();
 
 const CATEGORY_INFO = [
   { id: 'civil', name: 'CIVIL WORKS', color: '#ea580c' },
@@ -791,9 +831,12 @@ const DEFAULT_DATA = [
   { name: "NEW TIMESHEET", manager: "", supervisorRole: "SUPERVISOR", category: "civil", timesheetNo: "", timesheetName: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "Task description", foreman: "", source: "SKYBUILDING BRANCH", workers: "", workerList: [] }] }
 ];
 
-function migrateSkybuilding(worker) {
-  if (worker.company === 'SKYBUILDING') worker.company = 'SKYBUILDING BRANCH';
-}
+// --- NORMALISATION GLOBALE STRICTE ---
+const normalizeName = (str) => {
+    let s = String(str || '');
+    try { s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); } catch(e){}
+    return s.replace(/\s+/g, ' ').trim().toUpperCase();
+};
 
 try {
   const localSaved = localStorage.getItem("site_chart_backup");
@@ -821,32 +864,7 @@ cardsData.forEach(c => {
 });
 siteSupervisors.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
 
-// --- FONCTION UTILITAIRE : VÉRIFICATION DOUBLONS ---
-function findWorkerDuplicate(searchId, searchName, excludeId = null) {
-  const norm = str => String(str || '').trim().toUpperCase();
-  const sId = searchId ? norm(searchId) : null;
-  const sName = searchName ? norm(searchName) : null;
-
-  for (const w of unassignedWorkers) {
-    if (excludeId && norm(w.id) === norm(excludeId)) continue;
-    if (sId && norm(w.id) === sId) return { found: true, location: 'dans la Base (Non assigné)', worker: w };
-    if (sName && norm(w.name) === sName) return { found: true, location: 'dans la Base (Non assigné)', worker: w };
-  }
-
-  for (const card of cardsData) {
-    for (const t of (card.tasks || [])) {
-      for (const w of (t.workerList || [])) {
-        if (excludeId && norm(w.id) === norm(excludeId)) continue;
-        if (sId && norm(w.id) === sId) return { found: true, location: `sur l'équipe de ${card.name}`, worker: w };
-        if (sName && norm(w.name) === sName) return { found: true, location: `sur l'équipe de ${card.name}`, worker: w };
-      }
-    }
-  }
-
-  return { found: false };
-}
-
-// --- 1. INITIALISATION DE L'INTERFACE ---
+// --- INITIALISATION DE L'INTERFACE ---
 function initLayout() {
   document.getElementById('role-selector').value = currentRole;
 
@@ -1004,12 +1022,6 @@ setTimeout(() => {
             siteCompanies = [...new Set(siteCompanies)];
         }
         
-        unassignedWorkers.forEach(migrateSkybuilding);
-        cardsData.forEach(c => c.tasks.forEach(t => {
-            if(t.source === 'SKYBUILDING') t.source = 'SKYBUILDING BRANCH';
-            (t.workerList || []).forEach(migrateSkybuilding);
-        }));
-
         let supsAdded = false;
         cardsData.forEach(c => {
             let n = String(c.name || '').trim().toUpperCase();
@@ -1074,7 +1086,7 @@ function handleCheck(cIdx, isChecked) {
   else selectedForPrint.delete(cIdx);
 }
 
-// --- NETTOYAGE AUTOMATIQUE DES DOUBLONS (NORMALISATION STRICTE) ---
+// --- NETTOYAGE AUTOMATIQUE DES DOUBLONS ---
 window.cleanDuplicates = function(silent = false) {
   if (typeof silent !== 'boolean') silent = false;
   if (currentRole === 'viewer' || currentRole === 'cfo') return 0;
@@ -1085,43 +1097,42 @@ window.cleanDuplicates = function(silent = false) {
   let seenNames = new Set();
   let removedCount = 0;
 
-  const isDup = (w) => {
+  const isDup = (w, isAssigned) => {
       const normId = String(w.id || '').trim().toUpperCase();
-      let normName = String(w.name || '');
-      try { normName = normName.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); } catch(e){}
-      normName = normName.replace(/\s+/g, ' ').trim().toUpperCase();
+      let normName = normalizeName(w.name);
       
-      let idIsDup = (normId !== '' && !normId.startsWith('W-') && seenIds.has(normId));
-      let nameIsDup = (normName !== '' && seenNames.has(normName));
-
-      if (idIsDup || nameIsDup) return true;
+      let hasValidId = (normId !== '' && !normId.startsWith('W-'));
       
-      if (normId !== '' && !normId.startsWith('W-')) seenIds.add(normId);
-      if (normName !== '') seenNames.add(normName);
-      return false;
+      if (isAssigned) {
+          if (hasValidId) seenIds.add(normId);
+          if (normName !== '') seenNames.add(normName);
+          return false; // JAMAIS on ne supprime un ouvrier assigné
+      } else {
+          if ((hasValidId && seenIds.has(normId)) || (normName !== '' && seenNames.has(normName))) return true;
+          if (hasValidId) seenIds.add(normId);
+          if (normName !== '') seenNames.add(normName);
+          return false;
+      }
   };
 
   cardsData.forEach(c => {
       if (c.tasks) {
           c.tasks.forEach(t => {
               if (t.workerList) {
-                  t.workerList = t.workerList.filter(w => {
-                      if (isDup(w)) { removedCount++; return false; }
-                      return true;
-                  });
+                  t.workerList.forEach(w => isDup(w, true));
               }
           });
       }
   });
 
   unassignedWorkers = unassignedWorkers.filter(w => {
-      if (isDup(w)) { removedCount++; return false; }
+      if (isDup(w, false)) { removedCount++; return false; }
       return true;
   });
 
   if (!silent) {
       if (removedCount > 0) {
-          alert(`✅ Nettoyage terminé : ${removedCount} doublon(s) supprimé(s).`);
+          alert(`✅ Nettoyage terminé : ${removedCount} doublon(s) supprimé(s) de la base Non Assignée.`);
       } else {
           alert("👌 Aucun doublon n'a été trouvé dans la base de données !");
       }
@@ -1136,6 +1147,7 @@ window.cleanDuplicates = function(silent = false) {
   }
   return removedCount;
 };
+
 
 // --- BASE DE DONNÉES GLOBALE & RECHERCHE ---
 function openDBModal() {
@@ -1205,37 +1217,6 @@ function editWorker(oldId, field, newVal, context, cIdx, tIdx, inputEl) {
   let w = context === 'unassigned' ? unassignedWorkers.find(x => x.id === oldId) : cardsData[cIdx].tasks[tIdx].workerList.find(x => x.id === oldId);
   if (!w) return;
 
-  let dup = { found: false };
-  
-  if (field === 'id') {
-    dup = findWorkerDuplicate(newVal.trim(), null, oldId);
-  } else if (field === 'name') {
-    dup = findWorkerDuplicate(null, newVal.trim(), oldId);
-  }
-
-  if (dup.found) {
-    const msg = `⚠️ DOUBLON DÉTECTÉ !\n\nL'information "${newVal}" est déjà utilisée ${dup.location} par l'ouvrier [${dup.worker.name}].\n\nConserver ces deux lignes va fausser les effectifs du chantier.\n\nVoulez-vous SUPPRIMER définitivement la ligne que vous êtes en train de modifier pour nettoyer la base ?`;
-    
-    if (confirm(msg)) {
-       if (context === 'unassigned') {
-         const index = unassignedWorkers.findIndex(x => x.id === oldId);
-         if(index !== -1) unassignedWorkers.splice(index, 1);
-       } else {
-         const index = cardsData[cIdx].tasks[tIdx].workerList.findIndex(x => x.id === oldId);
-         if(index !== -1) cardsData[cIdx].tasks[tIdx].workerList.splice(index, 1);
-       }
-       recalculateTotals();
-       syncToFirebase();
-       renderCards();
-       renderDrawer();
-       if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
-       return;
-    } else {
-       if (inputEl) inputEl.value = w[field];
-       return;
-    }
-  }
-
   w[field] = newVal.trim();
   recalculateTotals();
   syncToFirebase();
@@ -1278,22 +1259,16 @@ window.verifyImportCoherence = function() {
       return;
   }
 
-  const norm = (str) => {
-      let s = String(str || '');
-      try { s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); } catch(e){}
-      return s.replace(/\s+/g, ' ').trim().toUpperCase();
-  };
-
   let allCurrentWorkers = new Map();
-  unassignedWorkers.forEach(w => allCurrentWorkers.set(norm(w.name), w));
-  cardsData.forEach(c => c.tasks.forEach(t => (t.workerList || []).forEach(w => allCurrentWorkers.set(norm(w.name), w))));
+  unassignedWorkers.forEach(w => allCurrentWorkers.set(normalizeName(w.name), w));
+  cardsData.forEach(c => c.tasks.forEach(t => (t.workerList || []).forEach(w => allCurrentWorkers.set(normalizeName(w.name), w))));
 
   let missingInApp = [];
   let extraInApp = [];
 
   let excelMap = new Map();
   window.rawImportedDB.forEach(wExcel => {
-      let n = norm(wExcel.name);
+      let n = normalizeName(wExcel.name);
       excelMap.set(n, wExcel);
       if (!allCurrentWorkers.has(n)) missingInApp.push(`${wExcel.id} - ${wExcel.name}`);
   });
@@ -1533,17 +1508,31 @@ function recalculateTotals() {
         if(hasM && lCount !== eCount) cardHasDiff = true;
 
         if (hasM && eCount !== lCount) {
-            let src = t.source || 'OTHER';
-            if (!siteCompanies.includes(src)) { siteCompanies.push(src); compTotals[src] = 0; }
-            if (compTotals[src] === undefined) compTotals[src] = 0;
-            compTotals[src] += eCount;
-        } else if (lCount > 0) {
-            t.workerList.forEach(w => {
-                let wc = w.company || t.source || 'OTHER';
-                if (!siteCompanies.includes(wc)) { siteCompanies.push(wc); compTotals[wc] = 0; }
-                if (compTotals[wc] === undefined) compTotals[wc] = 0;
-                compTotals[wc]++;
-            });
+            if (t.workerList) {
+                t.workerList.forEach(w => {
+                    let wc = w.company || t.source || 'OTHER';
+                    if (!siteCompanies.includes(wc)) { siteCompanies.push(wc); compTotals[wc] = 0; }
+                    compTotals[wc]++;
+                });
+            }
+            let diff = eCount - lCount;
+            if (diff > 0) {
+                let src = t.source || 'OTHER';
+                if (!siteCompanies.includes(src)) { siteCompanies.push(src); compTotals[src] = 0; }
+                compTotals[src] += diff;
+            }
+        } else {
+            if (t.workerList && lCount > 0) {
+                t.workerList.forEach(w => {
+                    let wc = w.company || t.source || 'OTHER';
+                    if (!siteCompanies.includes(wc)) { siteCompanies.push(wc); compTotals[wc] = 0; }
+                    compTotals[wc]++;
+                });
+            } else if (eCount > 0) {
+                let src = t.source || 'OTHER';
+                if (!siteCompanies.includes(src)) { siteCompanies.push(src); compTotals[src] = 0; }
+                compTotals[src] += eCount;
+            }
         }
       });
     }
@@ -1729,11 +1718,12 @@ function renderCards() {
               else if(w.company === 'EUROASIA') colorClass = 'euroasia';
               else if(w.company === 'BIK') colorClass = 'bik';
               
+              let warningIcon = w.isMissing ? `<span title="Absent du fichier Excel RH" style="color:#ef4444; margin-right:4px;">⚠️</span>` : '';
               if (w.isDeleted) {
                 return `<div class="worker-pill deleted-worker" onclick="confirmSoftDelete(${cIdx}, ${tIdx}, '${w.id}')" title="Cet ouvrier a été supprimé de la base. Cliquez pour confirmer son retrait de la tâche.">⚠️ ${w.id} - ${w.name}</div>`;
               }
               
-              return `<div class="worker-pill ${colorClass}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="${cIdx}" data-tidx="${tIdx}">${w.id} - ${w.name}</div>`;
+              return `<div class="worker-pill ${colorClass}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="${cIdx}" data-tidx="${tIdx}">${warningIcon}${w.id} - ${w.name}</div>`;
             }).join('')}
           </div>
         </div>
@@ -2572,40 +2562,56 @@ function executePrint() {
   setTimeout(() => { document.body.classList.remove('print-mode-ts'); }, 500);
 }
 
-function exportBackup() {
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors}, null, 2));
-  const dlAnchorElem = document.createElement('a');
-  dlAnchorElem.setAttribute("href", dataStr);
-  dlAnchorElem.setAttribute("download", `site_backup_${new Date().toISOString().split('T')[0]}.json`);
-  document.body.appendChild(dlAnchorElem); dlAnchorElem.click(); dlAnchorElem.remove();
-}
+window.toggleAllImportUpdates = function(checked) {
+    document.querySelectorAll('.import-update-cb').forEach(cb => cb.checked = checked);
+};
 
-function importBackup(event) {
-  if (currentRole === 'viewer') return;
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const parsed = JSON.parse(e.target.result);
-      if (parsed.cardsData) {
-        cardsData = parsed.cardsData;
-        payrollCounts = parsed.payrollCounts || {};
-        unassignedWorkers = parsed.unassignedWorkers || [];
-        if (parsed.companies) siteCompanies = parsed.companies;
-        if (parsed.supervisors) siteSupervisors = parsed.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
-        if (parsed.rawImportedDB) window.rawImportedDB = parsed.rawImportedDB;
-        renderCompanySelects();
-        renderPayrollTable();
-        renderCards(); 
-        renderDrawer(); 
-        syncToFirebase();
-        alert("Sauvegarde restaurée avec succès !");
-      } else { alert("Fichier invalide."); }
-    } catch (err) { alert("Erreur : " + err.message); }
-    event.target.value = "";
-  };
-  reader.readAsText(file);
+window.confirmImportUpdates = function() {
+    const checkboxes = document.querySelectorAll('.import-update-cb');
+    let count = 0;
+    checkboxes.forEach(cb => {
+        if (cb.checked) {
+            const u = pendingImportUpdates[cb.value];
+            u.worker.id = u.newId;
+            u.worker.company = u.newComp;
+            count++;
+        }
+    });
+    
+    document.getElementById('import-validation-modal').style.display = 'none';
+    finalizeImport(count);
+};
+
+window.cancelImportUpdates = function() {
+    document.getElementById('import-validation-modal').style.display = 'none';
+    finalizeImport(0);
+};
+
+function finalizeImport(updatedCount = 0) {
+    let newWorkersCount = 0;
+    let unmatchedExcelWorkers = [];
+    
+    pendingExcelWorkersMap.forEach((exW) => {
+        if (!exW.matched) {
+            unmatchedExcelWorkers.push({ id: exW.id, name: exW.name, company: exW.company });
+        }
+    });
+    
+    unassignedWorkers.push(...unmatchedExcelWorkers);
+    newWorkersCount = unmatchedExcelWorkers.length;
+
+    window.rawImportedDB = Array.from(pendingExcelWorkersMap.values()).map(w => ({id: w.id, name: w.name, company: w.company}));
+    
+    let removedDuplicates = window.cleanDuplicates(true);
+
+    renderCompanySelects();
+    recalculateTotals();
+    renderCards();
+    renderDrawer(); 
+    if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
+    syncToFirebase();
+    
+    alert(`Import et Fusion terminés avec succès !\n\n🔄 Mises à jour validées : ${updatedCount}\n📥 Nouveaux ouvriers envoyés dans la base "Non Assignés" : ${newWorkersCount}\n🧹 Doublons nettoyés automatiquement : ${removedDuplicates}\n\nLes assignations dans l'organigramme ont été conservées.`);
 }
 
 // --- IMPORTATION EXCEL GLOBALE POINTAGE ET BASE RH (FUSION & DÉDUPLICATION) ---
@@ -2620,8 +2626,6 @@ function importExcelFile(event) {
     try {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
-      let newWorkersCount = 0;
-      let updatedWorkersCount = 0;
       
       const normalizeName = (str) => {
           let s = String(str || '');
@@ -2629,8 +2633,8 @@ function importExcelFile(event) {
           return s.replace(/\s+/g, ' ').trim().toUpperCase();
       };
 
-      let rawDbMap = new Map();
-      window.rawImportedDB.forEach(w => rawDbMap.set(normalizeName(w.name), w));
+      pendingImportUpdates = [];
+      pendingExcelWorkersMap = new Map();
 
       workbook.SheetNames.forEach(sheetName => {
         if (!sheetName) return;
@@ -2668,13 +2672,9 @@ function importExcelFile(event) {
              workerName = (surname + " " + name).trim();
              
              let nationality = String(row[6] || "").trim().toUpperCase(); // Col G
-             if (nationality.includes("PHILIPPINE") || nationality.includes("FILIPINO")) {
-                 workerComp = "EUROASIA";
-             } else if (nationality.includes("GHAN") || nationality.includes("INDIA") || nationality.includes("INDIAN")) {
-                 workerComp = "DSS";
-             } else {
-                 workerComp = "BIK";
-             }
+             if (nationality.includes("PHILIPPINE") || nationality.includes("FILIPINO")) workerComp = "EUROASIA";
+             else if (nationality.includes("GHAN") || nationality.includes("INDIA") || nationality.includes("INDIAN")) workerComp = "DSS";
+             else workerComp = "BIK";
           } 
           else if (isSkyBranch || isSkyGreece) {
              workerId = String(row[2] || "").trim(); // Col C
@@ -2692,7 +2692,6 @@ function importExcelFile(event) {
                if (colName.includes("NAME") || colName.includes("SURNAME") || colName.includes("NOM")) dynWorkerCols.push(c);
                if (colName.includes("COMPANY") || colName.includes("SUBCON") || colName === "CO." || colName.includes("ENTREPRISE")) dynCompCol = c;
              }
-             
              if (dynWorkerCols.length > 0) {
                  workerId = dynIdCol !== -1 ? String(row[dynIdCol] || "").trim() : "";
                  let dynName = "";
@@ -2704,80 +2703,98 @@ function importExcelFile(event) {
              }
           }
 
-          if (!workerName || workerName === "") continue;
+          if (!workerName) continue;
           if (!workerId) workerId = "W-" + Math.floor(Math.random()*100000);
 
-          if (!siteCompanies.includes(workerComp)) siteCompanies.push(workerComp);
-
-          const normWorkerName = normalizeName(workerName);
-
-          rawDbMap.set(normWorkerName, { id: workerId, name: workerName, company: workerComp });
-
-          let matchFound = false;
-
-          cardsData.forEach(c => {
-            if (c.tasks) {
-              c.tasks.forEach(t => {
-                if (t.workerList) {
-                  let existing = t.workerList.find(w => normalizeName(w.name) === normWorkerName || (String(w.id || "") !== "" && !String(w.id || "").startsWith("W-") && String(w.id || "") === workerId));
-                  if (existing) {
-                     let existingIdClean = String(existing.id || "").trim();
-                     if (workerId && existingIdClean && existingIdClean !== workerId && !existingIdClean.startsWith("W-") && !workerId.startsWith("W-")) {
-                         if (confirm(`Le travailleur ${workerName} (actuellement sur l'équipe de ${c.name}) est enregistré avec l'ID [${existingIdClean}].\nLe fichier Excel indique le nouvel ID [${workerId}].\n\nVoulez-vous mettre à jour son ID avec le nouveau ?\n(Son affectation restera inchangée)`)) {
-                             existing.id = workerId; 
-                         }
-                     } else if (existingIdClean.startsWith("W-") && workerId && !workerId.startsWith("W-")) {
-                         existing.id = workerId; 
-                     }
-                     
-                     existing.name = workerName; 
-                     existing.company = workerComp;
-                     existing.isDeleted = false; 
-                     matchFound = true;
-                  }
-                }
-              });
-            }
-          });
+          const normWName = normalizeName(workerName);
+          pendingExcelWorkersMap.set(normWName, { id: workerId, name: workerName, company: workerComp, matched: false });
           
-          let existingUnassigned = unassignedWorkers.filter(w => normalizeName(w.name) === normWorkerName || (String(w.id || "") !== "" && !String(w.id || "").startsWith("W-") && String(w.id || "") === workerId));
-          if (existingUnassigned.length > 0) {
-             existingUnassigned.forEach(eu => {
-                 let existingIdClean = String(eu.id || "").trim();
-                 if (workerId && existingIdClean && existingIdClean !== workerId && !existingIdClean.startsWith("W-") && !workerId.startsWith("W-")) {
-                     if (confirm(`Le travailleur ${workerName} (Non assigné) est enregistré avec l'ID [${existingIdClean}].\nLe fichier Excel indique le nouvel ID [${workerId}].\n\nVoulez-vous mettre à jour son ID avec le nouveau ?`)) {
-                         eu.id = workerId; 
-                     }
-                 } else if (existingIdClean.startsWith("W-") && workerId && !workerId.startsWith("W-")) {
-                     eu.id = workerId;
-                 }
-                 eu.name = workerName;
-                 eu.company = workerComp;
-             });
-             matchFound = true;
-          }
-
-          if (!matchFound) {
-            unassignedWorkers.push({ id: workerId, name: workerName, company: workerComp });
-            newWorkersCount++;
-          } else {
-            updatedWorkersCount++;
-          }
+          if (!siteCompanies.includes(workerComp)) siteCompanies.push(workerComp);
         }
       });
 
-      window.rawImportedDB = Array.from(rawDbMap.values());
-      
-      let removedDuplicates = window.cleanDuplicates(true);
+      // 1. Détection des changements dans les cartes (Timesheets)
+      cardsData.forEach((c, cIdx) => {
+        if (c.tasks) {
+          c.tasks.forEach((t, tIdx) => {
+            if (t.workerList) {
+              t.workerList.forEach(w => {
+                 const normName = normalizeName(w.name);
+                 if (pendingExcelWorkersMap.has(normName)) {
+                     let exW = pendingExcelWorkersMap.get(normName);
+                     exW.matched = true; 
+                     w.isMissing = false; 
+                     
+                     let existingIdClean = String(w.id || "").trim();
+                     let idChanged = false;
+                     
+                     if (exW.id && existingIdClean && existingIdClean !== exW.id && !existingIdClean.startsWith('W-') && !exW.id.startsWith('W-')) {
+                         idChanged = true;
+                     } else if (existingIdClean.startsWith('W-') && exW.id && !exW.id.startsWith('W-')) {
+                         idChanged = true;
+                     }
+                     
+                     let compChanged = (w.company !== exW.company);
 
-      renderCompanySelects();
-      recalculateTotals();
-      renderCards();
-      renderDrawer(); 
-      if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
-      syncToFirebase();
-      
-      alert(`Import et Fusion terminés avec succès !\n\n📥 Nouveaux ouvriers ajoutés : ${newWorkersCount}\n🔄 Ouvriers existants mis à jour (Fusionnés) : ${updatedWorkersCount}\n🧹 Doublons nettoyés automatiquement : ${removedDuplicates}\n\nLes assignations dans l'organigramme ont été conservées.`);
+                     if (idChanged || compChanged) {
+                         pendingImportUpdates.push({
+                             worker: w, 
+                             newId: exW.id, 
+                             newComp: exW.company,
+                             oldId: existingIdClean,
+                             oldComp: w.company,
+                             tsName: c.name
+                         });
+                     } else {
+                         w.name = exW.name; // Silent casing update
+                     }
+                 } else {
+                     w.isMissing = true;
+                 }
+              });
+            }
+          });
+        }
+      });
+
+      // 2. Mise à jour silencieuse de la Base Non Assignée
+      unassignedWorkers.forEach(eu => {
+         const normName = normalizeName(eu.name);
+         if (pendingExcelWorkersMap.has(normName)) {
+             let exW = pendingExcelWorkersMap.get(normName);
+             exW.matched = true;
+             
+             let existingIdClean = String(eu.id || "").trim();
+             if (exW.id && existingIdClean && existingIdClean !== exW.id && !existingIdClean.startsWith("W-") && !exW.id.startsWith("W-")) {
+                 eu.id = exW.id; 
+             } else if (existingIdClean.startsWith("W-") && exW.id && !exW.id.startsWith("W-")) {
+                 eu.id = exW.id;
+             }
+             eu.name = exW.name;
+             eu.company = exW.company;
+         }
+      });
+
+      // 3. Ouvrir la modale ou finaliser directement
+      if (pendingImportUpdates.length > 0) {
+          const tbody = document.getElementById('import-validation-list');
+          tbody.innerHTML = pendingImportUpdates.map((u, i) => {
+              let idText = u.oldId !== u.newId ? `<span style="color:#ef4444;text-decoration:line-through;">${u.oldId}</span> ➡️ <span style="color:#10b981;font-weight:800;">${u.newId}</span>` : u.oldId;
+              let compText = u.oldComp !== u.newComp ? `<span style="color:#ef4444;text-decoration:line-through;">${u.oldComp}</span> ➡️ <span style="color:#10b981;font-weight:800;">${u.newComp}</span>` : u.oldComp;
+              
+              return `<tr>
+                  <td style="text-align:center; padding:8px;"><input type="checkbox" class="import-update-cb" value="${i}" checked style="cursor:pointer; width:14px; height:14px;"></td>
+                  <td style="padding:8px; font-weight:800; color:#0f172a;">${u.worker.name}</td>
+                  <td style="padding:8px; color:#64748b; font-size:11px;">${u.tsName}</td>
+                  <td style="padding:8px;">${idText}</td>
+                  <td style="padding:8px;">${compText}</td>
+              </tr>`;
+          }).join('');
+          document.getElementById('import-select-all').checked = true;
+          document.getElementById('import-validation-modal').style.display = 'flex';
+      } else {
+          finalizeImport(0);
+      }
 
     } catch (err) { alert("Erreur technique : " + err.message); }
     event.target.value = "";
