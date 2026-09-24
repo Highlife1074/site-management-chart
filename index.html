@@ -3317,6 +3317,69 @@ function importExcelFile(event) {
 
 // On s'assure que la fonction globale appelée par le bouton est bien reliée
 window.importWorkersDB = importExcelFile;
+ // 1. FORCER LA SÉLECTION PAR SIMPLE CLIC (Sans avoir besoin de la touche CTRL)
+document.addEventListener('click', function(e) {
+    if (currentRole === 'viewer' || currentRole === 'cfo') return;
+    const pill = e.target.closest('.worker-pill');
+    if (pill) {
+        pill.classList.toggle('selected-pill');
+        updateFab();
+    }
+});
+
+// 2. CORRIGER LE BLOCAGE DE FUSION (Texte vs Nombre)
+window.executeManualMerge = function() {
+    if (!window.pendingMergeData) return;
+    if (currentRole === 'viewer' || currentRole === 'cfo') return;
+
+    const pillU = window.pendingMergeData.unassigned;
+    const pillA = window.pendingMergeData.assigned;
+
+    // On force la conversion en texte pour garantir la correspondance
+    const uId = String(pillU.dataset.wid);
+    const aId = String(pillA.dataset.wid);
+    const aCidx = parseInt(pillA.dataset.cidx);
+    const aTidx = parseInt(pillA.dataset.tidx);
+
+    const unassignedWorker = unassignedWorkers.find(w => String(w.id) === uId);
+    const assignedWorker = cardsData[aCidx].tasks[aTidx].workerList.find(w => String(w.id) === aId);
+
+    if (!unassignedWorker) {
+        alert("Erreur : L'ouvrier Excel est introuvable.");
+        return;
+    }
+    if (!assignedWorker) {
+        alert("Erreur : L'ouvrier de la Timesheet est introuvable.");
+        return;
+    }
+
+    if (confirm(`Voulez-vous fusionner ces deux ouvriers ?\n\n[La Bible Excel] : ${unassignedWorker.name} (${unassignedWorker.id})\n\nva écraser et mettre à jour ⬇️\n\n[Le Chantier] : ${assignedWorker.name} (${assignedWorker.id})`)) {
+        
+        // On écrase les données du chantier par la Bible Excel
+        assignedWorker.id = unassignedWorker.id;
+        assignedWorker.name = unassignedWorker.name;
+        assignedWorker.company = unassignedWorker.company;
+        assignedWorker.isMissing = false; 
+
+        // On le retire du tiroir des Non Assignés
+        unassignedWorkers = unassignedWorkers.filter(w => String(w.id) !== uId);
+
+        // On nettoie l'interface
+        document.querySelectorAll('.worker-pill.sortable-selected, .worker-pill.selected-pill').forEach(el => {
+            el.classList.remove('sortable-selected', 'selected-pill');
+        });
+
+        // Sauvegarde de l'état
+        recalculateTotals();
+        renderCards();
+        renderDrawer();
+        if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
+        updateFab();
+        syncToFirebase();
+
+        alert("✅ Fusion réussie ! Le profil a été mis à jour avec les données officielles.");
+    }
+};
 </script>
 </body>
 </html>
