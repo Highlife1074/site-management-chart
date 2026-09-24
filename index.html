@@ -543,6 +543,33 @@
 </div>
 
 <!-- MODAL GESTION ENTREPRISES -->
+ <!-- MODAL FUSION MANUELLE -->
+<div id="merge-modal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">🔗 Fusionner un ouvrier</div>
+    <p style="font-size:12px; color:#64748b; margin-top:-8px;">
+      Les données de l'ouvrier importé <b>(Non Assigné)</b> vont écraser celles de l'ouvrier <b>Assigné</b> sélectionné ci-dessous. L'ouvrier conservera sa place dans son équipe.
+    </p>
+    
+    <div style="background:#f1f5f9; padding:10px; border-radius:8px; margin-top:8px;">
+      <div style="font-size:11px; font-weight:700; color:#475569;">SOURCE EXCEL (Nouvelles données à conserver) :</div>
+      <div id="merge-source-info" style="font-weight:800; font-size:13px; color:#0f172a; margin-top:4px;"></div>
+    </div>
+    
+    <div style="margin-top:12px;">
+      <label style="font-size:11px; font-weight:700; color:#475569;">CIBLE (Ouvrier assigné sur Timesheet à mettre à jour) :</label>
+      <input type="text" id="merge-search" class="modal-select" style="margin-top:4px; margin-bottom:4px;" placeholder="🔍 Rechercher un nom..." oninput="filterMergeTarget()">
+      <select id="merge-target-select" class="modal-select" size="6" style="margin-top:4px; padding:4px; height: 150px;">
+        <!-- Rempli dynamiquement -->
+      </select>
+    </div>
+    
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-outline" onclick="closeMergeModal()">Annuler</button>
+      <button class="btn btn-success" onclick="confirmMerge()">✅ Appliquer la Fusion</button>
+    </div>
+  </div>
+</div>
 <div id="companies-modal" class="modal-overlay">
   <div class="modal-box">
     <div class="modal-title">🏢 Gérer les Entreprises</div>
@@ -1270,7 +1297,8 @@ function renderDBTable() {
         <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9; font-size:11px; color:#64748b;">
           ${isUnassigned ? '<span style="color:#f59e0b; font-weight:700;">En attente</span>' : `Assigné : <b>${supName}</b>`}
         </td>
-        <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9;">
+        <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9; white-space:nowrap;">
+           ${isUnassigned ? `<button class="btn btn-blue" style="padding:2px 6px; font-size:10px; margin-right:4px;" onclick="openMergeModal('${w.id}')" title="Fusionner avec un ouvrier assigné">🔗 Fusionner</button>` : ''}
            <button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5; padding:2px 8px;" onclick="deleteWorkerFromDB('${w.id}', '${context}', ${cIdx}, ${tIdx})">&times;</button>
         </td>
      </tr>`;
@@ -2903,6 +2931,105 @@ function importExcelFile(event) {
 }
 
 window.importWorkersDB = importExcelFile;
+ // --- LOGIQUE DE FUSION MANUELLE ---
+let currentMergeSourceId = null;
+let mergeTargetOptions = [];
+
+window.openMergeModal = function(sourceId) {
+  if (currentRole === 'viewer' || currentRole === 'cfo') return;
+  currentMergeSourceId = sourceId;
+  
+  const sourceW = unassignedWorkers.find(w => w.id === sourceId);
+  if (!sourceW) return;
+  
+  document.getElementById('merge-source-info').innerHTML = `${sourceW.name} <br><span style="font-size:11px; color:#64748b;">ID: ${sourceW.id} | Ent: ${sourceW.company}</span>`;
+  
+  mergeTargetOptions = [];
+  cardsData.forEach((c, cIdx) => {
+    c.tasks.forEach((t, tIdx) => {
+      (t.workerList || []).forEach(w => {
+        mergeTargetOptions.push({
+          val: `${cIdx}::${tIdx}::${w.id}`,
+          label: `${w.name} (ID: ${w.id}) - TS: ${c.name}`
+        });
+      });
+    });
+  });
+  
+  // Tri alphabétique pour faciliter la recherche
+  mergeTargetOptions.sort((a,b) => a.label.localeCompare(b.label));
+  
+  document.getElementById('merge-search').value = "";
+  renderMergeSelect(mergeTargetOptions);
+  document.getElementById('merge-modal').style.display = 'flex';
+};
+
+window.renderMergeSelect = function(optionsArray) {
+  const targetSelect = document.getElementById('merge-target-select');
+  if (optionsArray.length === 0) {
+    targetSelect.innerHTML = '<option value="">-- Aucun ouvrier assigné trouvé --</option>';
+    return;
+  }
+  targetSelect.innerHTML = optionsArray.map(opt => `<option value="${opt.val}">${opt.label}</option>`).join('');
+};
+
+window.filterMergeTarget = function() {
+  const query = document.getElementById('merge-search').value.toLowerCase();
+  const filtered = mergeTargetOptions.filter(opt => opt.label.toLowerCase().includes(query));
+  renderMergeSelect(filtered);
+};
+
+window.closeMergeModal = function() {
+  document.getElementById('merge-modal').style.display = 'none';
+  currentMergeSourceId = null;
+};
+
+window.confirmMerge = function() {
+  if (currentRole === 'viewer' || currentRole === 'cfo') return;
+  
+  const targetSelect = document.getElementById('merge-target-select');
+  const targetVal = targetSelect.value;
+  
+  if (!targetVal) {
+    alert("Veuillez sélectionner un ouvrier cible dans la liste.");
+    return;
+  }
+  
+  const sourceIndex = unassignedWorkers.findIndex(w => w.id === currentMergeSourceId);
+  if (sourceIndex === -1) return;
+  const sourceW = unassignedWorkers[sourceIndex];
+  
+  const parts = targetVal.split('::');
+  const cIdx = parseInt(parts[0]);
+  const tIdx = parseInt(parts[1]);
+  const targetWId = parts.slice(2).join('::');
+  
+  const targetW = cardsData[cIdx].tasks[tIdx].workerList.find(w => w.id === targetWId);
+  
+  if (!targetW) {
+    alert("Erreur: L'ouvrier cible n'a pas été trouvé.");
+    return;
+  }
+  
+  // Remplacement pur des données de l'ouvrier assigné (sans toucher à son affectation)
+  targetW.id = sourceW.id;
+  targetW.name = sourceW.name;
+  targetW.company = sourceW.company;
+  targetW.isMissing = false; 
+  
+  // Suppression de l'ouvrier de la base Non Assignée
+  unassignedWorkers.splice(sourceIndex, 1);
+  
+  closeMergeModal();
+  recalculateTotals();
+  syncToFirebase();
+  renderCards();
+  renderDrawer();
+  
+  if (document.getElementById('db-modal').style.display === 'flex') {
+    renderDBTable();
+  }
+};
 </script>
 </body>
 </html>
