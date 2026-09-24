@@ -2904,5 +2904,419 @@ function importExcelFile(event) {
 
 window.importWorkersDB = importExcelFile;
 </script>
+ <!-- ========================================== -->
+<!-- NOUVELLES MODALES ET BOUTON FUSION         -->
+<!-- ========================================== -->
+<div id="fab-merge" onclick="executeManualMerge()" style="display:none; position:fixed; bottom:90px; right:30px; background:#10b981; color:white; padding:16px 24px; border-radius:30px; box-shadow:0 10px 25px rgba(16,185,129,0.4); cursor:pointer; font-weight:800; font-size:15px; z-index:2500; align-items:center; gap:10px; transition: transform 0.2s;">
+  🔗 Fusionner (Excel ➡️ Chantier)
+</div>
+
+<div id="merge-validation-modal" class="modal-overlay">
+  <div class="modal-box xl">
+    <div class="modal-title">🤖 Rapprochement Intelligent (Propositions)</div>
+    <p style="font-size:12px; color:#64748b; margin-top:-8px; line-height:1.4;">
+      L'algorithme a trouvé des correspondances probables (fautes de frappe, inversions).<br>
+      <b>Cochez</b> les fusions que vous validez. La donnée Excel (gauche) écrasera la donnée du Chantier (droite).
+    </p>
+    <div style="overflow-y:auto; max-height: 50vh; border: 1px solid #cbd5e1; border-radius: 8px; margin-top: 10px;">
+      <table class="payroll-table" style="width:100%; text-align:left;">
+         <thead style="background:#f1f5f9; position:sticky; top:0; z-index:10;">
+           <tr>
+             <th style="padding:8px; text-align:center; width:40px;"><input type="checkbox" id="merge-select-all" checked onchange="toggleAllMergeUpdates(this.checked)" style="cursor:pointer; width:14px; height:14px;"></th>
+             <th style="padding:8px; color:#10b981;">📥 Base Excel (À conserver)</th>
+             <th style="padding:8px; color:#dc2626;">👷 Chantier (À remplacer)</th>
+             <th style="padding:8px;">Timesheet</th>
+           </tr>
+         </thead>
+         <tbody id="merge-validation-list"></tbody>
+      </table>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-outline" onclick="cancelFuzzyMerges()">Annuler</button>
+      <button class="btn btn-success" onclick="confirmFuzzyMerges()">✅ Appliquer la sélection</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- SURCHARGE DES FONCTIONS JAVASCRIPT         -->
+<!-- ========================================== -->
+<script>
+// Nouvelles variables globales
+window.pendingMergeProposals = [];
+window.pendingMergeData = null;
+
+// Remplacement de l'apparition des boutons
+function updateFab() {
+  const selected = document.querySelectorAll('.worker-pill.sortable-selected, .worker-pill.selected-pill');
+  const fabMove = document.getElementById('fab-move');
+  const fabCount = document.getElementById('fab-count');
+  const fabMerge = document.getElementById('fab-merge');
+  
+  let hasUnassigned = false;
+  let hasAssigned = false;
+  let unassignedPill = null;
+  let assignedPill = null;
+
+  selected.forEach(pill => {
+      if (pill.dataset.cidx === 'unassigned') {
+          hasUnassigned = true;
+          unassignedPill = pill;
+      } else {
+          hasAssigned = true;
+          assignedPill = pill;
+      }
+  });
+
+  if (selected.length === 2 && hasUnassigned && hasAssigned) {
+     fabMerge.style.display = 'flex';
+     fabMove.style.display = 'none';
+     window.pendingMergeData = { unassigned: unassignedPill, assigned: assignedPill };
+  } else if (selected.length > 0) {
+     fabMerge.style.display = 'none';
+     fabMove.style.display = 'flex';
+     fabCount.innerText = selected.length;
+     window.pendingMergeData = null;
+  } else {
+     fabMerge.style.display = 'none';
+     fabMove.style.display = 'none';
+     window.pendingMergeData = null;
+  }
+}
+
+// Fonction de fusion manuelle
+window.executeManualMerge = function() {
+    if (!window.pendingMergeData) return;
+    if (currentRole === 'viewer' || currentRole === 'cfo') return;
+
+    const pillU = window.pendingMergeData.unassigned;
+    const pillA = window.pendingMergeData.assigned;
+
+    const uId = pillU.dataset.wid;
+    const aId = pillA.dataset.wid;
+    const aCidx = parseInt(pillA.dataset.cidx);
+    const aTidx = parseInt(pillA.dataset.tidx);
+
+    const unassignedWorker = unassignedWorkers.find(w => w.id === uId);
+    const assignedWorker = cardsData[aCidx].tasks[aTidx].workerList.find(w => w.id === aId);
+
+    if (!unassignedWorker || !assignedWorker) return;
+
+    if (confirm(`Voulez-vous fusionner ces deux ouvriers ?\n\n[La Bible Excel] : ${unassignedWorker.name} (${unassignedWorker.id})\n\nva écraser et mettre à jour ⬇️\n\n[Le Chantier] : ${assignedWorker.name} (${assignedWorker.id})`)) {
+        assignedWorker.id = unassignedWorker.id;
+        assignedWorker.name = unassignedWorker.name;
+        assignedWorker.company = unassignedWorker.company;
+        assignedWorker.isMissing = false; 
+
+        unassignedWorkers = unassignedWorkers.filter(w => w.id !== uId);
+
+        document.querySelectorAll('.worker-pill.sortable-selected').forEach(el => {
+            el.classList.remove('sortable-selected');
+            el.classList.remove('selected-pill');
+        });
+
+        recalculateTotals(); renderCards(); renderDrawer();
+        if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
+        updateFab(); syncToFirebase();
+
+        alert("✅ Fusion réussie ! Le profil a été mis à jour avec les informations RH officielles.");
+    }
+};
+
+// Algorithme IA de nettoyage
+window.cleanDuplicates = function(silent = false) {
+  if (currentRole === 'viewer' || currentRole === 'cfo') return 0;
+  
+  if (!silent && !confirm("Voulez-vous rechercher les doublons et lancer le rapprochement intelligent ?\n\n(L'IA identifiera les fautes de frappe et les prénoms inversés/manquants pour mettre à jour vos Timesheets avec la Bible Excel).")) return 0;
+  
+  function getSimilarity(s1, s2) {
+      if(!s1 || !s2) return 0;
+      function getBigrams(str) {
+          let bg = new Set();
+          for(let i=0; i<str.length-1; i++) bg.add(str.substring(i, i+2));
+          return bg;
+      }
+      let bg1 = getBigrams(s1), bg2 = getBigrams(s2);
+      if (bg1.size === 0 || bg2.size === 0) return 0;
+      let intersect = 0;
+      bg1.forEach(b => { if(bg2.has(b)) intersect++; });
+      return (2 * intersect) / (bg1.size + bg2.size);
+  }
+
+  function isSubset(n1, n2) {
+      let w1 = n1.split(' '), w2 = n2.split(' ');
+      if(w1.length < 2 || w2.length < 2) return false;
+      let matchCount = 0;
+      w1.forEach(word => { if(word.length > 2 && w2.includes(word)) matchCount++; });
+      return matchCount >= Math.min(w1.length, w2.length);
+  }
+
+  let assignedList = [];
+  cardsData.forEach((c, cIdx) => {
+      if (c.tasks) {
+          c.tasks.forEach((t, tIdx) => {
+              if (t.workerList) {
+                  t.workerList.forEach(w => assignedList.push({ worker: w, tsName: c.name, cIdx: cIdx, tIdx: tIdx }));
+              }
+          });
+      }
+  });
+
+  window.pendingMergeProposals = [];
+
+  unassignedWorkers.forEach((uW, uIdx) => {
+      const normUId = String(uW.id || '').trim().toUpperCase();
+      const normUName = normalizeName(uW.name);
+      const hasValidId = (normUId !== '' && !normUId.startsWith('W-'));
+      let matchFound = null;
+
+      for (let aObj of assignedList) {
+          let aW = aObj.worker;
+          const normAId = String(aW.id || '').trim().toUpperCase();
+          const normAName = normalizeName(aW.name);
+
+          let isDup = false;
+          if (hasValidId && normAId === normUId) { isDup = true; }
+          else if (normUName !== '' && normAName === normUName) { isDup = true; }
+          else if (normUName !== '' && normAName !== '' && isSubset(normUName, normAName)) { isDup = true; }
+          else if (normUName !== '' && normAName !== '') {
+              let sim = getSimilarity(normUName.replace(/ /g,''), normAName.replace(/ /g,''));
+              if (sim > 0.82) { isDup = true; }
+          }
+
+          if (isDup) {
+              matchFound = { uWorker: uW, aWorker: aW, cIdx: aObj.cIdx, tIdx: aObj.tIdx, tsName: aObj.tsName };
+              break;
+          }
+      }
+
+      if (matchFound) { window.pendingMergeProposals.push(matchFound); }
+  });
+
+  if (window.pendingMergeProposals.length > 0) {
+      const tbody = document.getElementById('merge-validation-list');
+      tbody.innerHTML = window.pendingMergeProposals.map((prop, i) => {
+          return `<tr>
+              <td style="text-align:center; padding:8px;"><input type="checkbox" class="merge-update-cb" value="${i}" checked style="cursor:pointer; width:14px; height:14px;"></td>
+              <td style="padding:8px; font-weight:800; color:#10b981;">${prop.uWorker.name} <br><span style="font-size:10px; color:#64748b;">${prop.uWorker.id} - ${prop.uWorker.company}</span></td>
+              <td style="padding:8px; font-weight:800; color:#dc2626;">${prop.aWorker.name} <br><span style="font-size:10px; color:#64748b;">${prop.aWorker.id} - ${prop.aWorker.company}</span></td>
+              <td style="padding:8px; color:#64748b; font-size:11px;">${prop.tsName}</td>
+          </tr>`;
+      }).join('');
+      document.getElementById('merge-select-all').checked = true;
+      document.getElementById('merge-validation-modal').style.display = 'flex';
+  } else {
+      if (!silent) alert("👌 Aucun doublon ou rapprochement possible trouvé dans la base !");
+  }
+  return window.pendingMergeProposals.length;
+};
+
+// Fonctions de la Modale IA
+window.toggleAllMergeUpdates = function(checked) { document.querySelectorAll('.merge-update-cb').forEach(cb => cb.checked = checked); };
+window.cancelFuzzyMerges = function() { document.getElementById('merge-validation-modal').style.display = 'none'; window.pendingMergeProposals = []; };
+window.confirmFuzzyMerges = function() {
+    const checkboxes = document.querySelectorAll('.merge-update-cb');
+    let count = 0;
+    let uIdsToRemove = new Set();
+    checkboxes.forEach(cb => {
+        if (cb.checked) {
+            const prop = window.pendingMergeProposals[cb.value];
+            if (prop && cardsData[prop.cIdx] && cardsData[prop.cIdx].tasks[prop.tIdx]) {
+                const aW = cardsData[prop.cIdx].tasks[prop.tIdx].workerList.find(w => w.id === prop.aWorker.id);
+                if (aW) {
+                    aW.id = prop.uWorker.id; aW.name = prop.uWorker.name; aW.company = prop.uWorker.company; aW.isMissing = false;
+                    count++; uIdsToRemove.add(prop.uWorker.id);
+                }
+            }
+        }
+    });
+
+    if (count > 0) {
+        unassignedWorkers = unassignedWorkers.filter(w => !uIdsToRemove.has(w.id));
+        recalculateTotals(); renderCards(); renderDrawer();
+        if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
+        syncToFirebase();
+        alert(`✅ ${count} ouvriers fusionnés avec succès !`);
+    }
+    document.getElementById('merge-validation-modal').style.display = 'none';
+    window.pendingMergeProposals = [];
+};
+
+// Remplacement Fin de l'Import Excel
+function finalizeImport(updatedCount = 0) {
+    let newWorkersCount = 0;
+    let unmatchedExcelWorkers = [];
+    pendingExcelWorkersMap.forEach((exW) => {
+        if (!exW.matched) unmatchedExcelWorkers.push({ id: exW.id, name: exW.name, company: exW.company });
+    });
+    unassignedWorkers.push(...unmatchedExcelWorkers);
+    newWorkersCount = unmatchedExcelWorkers.length;
+
+    window.rawImportedDB = Array.from(pendingExcelWorkersMap.values()).map(w => ({id: w.id, name: w.name, company: w.company}));
+    
+    renderCompanySelects(); recalculateTotals(); renderCards(); renderDrawer(); 
+    if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
+    syncToFirebase();
+    
+    alert(`Import et Mises à jour terminés !\n\n🔄 Assignés mis à jour : ${updatedCount}\n📥 Nouveaux ouvriers envoyés dans la Base "Non Assignés" : ${newWorkersCount}\n\n💡 NOUVEAUTÉ : Pensez à cliquer sur "🧹 Nettoyer Doublons" dans la Base Globale pour lancer le rapprochement intelligent et fusionner les fautes de frappe.`);
+}
+
+// Remplacement Importation Excel (avec colonnes strictes)
+function importExcelFile(event) {
+  if (currentRole === 'viewer' || currentRole === 'cfo') return; 
+  const file = event.target.files[0];
+  if (!file) return;
+  const fileName = file.name.toUpperCase();
+  const reader = new FileReader();
+  
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      pendingImportUpdates = [];
+      pendingExcelWorkersMap = new Map();
+
+      workbook.SheetNames.forEach(sheetName => {
+        if (!sheetName) return;
+        const worksheet = workbook.Sheets[sheetName];
+        if (!worksheet) return;
+        const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+        if (!rawRows || rawRows.length === 0) return;
+
+        let isForeign = fileName.includes("FOREIGN");
+        let isSkyBranch = fileName.includes("SKYBUILDING BRANCH") || fileName.includes("BRANCH");
+        let isSkyGreece = fileName.includes("SKYBUILDING GREECE") || fileName.includes("GREECE");
+
+        let headerRowIdx = -1;
+        for (let r = 0; r < rawRows.length; r++) {
+          const rowArray = rawRows[r];
+          if (!Array.isArray(rowArray)) continue;
+          const hasNameHeader = rowArray.some(cell => {
+             const exact = String(cell || "").trim().toUpperCase().replace(/[^A-Z]/g, '');
+             return ["NAME", "SURNAME", "NOM", "PRENOM", "FIRSTNAME", "LASTNAME", "FULLNAME"].includes(exact);
+          });
+          if (hasNameHeader) { headerRowIdx = r; break; }
+        }
+        if (headerRowIdx === -1) return;
+
+        for (let r = headerRowIdx + 1; r < rawRows.length; r++) {
+          const row = rawRows[r];
+          if (!Array.isArray(row) || row.length === 0) continue;
+          let workerId = "", workerName = "", workerComp = "OTHER";
+
+          if (isForeign) {
+             workerId = String(row[3] || "").trim(); 
+             let surname = String(row[4] || "").trim(); 
+             let name = String(row[5] || "").trim(); 
+             workerName = (surname + " " + name).trim();
+             let nationality = String(row[6] || "").trim().toUpperCase(); 
+             if (nationality.includes("PHILIPPINE") || nationality.includes("FILIPINO")) workerComp = "EUROASIA";
+             else if (nationality.includes("GHAN") || nationality.includes("INDIA") || nationality.includes("INDIAN")) workerComp = "DSS";
+             else workerComp = "BIK";
+          } 
+          else if (isSkyBranch || isSkyGreece) {
+             let dynIdCol = -1, dynWorkerCols = [];
+             const headerRow = rawRows[headerRowIdx] || [];
+             for (let c = 0; c < headerRow.length; c++) {
+               const colName = String(headerRow[c] || "").trim().toUpperCase();
+               const exactCol = colName.replace(/[^A-Z]/g, '');
+               if ((exactCol === "ID" || exactCol === "NO" || colName.includes("COMET") || colName.includes("NEOAXESS")) && dynIdCol === -1) dynIdCol = c;
+               if (["NAME", "SURNAME", "NOM", "PRENOM", "FIRSTNAME", "LASTNAME", "FULLNAME"].includes(exactCol)) dynWorkerCols.push(c);
+             }
+             if (dynIdCol === -1) dynIdCol = 2; 
+             if (dynWorkerCols.length === 0) dynWorkerCols = [4, 5]; 
+
+             workerId = dynIdCol !== -1 ? String(row[dynIdCol] || "").trim() : "";
+             let dynName = "";
+             dynWorkerCols.forEach(wc => { let val = String(row[wc] || "").trim(); if(val) dynName += val + " "; });
+             workerName = dynName.trim();
+             workerComp = isSkyBranch ? "SKYBUILDING BRANCH" : "SKYBUILDING GREECE";
+          } 
+          else {
+             let dynIdCol = -1, dynCompCol = -1, dynWorkerCols = [];
+             const headerRow = rawRows[headerRowIdx] || [];
+             for (let c = 0; c < headerRow.length; c++) {
+               const colName = String(headerRow[c] || "").trim().toUpperCase();
+               const exactCol = colName.replace(/[^A-Z]/g, '');
+               if ((exactCol === "ID" || exactCol === "NO" || colName.includes("COMET") || colName.includes("NEOAXESS")) && dynIdCol === -1) dynIdCol = c;
+               if (["NAME", "SURNAME", "NOM", "PRENOM", "FIRSTNAME", "LASTNAME", "FULLNAME"].includes(exactCol)) dynWorkerCols.push(c);
+               if (colName.includes("COMPANY") || colName.includes("SUBCON") || colName === "CO." || colName.includes("ENTREPRISE")) dynCompCol = c;
+             }
+             if (dynWorkerCols.length > 0) {
+                 workerId = dynIdCol !== -1 ? String(row[dynIdCol] || "").trim() : "";
+                 let dynName = "";
+                 dynWorkerCols.forEach(wc => { let val = String(row[wc] || "").trim(); if(val) dynName += val + " "; });
+                 workerName = dynName.trim();
+                 if (dynCompCol !== -1 && String(row[dynCompCol] || "").trim() !== "") {
+                     workerComp = String(row[dynCompCol]).trim().toUpperCase();
+                 }
+             }
+          }
+
+          if (!workerName) continue;
+          if (!workerId) workerId = "W-" + Math.floor(Math.random()*100000);
+          const normWName = normalizeName(workerName);
+          pendingExcelWorkersMap.set(normWName, { id: workerId, name: workerName, company: workerComp, matched: false });
+          if (!siteCompanies.includes(workerComp)) siteCompanies.push(workerComp);
+        }
+      });
+
+      cardsData.forEach((c, cIdx) => {
+        if (c.tasks) {
+          c.tasks.forEach((t, tIdx) => {
+            if (t.workerList) {
+              t.workerList.forEach(w => {
+                 const normName = normalizeName(w.name);
+                 if (pendingExcelWorkersMap.has(normName)) {
+                     let exW = pendingExcelWorkersMap.get(normName);
+                     exW.matched = true; w.isMissing = false; 
+                     let existingIdClean = String(w.id || "").trim();
+                     let idChanged = false;
+                     if (exW.id && existingIdClean && existingIdClean !== exW.id && !existingIdClean.startsWith('W-') && !exW.id.startsWith('W-')) idChanged = true;
+                     else if (existingIdClean.startsWith('W-') && exW.id && !exW.id.startsWith('W-')) idChanged = true;
+                     let compChanged = (w.company !== exW.company);
+
+                     if (idChanged || compChanged) {
+                         pendingImportUpdates.push({ worker: w, newId: exW.id, newComp: exW.company, oldId: existingIdClean, oldComp: w.company, tsName: c.name });
+                     } else { w.name = exW.name; }
+                 } else { w.isMissing = true; }
+              });
+            }
+          });
+        }
+      });
+
+      unassignedWorkers.forEach(eu => {
+         const normName = normalizeName(eu.name);
+         if (pendingExcelWorkersMap.has(normName)) {
+             let exW = pendingExcelWorkersMap.get(normName);
+             exW.matched = true;
+             let existingIdClean = String(eu.id || "").trim();
+             if (exW.id && existingIdClean && existingIdClean !== exW.id && !existingIdClean.startsWith("W-") && !exW.id.startsWith("W-")) eu.id = exW.id; 
+             else if (existingIdClean.startsWith("W-") && exW.id && !exW.id.startsWith("W-")) eu.id = exW.id;
+             eu.name = exW.name; eu.company = exW.company;
+         }
+      });
+
+      if (pendingImportUpdates.length > 0) {
+          const tbody = document.getElementById('import-validation-list');
+          tbody.innerHTML = pendingImportUpdates.map((u, i) => {
+              let idText = u.oldId !== u.newId ? `<span style="color:#ef4444;text-decoration:line-through;">${u.oldId}</span> ➡️ <span style="color:#10b981;font-weight:800;">${u.newId}</span>` : u.oldId;
+              let compText = u.oldComp !== u.newComp ? `<span style="color:#ef4444;text-decoration:line-through;">${u.oldComp}</span> ➡️ <span style="color:#10b981;font-weight:800;">${u.newComp}</span>` : u.oldComp;
+              return `<tr><td style="text-align:center; padding:8px;"><input type="checkbox" class="import-update-cb" value="${i}" checked style="cursor:pointer; width:14px; height:14px;"></td><td style="padding:8px; font-weight:800; color:#0f172a;">${u.worker.name}</td><td style="padding:8px; color:#64748b; font-size:11px;">${u.tsName}</td><td style="padding:8px;">${idText}</td><td style="padding:8px;">${compText}</td></tr>`;
+          }).join('');
+          document.getElementById('import-select-all').checked = true;
+          document.getElementById('import-validation-modal').style.display = 'flex';
+      } else { finalizeImport(0); }
+
+    } catch (err) { alert("Erreur technique : " + err.message); }
+    event.target.value = "";
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// On s'assure que la fonction globale appelée par le bouton est bien reliée
+window.importWorkersDB = importExcelFile;
+</script>
 </body>
 </html>
