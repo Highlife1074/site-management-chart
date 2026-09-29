@@ -226,6 +226,7 @@
   .worker-pill.bik { border-color: #5eead4; background: #ccfbf1; color: #0f766e; }
   .worker-pill.other { border-color: #cbd5e1; background: #f1f5f9; color: #475569; }
 
+  .worker-pill.dup-pill { outline: 2px solid #dc2626; outline-offset: 1px; }
   .worker-pill.deleted-worker { border: 2px dashed #f87171 !important; background: #fef2f2 !important; color: #991b1b !important; animation: blinkWarning 2s infinite; }
   @keyframes blinkWarning { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
   
@@ -351,6 +352,7 @@
     body.print-mode-tree #tree-view { display: block !important; width: 100%; overflow: visible !important; background: white; }
     body.print-mode-tree .btn-print-tree { display: none !important; }
   }
+
 </style>
 </head>
 <body>
@@ -612,7 +614,7 @@
     <button id="btn-toggle-dash" class="btn btn-black" onclick="setView('dashboard')" style="display:none;">📊 Tableau de bord</button>
     <div class="divider"></div>
 
-    <button class="btn btn-outline" onclick="openDBModal()" title="La Base de données Globale contient tous les ouvriers Excel + les manuels.">🗃️ Base Globale</button>
+    <button class="btn btn-outline" id="btn-db" onclick="openDBModal()" title="La Base de données Globale contient tous les ouvriers Excel + les manuels.">🗃️ Base Globale</button>
     <button class="btn btn-outline" id="btn-add-sup" onclick="addNewSupervisor()">+ Ajout Timesheet</button>
     <button class="btn btn-black" id="btn-print-ts" onclick="openPrintModal()">📄 Imprimer TS</button>
     
@@ -621,7 +623,7 @@
     
     <div id="admin-dropdown">
       <span style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase;">Configuration</span>
-      <button class="btn btn-outline" style="width:100%; justify-content:left;" onclick="openCompaniesModal()">🏢 Gérer Entreprises</button>
+      <button class="btn btn-outline" id="btn-menu-companies" style="width:100%; justify-content:left;" onclick="openCompaniesModal()">🏢 Gérer Entreprises</button>
       <button class="btn btn-outline" style="width:100%; justify-content:left; margin-top:4px;" onclick="openSupervisorsModal()">🧑‍💼 Gérer Superviseurs</button>
       <hr style="border:0; border-top:1px solid #e2e8f0; margin:4px 0;">
       <span style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase;">Données</span>
@@ -629,7 +631,7 @@
       <button class="btn btn-outline" style="width:100%; justify-content:left;" id="btn-import" onclick="document.getElementById('excel-file-input').click()" title="Importation intelligente de votre fichier Excel RH">📥 Import Fichier RH</button>
       <button class="btn btn-outline" style="width:100%; justify-content:left;" onclick="exportBackup()">💾 Sauvegarder (JSON)</button>
       <input type="file" id="backup-file-input" accept=".json" style="display:none" onchange="importBackup(event)">
-      <button class="btn btn-outline" style="width:100%; justify-content:left;" onclick="document.getElementById('backup-file-input').click()">📂 Restaurer (JSON)</button>
+      <button class="btn btn-outline" id="btn-menu-restore" style="width:100%; justify-content:left;" onclick="document.getElementById('backup-file-input').click()">📂 Restaurer (JSON)</button>
     </div>
 
   </div>
@@ -642,7 +644,7 @@
     <div class="kpi-header">
       <div>
         <div class="title-editable" contenteditable="false" id="chart-title">SITE MANAGEMENT & SUPERVISORY CHART</div>
-        <div class="title-editable" style="font-size: 11px; color: #64748b; font-weight: 600; margin-top: 3px;" contenteditable="false">WEEKS 37 / 38 &bull; REAL-TIME WORKFORCE ALLOCATION</div>
+        <div class="title-editable" id="week-subtitle" style="font-size: 11px; color: #64748b; font-weight: 600; margin-top: 3px;" contenteditable="false"></div>
       </div>
       <div class="total-badge-container">
         <span class="total-label">Effectif Total Chantier :</span>
@@ -693,6 +695,7 @@
 
 <!-- ===== SCRIPTS (ordre obligatoire : core en premier) ===== -->
 <script>
+/* ===== core.js ===== */
 /* ==========================================================
    core.js — CŒUR DE L'APPLICATION
    Config · utilitaires · RÈGLE DE COMPTAGE · état · profils · Firebase · totaux · démarrage
@@ -801,6 +804,30 @@ function ensureCardIds() {
   return changed;
 }
 
+// Retrouve une Timesheet par son ID stable (et non par sa position, qui peut changer)
+function cardById(id) {
+  return cardsData.find(c => c.id === id) || null;
+}
+
+// Numéro de semaine ISO (lundi → dimanche), comme sur les plannings de chantier
+function isoWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+}
+
+// Sous-titre du tableau de bord : semaine en cours / semaine suivante (calcul automatique)
+function renderWeekLabel() {
+  const el = document.getElementById('week-subtitle');
+  if (!el) return;
+  const now = new Date();
+  const next = new Date(now);
+  next.setDate(now.getDate() + 7);
+  el.innerText = `WEEKS ${isoWeek(now)} / ${isoWeek(next)} \u2022 REAL-TIME WORKFORCE ALLOCATION`;
+}
+
 /* ----------------------------------------------------------
    RÈGLE DE COMPTAGE UNIQUE — utilisée par TOUS les écrans
    (tableau de bord, lots, entreprises, Vue Équipes, Arbre, impression)
@@ -855,6 +882,26 @@ function computeTotals() {
     });
   });
   return T;
+}
+
+// CONTRÔLE : ouvriers présents à plusieurs endroits (même ID).
+// Ne modifie PAS les totaux : sert uniquement à alerter (badge + ouvriers encadrés en rouge).
+function findMultiAssigned() {
+  const map = new Map();
+  const add = (w, place, assigned) => {
+    const key = String(w.id ?? '').trim().toUpperCase();
+    if (!key) return;
+    if (!map.has(key)) map.set(key, { key, id: w.id, name: w.name, places: [], assignedCount: 0 });
+    const e = map.get(key);
+    e.places.push(place);
+    if (assigned) e.assignedCount++;
+  };
+  cardsData.forEach(card => {
+    const place = (card.name || 'Sans nom') + (card.timesheetNo ? ` (TS ${card.timesheetNo})` : '');
+    (card.tasks || []).forEach(t => activeWorkers(t).forEach(w => add(w, place, true)));
+  });
+  unassignedWorkers.forEach(w => add(w, 'Base non assignée', false));
+  return [...map.values()].filter(e => e.places.length > 1);
 }
 
 function cardBadgeHtml(cc) {
@@ -913,7 +960,7 @@ let currentView = 'dashboard';
 let sortableInstances = [];
 let workerSortables = [];
 let selectedForPrint = new Set(); 
-let currentTsCardIdx = -1;
+let currentTsCardId = null; // Timesheet ouverte dans la fenêtre ⚙️ TS (par ID)
 
 // --- VARIABLES GLOBALES DE DONNÉES ---
 let cardsData = [];
@@ -982,51 +1029,93 @@ function applyRolePermissions() {
   const isViewer = currentRole === 'viewer';
   const isCFO = currentRole === 'cfo';
   const isTK = currentRole === 'timekeeper';
+  const isAdmin = currentRole === 'admin';
+  const readOnly = isViewer || isCFO;
+  const show = (id, visible, mode = 'inline-flex') => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = visible ? mode : 'none';
+  };
 
-  document.getElementById('btn-settings-menu').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
-  document.getElementById('btn-print-ts').style.display = isViewer || isCFO ? 'none' : 'inline-flex';
-  document.getElementById('fab-drawer').style.display = isViewer || isCFO ? 'none' : 'flex';
+  // Boutons du haut : cachés quand le profil ne peut pas s'en servir
+  show('btn-settings-menu', !readOnly);
+  show('btn-print-ts', !readOnly);
+  show('btn-add-sup', !readOnly);
+  show('btn-db', !readOnly);
+  show('fab-drawer', !readOnly, 'flex');
+  // Menu ⚙️ : entreprises et restauration réservées à l'Admin
+  show('btn-menu-companies', isAdmin);
+  show('btn-menu-restore', isAdmin);
 
   document.querySelectorAll('.payroll-input').forEach(el => { el.disabled = isViewer || isTK; });
-  
-  document.querySelectorAll('.manager-name, .task-desc, .task-foreman span, .ts-badge span, .title-editable').forEach(el => { 
-    el.setAttribute('contenteditable', isViewer || isCFO ? 'false' : 'true'); 
+
+  // (le titre du tableau n'est plus modifiable : il n'était jamais enregistré)
+  document.querySelectorAll('.manager-name, .task-desc, .task-foreman span, .ts-badge span').forEach(el => {
+    el.setAttribute('contenteditable', readOnly ? 'false' : 'true');
   });
 
-  document.querySelectorAll('.worker-count-input, .source-select, .cat-select, .ts-select, .sup-name-select').forEach(el => { 
-    el.disabled = isViewer || isCFO; 
+  document.querySelectorAll('.worker-count-input, .source-select, .cat-select, .ts-select, .sup-name-select').forEach(el => {
+    el.disabled = readOnly;
   });
 
-  document.querySelectorAll('.btn-remove-card, .btn-add-task, .btn-delete-task').forEach(el => { 
-    el.style.display = isViewer || isCFO ? 'none' : 'inline-block'; 
-  });
-  
-  document.querySelectorAll('.ts-checkbox, .ts-btn-config').forEach(el => { 
-    el.disabled = isViewer || isCFO; 
-    if(el.classList.contains('ts-btn-config')) el.style.display = isViewer || isCFO ? 'none' : 'inline-block';
+  document.querySelectorAll('.btn-remove-card, .btn-add-task, .btn-delete-task').forEach(el => {
+    el.style.display = readOnly ? 'none' : 'inline-block';
   });
 
-  const isDisabled = (isViewer || isCFO);
-  sortableInstances.forEach(s => s.option("disabled", isDisabled));
-  workerSortables.forEach(s => s.option("disabled", isDisabled));
+  document.querySelectorAll('.ts-checkbox, .ts-btn-config').forEach(el => {
+    el.disabled = readOnly;
+    if (el.classList.contains('ts-btn-config')) el.style.display = readOnly ? 'none' : 'inline-block';
+  });
+
+  sortableInstances.forEach(s => s.option("disabled", readOnly));
+  workerSortables.forEach(s => s.option("disabled", readOnly));
 }
 
 /* ==========================================================
    5. FIREBASE & SAUVEGARDES
    ========================================================== */
 
+// --- SAISIE PROTÉGÉE ---
+// Si un collègue enregistre pendant que vous tapez dans une case du tableau de bord,
+// ses données sont prises en compte tout de suite, mais l'écran n'est redessiné
+// qu'à la fin de votre saisie (sinon votre texte serait effacé).
+let _renderPending = false;
+
+function isEditingBoard() {
+  const el = document.activeElement;
+  if (!el || !el.closest || !el.closest('#dashboard-view')) return false;
+  return el.isContentEditable || (el.tagName === 'INPUT' && (el.type === 'text' || el.type === 'number'));
+}
+
+// Redessine tous les écrans à partir des données en mémoire
+function refreshAllViews() {
+  renderCompanySelects();
+  renderPayrollTable();
+  renderCards();
+  if (currentView === 'orgchart') renderOrgChart();
+  if (currentView === 'tree') renderTreeOrgChart();
+  renderDrawer();
+  if (document.getElementById('db-modal').style.display === 'flex') renderDBTable();
+  updateFab();
+}
+
+document.addEventListener('focusout', () => {
+  if (!_renderPending) return;
+  _renderPending = false;
+  refreshAllViews();
+  if (!isSaving) document.getElementById("sync-text").innerText = "Connecté à Firebase";
+});
+
 // --- 2. CONNEXION FIREBASE ---
 function startFirebase() {
   try {
-    const firebaseConfig = FIREBASE_CONFIG;
-
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
     db.settings({ experimentalAutoDetectLongPolling: true });
     docRef = db.collection(FIRESTORE_COLLECTION).doc(FIRESTORE_DOC);
 
     docRef.onSnapshot((doc) => {
       if (isSaving || _syncTimer) return; // on ne remplace pas une saisie en cours
+      let statusText = "Connecté à Firebase";
       if (doc && doc.exists) {
         const data = doc.data();
         if (data.cardsData) cardsData = data.cardsData;
@@ -1042,7 +1131,7 @@ function startFirebase() {
             if(!siteCompanies.includes('SKYBUILDING GREECE')) siteCompanies.push('SKYBUILDING GREECE');
             siteCompanies = [...new Set(siteCompanies)];
         }
-        
+
         let supsAdded = false;
         cardsData.forEach(c => {
             let n = String(c.name || '').trim().toUpperCase();
@@ -1056,20 +1145,18 @@ function startFirebase() {
         if (idsAdded && currentRole !== 'viewer') setTimeout(syncToFirebase, 0);
         if (supsAdded) {
             siteSupervisors.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
-            syncToFirebase(); 
+            syncToFirebase();
         }
 
-        renderCompanySelects();
-        renderPayrollTable();
-        renderCards();
-        if (currentView === 'orgchart') renderOrgChart();
-        if (currentView === 'tree') renderTreeOrgChart();
-        renderDrawer();
-        if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
-        updateFab(); 
+        if (isEditingBoard()) {
+          _renderPending = true; // affichage à la fin de la saisie (voir focusout)
+          statusText = "Mise à jour reçue (affichée à la fin de votre saisie)";
+        } else {
+          refreshAllViews();
+        }
       } else { syncToFirebase(); }
       document.getElementById("sync-dot").style.background = "#16a34a";
-      document.getElementById("sync-text").innerText = "Connecté à Firebase";
+      document.getElementById("sync-text").innerText = statusText;
     }, (err) => {
       document.getElementById("sync-dot").style.background = "#eab308";
       document.getElementById("sync-text").innerText = "Mode local / Hors-ligne";
@@ -1258,6 +1345,13 @@ function recalculateTotals() {
     elDiffAll.className = `diff-badge ${diffAll === 0 ? 'diff-ok' : 'diff-warn'}`;
   }
 
+  // Ouvriers présents à plusieurs endroits : encadrés en rouge (contrôle, ne change pas les totaux)
+  const multi = findMultiAssigned();
+  const multiKeys = new Set(multi.map(m => m.key));
+  document.querySelectorAll('.worker-pill[data-wid]').forEach(p => {
+    p.classList.toggle('dup-pill', multiKeys.has(String(p.dataset.wid).trim().toUpperCase()));
+  });
+
   // Contrôle de cohérence : les 4 façons de sommer doivent donner le même total
   const sumCats = Object.values(T.byCategory).reduce((a, b) => a + b, 0);
   const sumCards = T.byCard.reduce((a, c) => a + c.total, 0);
@@ -1268,6 +1362,13 @@ function recalculateTotals() {
       badge.className = 'diff-badge diff-warn';
       badge.innerText = '⚠️ Totaux incohérents';
       badge.title = `Chantier ${T.grand} / Lots ${sumCats} / Entreprises ${sumTs} / Cartes ${sumCards}`;
+    } else if (multi.length > 0) {
+      badge.className = 'diff-badge diff-warn';
+      badge.innerText = `⚠️ ${multi.length} ouvrier(s) en double`;
+      const lines = multi.slice(0, 10).map(m =>
+        `• ${m.id} - ${m.name} : ${m.places.join(' + ')}${m.assignedCount > 1 ? ` (compté ${m.assignedCount} fois)` : ''}`);
+      if (multi.length > 10) lines.push(`… et ${multi.length - 10} autre(s)`);
+      badge.title = `Ces ouvriers apparaissent à plusieurs endroits (encadrés en rouge) :\n${lines.join('\n')}\n\nRetirez-les des Timesheets en trop.`;
     } else if (T.mismatchTasks > 0) {
       badge.className = 'diff-badge diff-warn';
       badge.innerText = `⚠️ ${T.mismatchTasks} ligne(s) à vérifier`;
@@ -1327,6 +1428,8 @@ function renderPayrollTable() {
 
 document.addEventListener('DOMContentLoaded', () => {
   initLayout();
+  renderWeekLabel();
+  setInterval(renderWeekLabel, 60 * 60 * 1000); // mise à jour toutes les heures (page restée ouverte)
   renderCompanySelects();
   renderPayrollTable();
   renderCards();
@@ -1334,8 +1437,10 @@ document.addEventListener('DOMContentLoaded', () => {
   applyRolePermissions();
   setTimeout(startFirebase, 500); // laisse l'interface s'afficher avant la connexion
 });
+
 </script>
 <script>
+/* ===== timesheets.js ===== */
 /* ==========================================================
    timesheets.js — ÉCRANS & TIMESHEETS
    Interface · cartes Timesheet (ajout, édition, tâches) · impression · Vue Équipes & Arbre · superviseurs & entreprises
@@ -1361,6 +1466,16 @@ document.addEventListener('click', function(e) {
   }
   if (!e.target.closest('.multi-select-container')) {
     document.querySelectorAll('.multi-select-menu').forEach(m => m.classList.remove('show'));
+  }
+});
+
+// Touche Entrée dans une case modifiable (Foreman, description, N° TS…) : valide la saisie
+// au lieu de créer un retour à la ligne. Maj+Entrée garde le retour à la ligne.
+document.addEventListener('keydown', function(e) {
+  const el = e.target;
+  if (e.key === 'Enter' && !e.shiftKey && el && el.isContentEditable) {
+    e.preventDefault();
+    el.blur();
   }
 });
 
@@ -1466,8 +1581,8 @@ window.populateMultiFilters = function() {
     if (JSON.stringify(currentCheckboxes) !== JSON.stringify(optionsArr)) {
       menuEl.innerHTML = optionsArr.map(opt => `
         <label class="multi-select-label">
-          <input type="checkbox" value="${opt}" ${selectedArr.includes(opt) ? 'checked' : ''} onchange="updateMultiFilters()">
-          ${opt}
+          <input type="checkbox" value="${escapeHtml(opt)}" ${selectedArr.includes(opt) ? 'checked' : ''} onchange="updateMultiFilters()">
+          ${escapeHtml(opt)}
         </label>
       `).join('');
     }
@@ -1501,7 +1616,7 @@ function setFilter(catId) {
 }
 
 function renderCompanySelects() {
-  const opts = siteCompanies.map(c => `<option value="${c}">${c}</option>`).join('');
+  const opts = siteCompanies.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
   document.querySelectorAll('.dynamic-comp-select').forEach(el => {
     const currentVal = el.value;
     el.innerHTML = opts;
@@ -1555,6 +1670,7 @@ function renderCards() {
     displayList.forEach(({ card, cIdx }) => {
       if(!card.tasks) card.tasks = [];
       const catId = cardCategory(card);
+      const idArg = jsArg(card.id); // les champs texte retrouvent la carte par son ID
 
       const mgrName = String(card.manager || '').trim() || 'NO MANAGER';
       const supName = String(card.name || '').trim() || 'Unknown';
@@ -1587,17 +1703,17 @@ function renderCards() {
         return `
         <div class="task-item">
           <div class="task-foreman">
-            👷‍♂️ FOREMAN: <span contenteditable="true" data-placeholder="Nom..." onblur="updateTaskForeman(${cIdx}, ${tIdx}, this.innerText)">${escapeHtml(t.foreman || '')}</span>
+            👷‍♂️ FOREMAN: <span contenteditable="true" data-placeholder="Nom..." onblur="updateTaskForeman(${idArg}, ${tIdx}, this.innerText)">${escapeHtml(t.foreman || '')}</span>
           </div>
-          <div class="task-desc" contenteditable="true" onblur="updateTaskDesc(${cIdx}, ${tIdx}, this.innerText)">${escapeHtml(t.desc || '')}</div>
+          <div class="task-desc" contenteditable="true" onblur="updateTaskDesc(${idArg}, ${tIdx}, this.innerText)">${escapeHtml(t.desc || '')}</div>
           <div class="task-controls">
             <select class="source-select" style="background:#f1f5f9; color:#0f172a;" onchange="updateTaskSource(${cIdx}, ${tIdx}, this.value, this)">
               ${companyOpts}
             </select>
             <div style="display:flex; align-items:center; gap:6px;">
-              <div class="count-comparator ${compClass}" title="${compTitle}">
+              <div class="count-comparator ${compClass}" title="${escapeHtml(compTitle)}">
                 <span style="margin-right:2px; font-weight:700;">👥 ${linkedCount}</span> /
-                <input type="number" min="0" class="worker-count-input" placeholder="${linkedCount}" value="${hasManualOverride ? tc.manual : ''}" oninput="updateWorkerCount(${cIdx}, ${tIdx}, this.value, this)" />
+                <input type="number" min="0" class="worker-count-input" placeholder="${linkedCount}" value="${hasManualOverride ? tc.manual : ''}" oninput="updateWorkerCount(${idArg}, ${tIdx}, this.value, this)" />
               </div>
               <span class="btn-delete-task" title="Supprimer cette ligne" onclick="removeTask(${cIdx}, ${tIdx})">&times;</span>
             </div>
@@ -1619,6 +1735,8 @@ function renderCards() {
       const isChecked = selectedForPrint.has(card.id) ? 'checked' : '';
 
       const cc = cardCount(card);
+      const cardNameUp = String(card.name || '').toUpperCase();
+      const isArchived = card.name && !siteSupervisors.find(s => s && s.name && String(s.name).toUpperCase() === cardNameUp);
 
       cardEl.innerHTML = `
         <div class="card-header drag-handle" title="Glisser pour déplacer">
@@ -1639,22 +1757,21 @@ function renderCards() {
         <div class="card-title-row">
           <div style="display:flex; flex-direction:column; gap:2px; width:100%;">
             <div class="manager-field">
-              Mgr: <span class="manager-name" contenteditable="true" onblur="updateManager(${cIdx}, this.innerText)">${escapeHtml(card.manager || '')}</span>
+              Mgr: <span class="manager-name" contenteditable="true" onblur="updateManager(${idArg}, this.innerText)">${escapeHtml(card.manager || '')}</span>
             </div>
-            <select class="sup-name-select" onchange="changeSupervisorData(${cIdx}, this.value)" ${currentRole === 'viewer' || currentRole === 'cfo' ? 'disabled' : ''}>
+            <select class="sup-name-select" onchange="changeSupervisorData(${cIdx}, this.value)" ${canEdit() ? '' : 'disabled'}>
                <option value="">-- SÉLECTIONNER SUPERVISEUR --</option>
                ${siteSupervisors.map(s => {
                   const sName = String(s.name).toUpperCase();
-                  const cName = String(card.name || '').toUpperCase();
-                  return `<option value="${s.name}" ${cName === sName ? 'selected' : ''}>${s.name}</option>`;
+                  return `<option value="${escapeHtml(s.name)}" ${cardNameUp === sName ? 'selected' : ''}>${escapeHtml(s.name)}</option>`;
                }).join('')}
-               ${card.name && !siteSupervisors.find(s => s && s.name && String(s.name).toUpperCase() === String(card.name || '').toUpperCase()) ? `<option value="${card.name}" selected>${card.name} (Archivé)</option>` : ''}
+               ${isArchived ? `<option value="${escapeHtml(card.name)}" selected>${escapeHtml(card.name)} (Archivé)</option>` : ''}
             </select>
             <div class="sup-role" style="font-size:10px; font-weight:700; color:#64748b; text-transform:uppercase; margin-top:2px;">${escapeHtml(card.supervisorRole || 'SUPERVISOR')}</div>
             <div class="ts-badge-container">
               <div class="ts-badge" title="Numéro et Nom de la Timesheet">
-                TS: <span contenteditable="true" data-placeholder="N°..." onblur="updateTimesheetNo(${cIdx}, this.innerText)">${escapeHtml(card.timesheetNo || '')}</span>
-                - <span contenteditable="true" data-placeholder="Nom de la TS..." onblur="updateTimesheetName(${cIdx}, this.innerText)">${escapeHtml(card.timesheetName || '')}</span>
+                TS: <span contenteditable="true" data-placeholder="N°..." onblur="updateTimesheetNo(${idArg}, this.innerText)">${escapeHtml(card.timesheetNo || '')}</span>
+                - <span contenteditable="true" data-placeholder="Nom de la TS..." onblur="updateTimesheetName(${idArg}, this.innerText)">${escapeHtml(card.timesheetName || '')}</span>
               </div>
               <div class="ts-badge">
                 <select class="ts-select" onchange="updateShiftType(${cIdx}, this.value)">
@@ -1662,9 +1779,9 @@ function renderCards() {
                   <option value="Shift 2" ${sType==='Shift 2'?'selected':''}>Shift 2</option>
                   <option value="Night" ${sType==='Night'?'selected':''}>Night</option>
                 </select>
-                <span contenteditable="true" data-placeholder="07:00-15:00" onblur="updateShiftHours(${cIdx}, this.innerText)">${escapeHtml(sHours)}</span>
+                <span contenteditable="true" data-placeholder="07:00-15:00" onblur="updateShiftHours(${idArg}, this.innerText)">${escapeHtml(sHours)}</span>
               </div>
-              <button class="ts-btn-config" onclick="openTsTasksModal(${cIdx})" title="Colonnes">⚙️ TS</button>
+              <button class="ts-btn-config" onclick="openTsTasksModal(${idArg})" title="Colonnes">⚙️ TS</button>
             </div>
           </div>
           <button class="btn-remove-card" onclick="removeSupervisor(${cIdx})">&times;</button>
@@ -1703,30 +1820,65 @@ function reorderCardsBasedOnDOM() {
   renderCards(); syncToFirebase();
 }
 
-function updateManager(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].manager = String(val).trim(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); if(currentView==='tree') renderTreeOrgChart();}
-function updateTimesheetNo(cIdx, val) { 
-  if (currentRole === 'viewer' || currentRole === 'cfo') return; 
-  cardsData[cIdx].timesheetNo = String(val).trim(); 
-  syncToFirebase(); 
-  if(currentView === 'orgchart') renderOrgChart(); 
-  if(currentView === 'tree') renderTreeOrgChart();
+// Rafraîchit la Vue Équipes ou l'Arbre si l'une d'elles est affichée
+function refreshOrgViews() {
+  if (currentView === 'orgchart') renderOrgChart();
+  if (currentView === 'tree') renderTreeOrgChart();
 }
-window.updateTimesheetName = function(cIdx, val) {
-  if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  cardsData[cIdx].timesheetName = String(val).trim();
-  syncToFirebase();
-  if(currentView === 'orgchart') renderOrgChart();
-  if(currentView === 'tree') renderTreeOrgChart();
-};
-function updateShiftType(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].shiftType = val; syncToFirebase(); }
-function updateShiftHours(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].shiftHours = String(val).trim(); syncToFirebase(); }
-function updateTaskForeman(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].foreman = String(val).trim(); syncToFirebase(); if(currentView==='orgchart') renderOrgChart(); if(currentView==='tree') renderTreeOrgChart();}
-function updateTaskDesc(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].desc = String(val).trim(); syncToFirebase(); if(currentView==='tree') renderTreeOrgChart();}
-function updateTaskSource(cIdx, tIdx, val, el) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].source = val; recalculateTotals(); syncToFirebase(); }
 
-function updateWorkerCount(cIdx, tIdx, val, el) {
+// Champ texte d'une carte. La carte est retrouvée par son ID (sa position peut avoir changé
+// si un collègue a ajouté ou supprimé une Timesheet pendant la saisie).
+// Renvoie true si la valeur a changé (et a été enregistrée).
+function updateCardField(cardId, field, val) {
+  if (!canEdit()) return false;
+  const card = cardById(cardId);
+  if (!card) return false;
+  const v = String(val ?? '').trim();
+  if ((card[field] ?? '') === v) return false; // rien n'a changé : pas d'écriture inutile
+  card[field] = v;
+  syncToFirebase();
+  return true;
+}
+
+// Ligne de tâche d'une carte (carte par ID, ligne par position dans la carte)
+function taskOf(cardId, tIdx) {
+  const card = cardById(cardId);
+  return (card && card.tasks && card.tasks[tIdx]) || null;
+}
+
+function updateManager(cardId, val) { if (updateCardField(cardId, 'manager', val)) refreshOrgViews(); }
+function updateTimesheetNo(cardId, val) { if (updateCardField(cardId, 'timesheetNo', val)) refreshOrgViews(); }
+window.updateTimesheetName = function(cardId, val) { if (updateCardField(cardId, 'timesheetName', val)) refreshOrgViews(); };
+function updateShiftHours(cardId, val) { updateCardField(cardId, 'shiftHours', val); }
+function updateShiftType(cIdx, val) { if (!canEdit()) return; cardsData[cIdx].shiftType = val; syncToFirebase(); }
+
+function updateTaskForeman(cardId, tIdx, val) {
   if (!canEdit()) return;
-  const t = cardsData[cIdx] && cardsData[cIdx].tasks[tIdx];
+  const t = taskOf(cardId, tIdx);
+  if (!t) return;
+  const v = String(val ?? '').trim();
+  if ((t.foreman ?? '') === v) return;
+  t.foreman = v;
+  syncToFirebase();
+  refreshOrgViews();
+}
+
+function updateTaskDesc(cardId, tIdx, val) {
+  if (!canEdit()) return;
+  const t = taskOf(cardId, tIdx);
+  if (!t) return;
+  const v = String(val ?? '').trim();
+  if ((t.desc ?? '') === v) return;
+  t.desc = v;
+  syncToFirebase();
+  refreshOrgViews();
+}
+
+function updateTaskSource(cIdx, tIdx, val, el) { if (!canEdit()) return; cardsData[cIdx].tasks[tIdx].source = val; recalculateTotals(); syncToFirebase(); }
+
+function updateWorkerCount(cardId, tIdx, val, el) {
+  if (!canEdit()) return;
+  const t = taskOf(cardId, tIdx);
   if (!t) return;
   const v = String(val ?? '').trim();
   t.workers = (v === '') ? '' : Math.max(0, parseInt(v) || 0);
@@ -1823,20 +1975,23 @@ function removeSupervisor(cIdx) {
    3. IMPRESSION DES TIMESHEETS
    ========================================================== */
 
-function openTsTasksModal(cIdx) {
-  if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  currentTsCardIdx = cIdx;
-  const card = cardsData[cIdx];
-  
-  let pts = card.printTasks;
-  if (!pts || pts.length === 0) {
-     pts = card.tasks.map(t => {
-        let prefix = t.foreman ? `[${t.foreman}] ` : '';
-        return prefix + t.desc;
-     }).filter(d => d.trim() !== "");
-  }
-  
-  renderTsTasksList(pts);
+// Colonnes de tâches d'une Timesheet imprimée : celles définies via ⚙️ TS,
+// sinon (jamais configurées ou vidées) les lignes de la carte. Même règle pour la fenêtre et l'impression.
+function printColumnsOf(card) {
+  if (Array.isArray(card.printTasks) && card.printTasks.length > 0) return [...card.printTasks];
+  return (card.tasks || [])
+    .map(t => (t.foreman ? `[${t.foreman}] ` : '') + (t.desc || ''))
+    .filter(d => d.trim() !== '');
+}
+
+function openTsTasksModal(cardId) {
+  if (!canEdit()) return;
+  const card = cardById(cardId);
+  if (!card) return;
+  currentTsCardId = card.id;
+  document.querySelector('#ts-tasks-modal .modal-title').innerText =
+    `⚙️ Colonnes de pointage — ${card.name || 'Timesheet'}${card.timesheetNo ? ' (TS ' + card.timesheetNo + ')' : ''}`;
+  renderTsTasksList(printColumnsOf(card));
   document.getElementById('ts-tasks-modal').style.display = 'flex';
 }
 
@@ -1868,18 +2023,25 @@ function closeTsTasksModal() {
 }
 
 function saveTsTasks() {
-  if (currentTsCardIdx === -1) return;
-  const inputs = document.querySelectorAll('.ts-task-input');
+  if (!canEdit() || !currentTsCardId) return;
+  const card = cardById(currentTsCardId);
+  if (!card) {
+    alert("Cette Timesheet n'existe plus (supprimée entre-temps ?). Colonnes non enregistrées.");
+    closeTsTasksModal();
+    return;
+  }
   const newTasks = [];
-  inputs.forEach(input => {
+  document.querySelectorAll('.ts-task-input').forEach(input => {
      if (input.value.trim() !== "") newTasks.push(input.value.trim());
   });
-  cardsData[currentTsCardIdx].printTasks = newTasks;
+  card.printTasks = newTasks;
+  currentTsCardId = null;
   syncToFirebase();
   closeTsTasksModal();
 }
 
 function openPrintModal() {
+  if (!canEdit()) return;
   // On ne garde que les Timesheets encore existantes
   const existing = new Set(cardsData.map(c => c.id));
   [...selectedForPrint].forEach(id => { if (!existing.has(id)) selectedForPrint.delete(id); });
@@ -1921,9 +2083,7 @@ function executePrint() {
   const cardsToPrint = cardsData.filter(c => selectedForPrint.has(c.id));
 
   cardsToPrint.forEach(card => {
-    let taskHeaders = card.printTasks !== undefined
-      ? [...card.printTasks]
-      : card.tasks.map(t => (t.foreman ? `[${t.foreman}] ` : '') + (t.desc || '')).filter(d => d.trim() !== "");
+    const taskHeaders = printColumnsOf(card);
     taskHeaders.push('', '');
     const taskThs = taskHeaders.map(th => `<th class="ts-task-col">${th ? escapeHtml(th) : '&nbsp;'}</th>`).join('');
     const emptyCells = taskHeaders.map(() => `<td></td>`).join('');
@@ -2024,23 +2184,17 @@ window.renderTreeOrgChart = function() {
   const container = document.getElementById('tree-view');
   let treeData = { name: "Denis NETO", role: "General Site Superintendent", children: {}, total: 0 };
 
+  // Nom sur 2 lignes (prénom / nom), texte échappé
   const formatName = (name) => {
-     let p = String(name).trim().split(' ');
-     if(p.length > 1) {
-        return `${p[0]}<br>${p.slice(1).join(' ')}`;
-     }
-     return String(name);
+     const p = String(name ?? '').trim().split(/\s+/);
+     return p.length > 1 ? `${escapeHtml(p[0])}<br>${escapeHtml(p.slice(1).join(' '))}` : escapeHtml(p[0] || '');
   };
+  const COMPANY_ORDER = ['skybuilding-branch', 'skybuilding-greece', 'dss', 'euroasia', 'bik', 'other'];
 
   cardsData.forEach(c => {
     let mgr = String(c.manager || '').trim().toUpperCase() || 'NO MANAGER';
     if(!treeData.children[mgr]) treeData.children[mgr] = { name: mgr, children: [], totalWorkers: 0 };
-    
-    let cTotal = 0;
-    c.tasks.forEach(t => {
-       cTotal += taskCount(t).total;
-    });
-    
+    const cTotal = cardCount(c).total;
     treeData.children[mgr].children.push(c);
     treeData.children[mgr].totalWorkers += cTotal;
     treeData.total += cTotal;
@@ -2066,7 +2220,7 @@ window.renderTreeOrgChart = function() {
   html += `<div class="tree" style="margin-bottom: 20px; display:block;"><ul><li>
      <div class="tree-node top-node">
         <div class="node-title">${formatName(treeData.name)}</div>
-        <div class="node-sub">${treeData.role}</div>
+        <div class="node-sub">${escapeHtml(treeData.role)}</div>
         <div style="margin-top:6px; font-size:11px; font-weight:800; color:#0369a1; background:#e0f2fe; border-radius:12px; padding:2px 8px;">${treeData.total} Worker(s)</div>
      </div>
      <ul>`;
@@ -2089,7 +2243,7 @@ window.renderTreeOrgChart = function() {
     let mgrNode = treeData.children[mgrName];
     
     html += `<div style="width:100%; border-top: 2px dashed #cbd5e1; position:relative; margin-top:20px; padding-top:20px;">
-                <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#f8fafc; padding:0 10px; color:#94a3b8; font-weight:800; font-size:14px; text-transform:uppercase;">⬇ TEAM DETAILS : ${mgrNode.name} ⬇</div>
+                <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#f8fafc; padding:0 10px; color:#94a3b8; font-weight:800; font-size:14px; text-transform:uppercase;">⬇ TEAM DETAILS : ${escapeHtml(mgrNode.name)} ⬇</div>
              `;
 
     html += `<div class="tree"><ul><li>
@@ -2101,61 +2255,32 @@ window.renderTreeOrgChart = function() {
       <ul>`;
 
     mgrNode.children.forEach(sup => {
-      let supDisplayName = String(sup.name || 'Unknown');
-      let supRole = String(sup.supervisorRole || 'SUPERVISOR').toUpperCase();
-      let tsInfoArray = [sup.timesheetNo, sup.timesheetName].map(x => String(x || '').trim()).filter(x => x !== '');
-      let tsSub = tsInfoArray.length > 0 ? tsInfoArray.join(' - ') : '';
-      let displaySub = `<span style="color:#64748b;">${supRole}</span>` + (tsSub ? `<br><span style="color:#2563eb;">${tsSub}</span>` : '');
+      const supDisplayName = String(sup.name || 'Unknown');
+      const supRole = String(sup.supervisorRole || 'SUPERVISOR').toUpperCase();
+      const tsSub = [sup.timesheetNo, sup.timesheetName].map(x => String(x || '').trim()).filter(x => x !== '').join(' - ');
+      const displaySub = `<span style="color:#64748b;">${escapeHtml(supRole)}</span>` + (tsSub ? `<br><span style="color:#2563eb;">${escapeHtml(tsSub)}</span>` : '');
 
       html += `<li><div class="tree-node sup-node">
          <div class="node-title">${formatName(supDisplayName)}</div>
          <div class="node-sub">${displaySub}</div>
       </div><ul>`;
 
-      sup.tasks.forEach(t => {
-        const tc = taskCount(t);
-        let linkedCount = tc.named;
-        let totalW = tc.total;
-
+      (sup.tasks || []).forEach(t => {
+        const totalW = taskCount(t).total;
         if (totalW > 0) {
-            let fName = String(t.foreman || '').trim().toUpperCase() || 'DIRECT TEAM';
-            let taskDesc = String(t.desc || '').trim();
-            let fSub = taskDesc ? taskDesc : 'Foreman';
+            const fName = String(t.foreman || '').trim().toUpperCase() || 'DIRECT TEAM';
+            const fSub = String(t.desc || '').trim() || 'Foreman';
 
-            let wCount = { skybuildingB: 0, skybuildingG: 0, dss: 0, euroasia: 0, bik: 0, other: 0 };
-            
-            {
-                activeWorkers(t).forEach(w => {
-                    if(w.company === 'SKYBUILDING BRANCH') wCount.skybuildingB++;
-                    else if(w.company === 'SKYBUILDING GREECE') wCount.skybuildingG++;
-                    else if(w.company === 'DSS') wCount.dss++;
-                    else if(w.company === 'EUROASIA') wCount.euroasia++;
-                    else if(w.company === 'BIK') wCount.bik++;
-                    else wCount.other++;
-                });
-            }
-            
-            let diff = totalW - linkedCount;
-            if (diff > 0) {
-                if(t.source === 'SKYBUILDING BRANCH') wCount.skybuildingB += diff;
-                else if(t.source === 'SKYBUILDING GREECE') wCount.skybuildingG += diff;
-                else if(t.source === 'DSS') wCount.dss += diff;
-                else if(t.source === 'EUROASIA') wCount.euroasia += diff;
-                else if(t.source === 'BIK') wCount.bik += diff;
-                else wCount.other += diff;
-            }
-
-            let badgesHtml = '';
-            if(wCount.skybuildingB > 0) badgesHtml += `<span class="worker-pill skybuilding-branch" style="margin:0; padding:2px 8px; font-size:11px; cursor:default;">${wCount.skybuildingB}</span>`;
-            if(wCount.skybuildingG > 0) badgesHtml += `<span class="worker-pill skybuilding-greece" style="margin:0; padding:2px 8px; font-size:11px; cursor:default;">${wCount.skybuildingG}</span>`;
-            if(wCount.dss > 0) badgesHtml += `<span class="worker-pill dss" style="margin:0; padding:2px 8px; font-size:11px; cursor:default;">${wCount.dss}</span>`;
-            if(wCount.euroasia > 0) badgesHtml += `<span class="worker-pill euroasia" style="margin:0; padding:2px 8px; font-size:11px; cursor:default;">${wCount.euroasia}</span>`;
-            if(wCount.bik > 0) badgesHtml += `<span class="worker-pill bik" style="margin:0; padding:2px 8px; font-size:11px; cursor:default;">${wCount.bik}</span>`;
-            if(wCount.other > 0) badgesHtml += `<span class="worker-pill other" style="margin:0; padding:2px 8px; font-size:11px; cursor:default;">${wCount.other}</span>`;
+            // Répartition par entreprise (mêmes couleurs que les pastilles ouvriers)
+            const wCount = {};
+            activeWorkers(t).forEach(w => { const k = companyClass(w.company); wCount[k] = (wCount[k] || 0) + 1; });
+            const badgesHtml = COMPANY_ORDER.filter(k => wCount[k] > 0)
+              .map(k => `<span class="worker-pill ${k}" style="margin:0; padding:2px 8px; font-size:11px; cursor:default;">${wCount[k]}</span>`)
+              .join('');
 
             html += `<li><div class="tree-node f-node">
                <div class="node-title">${formatName(fName)}</div>
-               <div class="node-sub" style="color:#059669;">${fSub}</div>
+               <div class="node-sub" style="color:#059669;">${escapeHtml(fSub)}</div>
             </div><ul><li>
                 <div class="tree-node w-summary-node" style="padding:6px 10px;">
                     <div style="display:flex; justify-content:center; gap:4px; flex-wrap:wrap;">${badgesHtml}</div>
@@ -2197,7 +2322,7 @@ function renderOrgChart() {
         let foremenGroups = {};
         let directWkrs = 0;
 
-        sup.tasks.forEach(t => { 
+        (sup.tasks || []).forEach(t => { 
           let w = taskCount(t).total;
           supWorkers += w; 
           mgrTotalWorkers += w;
@@ -2211,32 +2336,30 @@ function renderOrgChart() {
         
         let foremenHtml = '';
         Object.keys(foremenGroups).forEach(fName => {
-           foremenHtml += `<div class="org-foreman-card"><div class="org-foreman-name">👷‍♂️ ${fName}</div><div class="org-foreman-meta">${foremenGroups[fName]} wkrs</div></div>`;
+           foremenHtml += `<div class="org-foreman-card"><div class="org-foreman-name">👷‍♂️ ${escapeHtml(fName)}</div><div class="org-foreman-meta">${foremenGroups[fName]} wkrs</div></div>`;
         });
         if (directWkrs > 0) {
            foremenHtml += `<div class="org-foreman-card" style="background:#f8fafc; border-style:dashed;"><div class="org-foreman-name" style="color:#64748b;">Direct Team</div><div class="org-foreman-meta" style="background:#e2e8f0; color:#475569;">${directWkrs} wkrs</div></div>`;
         }
 
         const catColor = CATEGORY_INFO.find(c => c.id === sup.category)?.color || '#94a3b8';
-        const catName = CATEGORY_INFO.find(c => c.id === sup.category)?.name || sup.category;
+        const catName = CATEGORY_INFO.find(c => c.id === sup.category)?.name || sup.category || '';
         
-        let tsInfoArray = [sup.timesheetNo, sup.timesheetName].map(x => String(x || '').trim()).filter(x => x !== '');
-        let fullTsName = tsInfoArray.join(' - ');
-        
+        const fullTsName = [sup.timesheetNo, sup.timesheetName].map(x => String(x || '').trim()).filter(x => x !== '').join(' - ');
         const tsNameDisplay = fullTsName !== ''
-            ? `<div style="font-size:10px; font-weight:800; color:#2563eb; background:#eff6ff; padding:3px 6px; border-radius:4px; display:inline-block; margin-top:2px; border:1px solid #bfdbfe; margin-bottom:4px;">📄 TS: ${fullTsName}</div>` 
+            ? `<div style="font-size:10px; font-weight:800; color:#2563eb; background:#eff6ff; padding:3px 6px; border-radius:4px; display:inline-block; margin-top:2px; border:1px solid #bfdbfe; margin-bottom:4px;">📄 TS: ${escapeHtml(fullTsName)}</div>` 
             : '';
 
         supsHtml += `<div class="org-sup-card" style="border-left-color: ${catColor}">
-            <div class="org-sup-name" style="margin-bottom:2px;">${sup.name}</div>
+            <div class="org-sup-name" style="margin-bottom:2px;">${escapeHtml(sup.name)}</div>
             ${tsNameDisplay}
-            <div class="org-sup-meta"><span>${catName}</span><span style="font-weight:800; color:#0f172a;">${supWorkers} wkrs</span></div>
+            <div class="org-sup-meta"><span>${escapeHtml(catName)}</span><span style="font-weight:800; color:#0f172a;">${supWorkers} wkrs</span></div>
             ${foremenHtml ? `<div class="org-foremen-list">${foremenHtml}</div>` : ''}
           </div>`;
      });
 
      html += `<div class="org-manager-col">
-        <div class="org-manager-name">${mgr === 'NO MANAGER' ? '⚠️ NO MANAGER' : '👔 ' + mgr}</div>
+        <div class="org-manager-name">${mgr === 'NO MANAGER' ? '⚠️ NO MANAGER' : '👔 ' + escapeHtml(mgr)}</div>
         <div class="org-manager-total">${mgrTotalWorkers} Supervised worker(s)</div>
         <div class="org-sups-list">${supsHtml}</div>
      </div>`;
@@ -2251,7 +2374,7 @@ function renderOrgChart() {
 
 // --- GESTION DES SUPERVISEURS DYNAMIQUE ---
 window.openSupervisorsModal = function() {
-  if (currentRole === 'viewer' || currentRole === 'cfo') return;
+  if (!canEdit()) return;
   
   siteSupervisors = siteSupervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
 
@@ -2266,8 +2389,8 @@ window.renderSupervisorsList = function() {
   list.innerHTML = siteSupervisors.map((s, idx) => `
     <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px; border:1px solid #cbd5e1; border-radius:6px; gap:8px;">
       <div style="display:flex; flex-direction:column; gap:4px; flex-grow:1;">
-         <input type="text" class="modal-select" style="padding:4px 8px; font-size:12px; font-weight:800; color:#0f172a; border-color:transparent; background:transparent; transition:0.15s; outline:none;" value="${s.name}" onchange="updateSupervisorInDB(${idx}, 'name', this.value)" title="Modifier le nom">
-         <input type="text" class="modal-select" style="padding:4px 8px; font-size:10px; font-weight:600; color:#64748b; border-color:transparent; background:transparent; transition:0.15s; outline:none;" value="${s.role}" onchange="updateSupervisorInDB(${idx}, 'role', this.value)" title="Modifier le rôle">
+         <input type="text" class="modal-select" style="padding:4px 8px; font-size:12px; font-weight:800; color:#0f172a; border-color:transparent; background:transparent; transition:0.15s; outline:none;" value="${escapeHtml(s.name)}" onchange="updateSupervisorInDB(${idx}, 'name', this.value)" title="Modifier le nom">
+         <input type="text" class="modal-select" style="padding:4px 8px; font-size:10px; font-weight:600; color:#64748b; border-color:transparent; background:transparent; transition:0.15s; outline:none;" value="${escapeHtml(s.role)}" onchange="updateSupervisorInDB(${idx}, 'role', this.value)" title="Modifier le rôle">
       </div>
       <button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5; padding:4px 8px; height:100%;" onclick="removeSupervisorFromDB(${idx})">&times;</button>
     </div>
@@ -2280,6 +2403,7 @@ window.renderSupervisorsList = function() {
 };
 
 window.updateSupervisorInDB = function(idx, field, newVal) {
+  if (!canEdit() || !siteSupervisors[idx]) return;
   const oldName = siteSupervisors[idx].name;
   const val = String(newVal || '').trim().toUpperCase();
   if (!val) {
@@ -2303,14 +2427,14 @@ window.updateSupervisorInDB = function(idx, field, newVal) {
   siteSupervisors.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
   renderSupervisorsList();
   renderCards();
-  if(currentView==='orgchart') renderOrgChart();
-  if(currentView==='tree') renderTreeOrgChart();
+  refreshOrgViews();
   syncToFirebase();
 };
 
 window.addSupervisorToDB = function() {
+  if (!canEdit()) return;
   const name = document.getElementById('new-sup-name-input').value.trim().toUpperCase();
-  const role = document.getElementById('new-sup-role-input').value.trim().toUpperCase();
+  const role = document.getElementById('new-sup-role-input').value.trim().toUpperCase() || 'SUPERVISOR';
   if (name && name !== 'UNDEFINED' && !siteSupervisors.find(s => s && s.name && String(s.name).toUpperCase() === name)) {
      siteSupervisors.push({ name, role });
      siteSupervisors.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
@@ -2322,7 +2446,8 @@ window.addSupervisorToDB = function() {
 };
 
 window.removeSupervisorFromDB = function(idx) {
-  if (confirm(`Supprimer ce superviseur de la base ? (Les Timesheets existantes conserveront son nom en archive)`)) {
+  if (!canEdit() || !siteSupervisors[idx]) return;
+  if (confirm(`Supprimer ${siteSupervisors[idx].name} de la base ? (Les Timesheets existantes conserveront son nom en archive)`)) {
      siteSupervisors.splice(idx, 1);
      renderSupervisorsList();
      renderCards();
@@ -2343,8 +2468,9 @@ window.changeSupervisorData = function(cIdx, selectedName) {
   if(currentView==='tree') renderTreeOrgChart();
 };
 
+// --- ENTREPRISES : réservé à l'Admin ---
 function openCompaniesModal() {
-  if (currentRole === 'viewer' || currentRole === 'timekeeper') return;
+  if (currentRole !== 'admin') return;
   renderCompaniesList();
   document.getElementById('companies-modal').style.display = 'flex';
 }
@@ -2354,15 +2480,16 @@ function renderCompaniesList() {
   const list = document.getElementById('companies-list');
   list.innerHTML = siteCompanies.map(c => `
     <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
-      <span style="font-size:12px; font-weight:700;">${c}</span>
-      ${!['SKYBUILDING BRANCH', 'SKYBUILDING GREECE', 'DSS', 'EUROASIA', 'BIK', 'OTHER'].includes(c) 
-        ? `<button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5; padding:2px 6px;" onclick="removeCompany('${c}')">&times;</button>` 
+      <span style="font-size:12px; font-weight:700;">${escapeHtml(c)}</span>
+      ${!DEFAULT_COMPANIES.includes(c)
+        ? `<button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5; padding:2px 6px;" onclick="removeCompany(${jsArg(c)})">&times;</button>`
         : '<span style="font-size:10px; color:#94a3b8;">Défaut</span>'}
     </div>
   `).join('');
 }
 
 function addCompany() {
+  if (currentRole !== 'admin') return;
   const val = document.getElementById('new-comp-input').value.trim().toUpperCase();
   if (val && !siteCompanies.includes(val)) {
      siteCompanies.push(val);
@@ -2376,6 +2503,7 @@ function addCompany() {
 }
 
 function removeCompany(comp) {
+  if (currentRole !== 'admin') return;
   let used = 0;
   unassignedWorkers.forEach(w => { if (w.company === comp) used++; });
   cardsData.forEach(c => (c.tasks || []).forEach(t => {
@@ -2396,8 +2524,10 @@ function removeCompany(comp) {
      syncToFirebase();
   }
 }
+
 </script>
 <script>
+/* ===== workers.js ===== */
 /* ==========================================================
    workers.js — OUVRIERS
    Glisser-déposer & déplacements · tiroir Base Ouvriers · ajout manuel · Base Globale (édition) · import Excel RH
@@ -2505,7 +2635,7 @@ window.handleFabClick = function(event) {
   let html = `<option value="-1">👷 Renvoyer à la Base (Non assigné)</option>`;
   cardsData.forEach((c, idx) => {
      const tsInfo = c.timesheetNo ? ` [TS: ${c.timesheetNo}]` : '';
-     html += `<option value="${idx}">➡️ ${c.name}${tsInfo}</option>`;
+     html += `<option value="${idx}">➡️ ${escapeHtml(c.name)}${escapeHtml(tsInfo)}</option>`;
   });
   
   document.getElementById('modal-sup-select').innerHTML = html;
@@ -2852,7 +2982,7 @@ function printDB() {
     <table class="db-print-table">
       <thead><tr><th>ID</th><th>Nom Complet</th><th>Entreprise</th><th>Statut / Assignation</th></tr></thead>
       <tbody>
-        ${exportData.map(w => `<tr><td>${w.id}</td><td>${w.name}</td><td>${w.comp}</td><td>${w.stat}</td></tr>`).join('')}
+        ${exportData.map(w => `<tr><td>${escapeHtml(w.id)}</td><td>${escapeHtml(w.name)}</td><td>${escapeHtml(w.comp)}</td><td>${escapeHtml(w.stat)}</td></tr>`).join('')}
       </tbody>
     </table>
   `;
@@ -3101,6 +3231,7 @@ function importExcelFile(event) {
 }
 
 window.importWorkersDB = importExcelFile;
+
 </script>
 </body>
 </html>
