@@ -406,7 +406,7 @@
   <div class="modal-box xl" style="height: 85vh;">
     <div class="modal-title">🗃️ Base de Données Globale (Éditeur)</div>
     <div style="display:flex; justify-content: space-between; margin-bottom: 10px; align-items:center;">
-       <span style="font-size:12px; color:#64748b;">La Base Globale contient tous les ouvriers importés d'Excel + ceux créés manuellement.</span>
+       <span style="font-size:12px; color:#64748b;">Modifiez les champs directement. Toute modification est sauvegardée.</span>
        
        <div style="display:flex; gap:8px;">
           <button class="btn btn-blue" onclick="window.verifyImportCoherence()" title="Vérifier les écarts entre la base Excel arrière-plan et le chantier">🔍 Vérifier Cohérence Import</button>
@@ -1497,6 +1497,15 @@ window.changeSupervisorData = function(cIdx, selectedName) {
 };
 
 // --- GESTION ENTREPRISES DYNAMIQUE ---
+window.renderCompanySelects = function() {
+  const opts = siteCompanies.map(c => `<option value="${c}">${c}</option>`).join('');
+  document.querySelectorAll('.dynamic-comp-select').forEach(el => {
+    const currentVal = el.value;
+    el.innerHTML = opts;
+    if (siteCompanies.includes(currentVal)) el.value = currentVal;
+  });
+};
+
 window.openCompaniesModal = function() {
   if (currentRole === 'viewer' || currentRole === 'timekeeper') return;
   window.renderCompaniesList();
@@ -1543,8 +1552,7 @@ window.removeCompany = function(comp) {
 window.updatePayroll = function(company, val) {
   if (currentRole === 'viewer' || currentRole === 'timekeeper') return;
   payrollCounts[company] = parseInt(val) || 0;
-  window.recalculateTotals(); 
-  window.syncToFirebase();
+  window.recalculateTotals(); window.syncToFirebase();
 };
 
 window.recalculateTotals = function() {
@@ -1834,351 +1842,507 @@ window.renderCards = function() {
   } catch (err) { console.error("Render error:", err); }
 };
 
-window.reorderCardsBasedOnDOM = function() {
-  if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  if (currentFilter === 'alpha') return;
+// ARBRE HIERARCHIQUE
+window.renderTreeOrgChart = function() {
+  const container = document.getElementById('tree-view');
+  let treeData = { name: "Denis NETO", role: "General Site Superintendent", children: {}, total: 0 };
 
-  const newCardsData = [];
-  CATEGORY_INFO.forEach(cat => {
-    const grid = document.getElementById(`grid-${cat.id}`);
-    if (!grid) return;
-    grid.querySelectorAll('.card').forEach(cardEl => {
-      const oldIdx = cardEl.dataset.cidx;
-      if (cardsData[oldIdx]) {
-        cardsData[oldIdx].category = cat.id; 
-        newCardsData.push(cardsData[oldIdx]);
+  const formatName = (name) => {
+     let p = String(name).trim().split(' ');
+     if(p.length > 1) {
+        return `${p[0]}<br>${p.slice(1).join(' ')}`;
+     }
+     return String(name);
+  };
+
+  cardsData.forEach(c => {
+    let mgr = String(c.manager || '').trim().toUpperCase() || 'NO MANAGER';
+    if(!treeData.children[mgr]) treeData.children[mgr] = { name: mgr, children: [], totalWorkers: 0 };
+    
+    let cTotal = 0;
+    c.tasks.forEach(t => {
+       let linked = t.workerList ? t.workerList.length : 0;
+       let hasM = t.workers !== undefined && t.workers !== null && String(t.workers) !== "";
+       let manual = hasM ? parseInt(t.workers) : linked;
+       cTotal += Math.max(manual, linked);
+    });
+    
+    treeData.children[mgr].children.push(c);
+    treeData.children[mgr].totalWorkers += cTotal;
+    treeData.total += cTotal;
+  });
+
+  let html = `
+    <div style="display:flex; justify-content:center; align-items:center; gap:16px; margin-bottom: 30px; padding: 10px 20px; background: white; border: 1px solid #cbd5e1; border-radius: 8px; display: inline-flex; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+        <div style="font-size:12px; font-weight:800; color:#475569;">COMPANIES LEGEND :</div>
+        <div style="display:flex; gap:8px;">
+            <span class="worker-pill skybuilding-branch" style="margin:0; cursor:default;">SKYBUILDING B.</span>
+            <span class="worker-pill skybuilding-greece" style="margin:0; cursor:default;">SKYBUILDING G.</span>
+            <span class="worker-pill dss" style="margin:0; cursor:default;">DSS</span>
+            <span class="worker-pill euroasia" style="margin:0; cursor:default;">EUROASIA</span>
+            <span class="worker-pill bik" style="margin:0; cursor:default;">BIK</span>
+            <span class="worker-pill other" style="margin:0; cursor:default;">OTHERS</span>
+        </div>
+        <div style="width:1px; height:20px; background:#e2e8f0; margin:0 8px;"></div>
+        <button class="btn btn-black btn-print-tree" onclick="window.printTree()">🖨️ Print Tree</button>
+    </div>
+  `;
+
+  // 1. ARBRE MAITRE (Résumé)
+  html += `<div class="tree" style="margin-bottom: 20px; display:block;"><ul><li>
+     <div class="tree-node top-node">
+        <div class="node-title">${formatName(treeData.name)}</div>
+        <div class="node-sub">${treeData.role}</div>
+        <div style="margin-top:6px; font-size:11px; font-weight:800; color:#0369a1; background:#e0f2fe; border-radius:12px; padding:2px 8px;">${treeData.total} Worker(s)</div>
+     </div>
+     <ul>`;
+     
+  Object.keys(treeData.children).sort().forEach(mgrName => {
+     let mgrNode = treeData.children[mgrName];
+     html += `<li><div class="tree-node mgr-node">
+        <div class="node-title">${formatName(mgrNode.name)}</div>
+        <div class="node-sub">Manager</div>
+        <div style="margin-top:6px; font-size:11px; font-weight:800; color:#0284c7; background:#bae6fd; border-radius:12px; padding:2px 8px;">${mgrNode.totalWorkers} Wkrs</div>
+        <div style="margin-top:4px; font-size:10px; color:#64748b;">(See Details ⬇)</div>
+     </div></li>`;
+  });
+  html += `</ul></li></ul></div>`;
+
+  // 2. SOUS-ARBRES DES MANAGERS EMPILÉS VERTICALEMENT
+  html += `<div style="display:flex; flex-direction:column; gap: 40px; align-items:center; width:100%;">`;
+  
+  Object.keys(treeData.children).sort().forEach(mgrName => {
+    let mgrNode = treeData.children[mgrName];
+    
+    html += `<div style="width:100%; border-top: 2px dashed #cbd5e1; position:relative; margin-top:20px; padding-top:20px;">
+                <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#f8fafc; padding:0 10px; color:#94a3b8; font-weight:800; font-size:14px; text-transform:uppercase;">⬇ TEAM DETAILS : ${mgrNode.name} ⬇</div>
+             `;
+
+    html += `<div class="tree"><ul><li>
+      <div class="tree-node mgr-node">
+        <div class="node-title">${formatName(mgrNode.name)}</div>
+        <div class="node-sub">Manager</div>
+        <div style="margin-top:6px; font-size:11px; font-weight:800; color:#0284c7; background:#bae6fd; border-radius:12px; padding:2px 8px;">${mgrNode.totalWorkers} Wkrs</div>
+      </div>
+      <ul>`;
+
+    mgrNode.children.forEach(sup => {
+      let supDisplayName = String(sup.name || 'Unknown');
+      let supRole = String(sup.supervisorRole || 'SUPERVISOR').toUpperCase();
+      let tsInfoArray = [sup.timesheetNo, sup.timesheetName].map(x => String(x || '').trim()).filter(x => x !== '');
+      let tsSub = tsInfoArray.length > 0 ? tsInfoArray.join(' - ') : '';
+      let displaySub = `<span style="color:#64748b;">${supRole}</span>` + (tsSub ? `<br><span style="color:#2563eb;">${tsSub}</span>` : '');
+
+      html += `<li><div class="tree-node sup-node">
+         <div class="node-title">${formatName(supDisplayName)}</div>
+         <div class="node-sub">${displaySub}</div>
+      </div><ul>`;
+
+      sup.tasks.forEach(t => {
+        let linkedCount = t.workerList ? t.workerList.length : 0;
+        let hasM = t.workers !== undefined && t.workers !== null && String(t.workers) !== "";
+        let manualCount = hasM ? parseInt(t.workers) : linkedCount;
+        let totalW = Math.max(manualCount, linkedCount);
+
+        if (totalW > 0) {
+            let fName = String(t.foreman || '').trim().toUpperCase() || 'DIRECT TEAM';
+            let taskDesc = String(t.desc || '').trim();
+            let fSub = taskDesc ? taskDesc : 'Foreman';
+
+            let wCount = { skybuildingB: 0, skybuildingG: 0, dss: 0, euroasia: 0, bik: 0, other: 0 };
+            
+            if (t.workerList) {
+                t.workerList.forEach(w => {
+                    if(w.company === 'SKYBUILDING BRANCH') wCount.skybuildingB++;
+                    else if(w.company === 'SKYBUILDING GREECE') wCount.skybuildingG++;
+                    else if(w.company === 'DSS') wCount.dss++;
+                    else if(w.company === 'EUROASIA') wCount.euroasia++;
+                    else if(w.company === 'BIK') wCount.bik++;
+                    else wCount.other++;
+                });
+            }
+            
+            let diff = totalW - linkedCount;
+            if (diff > 0) {
+                if(t.source === 'SKYBUILDING BRANCH') wCount.skybuildingB += diff;
+                else if(t.source === 'SKYBUILDING GREECE') wCount.skybuildingG += diff;
+                else if(t.source === 'DSS') wCount.dss += diff;
+                else if(t.source === 'EUROASIA') wCount.euroasia += diff;
+                else if(t.source === 'BIK') wCount.bik += diff;
+                else wCount.other += diff;
+            }
+
+            let badgesHtml = '';
+            if(wCount.skybuildingB > 0) badgesHtml += `<span class="worker-pill skybuilding-branch" style="margin:0; padding:2px 8px; font-size:11px; cursor:default;">${wCount.skybuildingB}</span>`;
+            if(wCount.skybuildingG > 0) badgesHtml += `<span class="worker-pill skybuilding-greece" style="margin:0; padding:2px 8px; font-size:11px; cursor:default;">${wCount.skybuildingG}</span>`;
+            if(wCount.dss > 0) badgesHtml += `<span class="worker-pill dss" style="margin:0; padding:2px 8px; font-size:11px; cursor:default;">${wCount.dss}</span>`;
+            if(wCount.euroasia > 0) badgesHtml += `<span class="worker-pill euroasia" style="margin:0; padding:2px 8px; font-size:11px; cursor:default;">${wCount.euroasia}</span>`;
+            if(wCount.bik > 0) badgesHtml += `<span class="worker-pill bik" style="margin:0; padding:2px 8px; font-size:11px; cursor:default;">${wCount.bik}</span>`;
+            if(wCount.other > 0) badgesHtml += `<span class="worker-pill other" style="margin:0; padding:2px 8px; font-size:11px; cursor:default;">${wCount.other}</span>`;
+
+            html += `<li><div class="tree-node f-node">
+               <div class="node-title">${formatName(fName)}</div>
+               <div class="node-sub" style="color:#059669;">${fSub}</div>
+            </div><ul><li>
+                <div class="tree-node w-summary-node" style="padding:6px 10px;">
+                    <div style="display:flex; justify-content:center; gap:4px; flex-wrap:wrap;">${badgesHtml}</div>
+                    <div style="font-size:11px; font-weight:800; color:#0f172a; margin-top:6px; border-top:1px solid #e2e8f0; padding-top:4px;">${totalW} Total</div>
+                </div>
+            </li></ul></li>`;
+        }
+      });
+      html += `</ul></li>`;
+    });
+    html += `</ul></li></ul></div></div>`;
+  });
+  
+  html += `</div>`;
+
+  container.innerHTML = html;
+};
+
+// ORGANIGRAMME (Blocs)
+window.renderOrgChart = function() {
+  const container = document.getElementById('orgchart-view');
+  const groups = {};
+  
+  cardsData.forEach(c => {
+     let mgr = String(c.manager || '').trim().toUpperCase();
+     if (!mgr) mgr = 'NO MANAGER';
+     if(!groups[mgr]) groups[mgr] = [];
+     groups[mgr].push(c);
+  });
+  
+  let html = `<div class="org-level-top"><span>RIVIERA TOWER SITE</span></div><div class="org-managers-grid">`;
+  
+  Object.keys(groups).sort().forEach(mgr => {
+     let mgrTotalWorkers = 0;
+     let supsHtml = '';
+     
+     groups[mgr].forEach(sup => {
+        let supWorkers = 0;
+        let foremenGroups = {};
+        let directWkrs = 0;
+
+        sup.tasks.forEach(t => { 
+          const linked = t.workerList ? t.workerList.length : 0;
+          const hasM = t.workers !== undefined && t.workers !== null && String(t.workers) !== "";
+          const manual = hasM ? parseInt(t.workers) : linked;
+          let w = Math.max(manual, linked); 
+          supWorkers += w; 
+          mgrTotalWorkers += w;
+          
+          let fName = String(t.foreman || '').trim().toUpperCase();
+          if (fName) {
+             if(!foremenGroups[fName]) foremenGroups[fName] = 0;
+             foremenGroups[fName] += w;
+          } else { directWkrs += w; }
+        });
+        
+        let foremenHtml = '';
+        Object.keys(foremenGroups).forEach(fName => {
+           foremenHtml += `<div class="org-foreman-card"><div class="org-foreman-name">👷‍♂️ ${fName}</div><div class="org-foreman-meta">${foremenGroups[fName]} wkrs</div></div>`;
+        });
+        if (directWkrs > 0) {
+           foremenHtml += `<div class="org-foreman-card" style="background:#f8fafc; border-style:dashed;"><div class="org-foreman-name" style="color:#64748b;">Direct Team</div><div class="org-foreman-meta" style="background:#e2e8f0; color:#475569;">${directWkrs} wkrs</div></div>`;
+        }
+
+        const catColor = CATEGORY_INFO.find(c => c.id === sup.category)?.color || '#94a3b8';
+        const catName = CATEGORY_INFO.find(c => c.id === sup.category)?.name || sup.category;
+        
+        let tsInfoArray = [sup.timesheetNo, sup.timesheetName].map(x => String(x || '').trim()).filter(x => x !== '');
+        let fullTsName = tsInfoArray.join(' - ');
+        
+        const tsNameDisplay = fullTsName !== ''
+            ? `<div style="font-size:10px; font-weight:800; color:#2563eb; background:#eff6ff; padding:3px 6px; border-radius:4px; display:inline-block; margin-top:2px; border:1px solid #bfdbfe; margin-bottom:4px;">📄 TS: ${fullTsName}</div>` 
+            : '';
+
+        supsHtml += `<div class="org-sup-card" style="border-left-color: ${catColor}">
+            <div class="org-sup-name" style="margin-bottom:2px;">${sup.name}</div>
+            ${tsNameDisplay}
+            <div class="org-sup-meta"><span>${catName}</span><span style="font-weight:800; color:#0f172a;">${supWorkers} wkrs</span></div>
+            ${foremenHtml ? `<div class="org-foremen-list">${foremenHtml}</div>` : ''}
+          </div>`;
+     });
+
+     html += `<div class="org-manager-col">
+        <div class="org-manager-name">${mgr === 'NO MANAGER' ? '⚠️ NO MANAGER' : '👔 ' + mgr}</div>
+        <div class="org-manager-total">${mgrTotalWorkers} Supervised worker(s)</div>
+        <div class="org-sups-list">${supsHtml}</div>
+     </div>`;
+  });
+  html += `</div>`;
+  container.innerHTML = html;
+};
+
+// --- GESTION DU MULTI-SELECT ET DRAG DROP ---
+window.initWorkerSortables = function() {
+  workerSortables.forEach(s => s.destroy());
+  workerSortables = [];
+  
+  const isDisabled = (currentRole === 'viewer' || currentRole === 'cfo');
+
+  document.querySelectorAll('.task-worker-dropzone, #unassigned-dropzone').forEach(el => {
+    const s = new Sortable(el, {
+      group: 'workers-pool',
+      animation: 150,
+      multiDrag: true,
+      selectedClass: 'selected-pill',
+      fallbackTolerance: 3,
+      disabled: isDisabled,
+      onSelect: function() { window.updateFab(); },
+      onDeselect: function() { window.updateFab(); },
+      onEnd: function(evt) { window.handleWorkerDrop(evt); }
+    });
+    workerSortables.push(s);
+  });
+};
+
+window.handleWorkerDrop = function(evt) {
+  if (currentRole === 'viewer' || currentRole === 'cfo') return;
+  if (evt.from === evt.to) {
+     window.updateFab();
+     return;
+  }
+
+  const movedItems = (evt.items && evt.items.length > 0) ? evt.items : [evt.item];
+  const workersToMove = [];
+
+  movedItems.forEach(item => {
+    const wId = item.dataset.wid;
+    const wName = item.dataset.wname;
+    const wComp = item.dataset.wcomp;
+    const cIdx = item.dataset.cidx;
+    const tIdx = item.dataset.tidx;
+    workersToMove.push({ id: wId, name: wName, company: wComp });
+
+    if (cIdx === 'unassigned') {
+      unassignedWorkers = unassignedWorkers.filter(w => w.id !== wId);
+    } else {
+      const fromCIdx = parseInt(cIdx);
+      const oldTIdx = parseInt(tIdx);
+      if (cardsData[fromCIdx] && cardsData[fromCIdx].tasks[oldTIdx]) {
+        let t = cardsData[fromCIdx].tasks[oldTIdx];
+        t.workerList = t.workerList.filter(w => w.id !== wId);
+      }
+    }
+  });
+
+  if (evt.to.id === 'unassigned-dropzone') {
+    workersToMove.forEach(workerObj => {
+      if (!unassignedWorkers.find(w => w.id === workerObj.id)) {
+        unassignedWorkers.push(workerObj);
       }
     });
-  });
-  cardsData = newCardsData;
-  window.renderCards(); 
-  window.syncToFirebase();
-};
-
-window.updateManager = function(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].manager = String(val).trim(); window.syncToFirebase(); if(currentView==='orgchart') window.renderOrgChart(); if(currentView==='tree') window.renderTreeOrgChart();};
-window.updateTimesheetNo = function(cIdx, val) { 
-  if (currentRole === 'viewer' || currentRole === 'cfo') return; 
-  cardsData[cIdx].timesheetNo = String(val).trim(); 
-  window.syncToFirebase(); 
-  if(currentView === 'orgchart') window.renderOrgChart(); 
-  if(currentView === 'tree') window.renderTreeOrgChart();
-};
-window.updateTimesheetName = function(cIdx, val) {
-  if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  cardsData[cIdx].timesheetName = String(val).trim();
-  window.syncToFirebase();
-  if(currentView === 'orgchart') window.renderOrgChart();
-  if(currentView === 'tree') window.renderTreeOrgChart();
-};
-window.updateShiftType = function(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].shiftType = val; window.syncToFirebase(); };
-window.updateShiftHours = function(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].shiftHours = String(val).trim(); window.syncToFirebase(); };
-window.updateTaskForeman = function(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].foreman = String(val).trim(); window.syncToFirebase(); if(currentView==='orgchart') window.renderOrgChart(); if(currentView==='tree') window.renderTreeOrgChart();};
-window.updateTaskDesc = function(cIdx, tIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].desc = String(val).trim(); window.syncToFirebase(); if(currentView==='tree') window.renderTreeOrgChart();};
-window.updateTaskSource = function(cIdx, tIdx, val, el) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].tasks[tIdx].source = val; window.recalculateTotals(); window.syncToFirebase(); };
-window.updateWorkerCount = function(cIdx, tIdx, val) { 
-  if (currentRole === 'viewer' || currentRole === 'cfo') return; 
-  cardsData[cIdx].tasks[tIdx].workers = (String(val).trim() === "") ? "" : parseInt(val); 
-  window.renderCards(); window.syncToFirebase(); if(currentView==='orgchart') window.renderOrgChart(); if(currentView==='tree') window.renderTreeOrgChart();
-};
-window.changeCategory = function(cIdx, val) { if (currentRole === 'viewer' || currentRole === 'cfo') return; cardsData[cIdx].category = val; window.renderCards(); window.syncToFirebase(); };
-
-window.addTask = function(cIdx) { 
-  if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); 
-  if (currentRole === 'viewer' || currentRole === 'cfo') return; 
-  cardsData[cIdx].tasks.push({ desc: "", foreman: "", source: siteCompanies[0], workers: "", workerList: [] }); 
-  window.renderCards(); 
-  window.syncToFirebase(); 
-};
-
-window.removeTask = function(cIdx, tIdx) { 
-  if (currentRole === 'viewer' || currentRole === 'cfo') return; 
-  
-  const task = cardsData[cIdx].tasks[tIdx];
-  if (task && task.workerList) {
-      task.workerList.forEach(w => {
-          if (!unassignedWorkers.find(uw => uw.id === w.id)) unassignedWorkers.push(w);
-      });
-  }
-  
-  cardsData[cIdx].tasks.splice(tIdx, 1); 
-  window.renderCards(); 
-  window.renderDrawer();
-  window.syncToFirebase(); 
-  if(currentView==='orgchart') window.renderOrgChart(); 
-  if(currentView==='tree') window.renderTreeOrgChart();
-};
-
-window.addNewSupervisor = function() { 
-  if (currentRole === 'viewer' || currentRole === 'cfo') return; 
-  cardsData.unshift({ 
-    name: "NEW TIMESHEET", 
-    manager: "", 
-    supervisorRole: "SUPERVISOR",
-    category: "civil",
-    timesheetNo: "", 
-    timesheetName: "",
-    shiftType: "Shift 1", 
-    shiftHours: "07:00 - 15:00", 
-    printTasks: [], 
-    tasks: [{ desc: "", foreman: "", source: siteCompanies[0], workers: "", workerList: [] }] 
-  }); 
-  
-  if (!['all', 'alpha', 'civil'].includes(currentFilter)) {
-    window.setFilter('all');
   } else {
-    window.renderCards();
+    const toCIdx = parseInt(evt.to.dataset.cidx);
+    const toTIdx = parseInt(evt.to.dataset.tidx);
+    workersToMove.forEach(workerObj => {
+      let t = cardsData[toCIdx].tasks[toTIdx];
+      if (!t.workerList) t.workerList = [];
+      t.workerList.push(workerObj);
+    });
   }
-  
-  window.syncToFirebase(); 
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-};
 
-window.removeSupervisor = function(cIdx) { 
-  if (currentRole === 'viewer' || currentRole === 'cfo') return; 
-  if (confirm(`Supprimer ${cardsData[cIdx].name} ?`)) { 
-      cardsData[cIdx].tasks.forEach(t => {
-          if (t.workerList) {
-              t.workerList.forEach(w => {
-                  if (!unassignedWorkers.find(uw => uw.id === w.id)) unassignedWorkers.push(w);
-              });
-          }
-      });
-      
-      cardsData.splice(cIdx, 1); 
-      window.renderCards(); 
-      window.renderDrawer();
-      window.syncToFirebase(); 
-      if(currentView==='orgchart') window.renderOrgChart(); 
-      if(currentView==='tree') window.renderTreeOrgChart();
-  } 
-};
-
-window.openTsTasksModal = function(cIdx) {
-  if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  currentTsCardIdx = cIdx;
-  const card = cardsData[cIdx];
-  
-  let pts = card.printTasks;
-  if (!pts || pts.length === 0) {
-     pts = card.tasks.map(t => {
-        let prefix = t.foreman ? `[${t.foreman}] ` : '';
-        return prefix + t.desc;
-     }).filter(d => d.trim() !== "");
-  }
-  
-  window.renderTsTasksList(pts);
-  document.getElementById('ts-tasks-modal').style.display = 'flex';
-};
-
-window.renderTsTasksList = function(tasksArray) {
-  const list = document.getElementById('ts-tasks-list');
-  list.innerHTML = '';
-  if(tasksArray.length === 0) tasksArray = [""];
-  tasksArray.forEach((t) => {
-     list.insertAdjacentHTML('beforeend', `
-       <div style="display:flex; gap:6px;">
-         <input type="text" class="modal-select ts-task-input" value="${t}" placeholder="Nom de la tâche à pointer...">
-         <button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5;" onclick="this.parentElement.remove()" style="padding:4px 8px;">&times;</button>
-       </div>
-     `);
-  });
-};
-
-window.addTsTaskInput = function() {
-  document.getElementById('ts-tasks-list').insertAdjacentHTML('beforeend', `
-       <div style="display:flex; gap:6px;">
-         <input type="text" class="modal-select ts-task-input" placeholder="Nom de la tâche à pointer...">
-         <button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5;" onclick="this.parentElement.remove()" style="padding:4px 8px;">&times;</button>
-       </div>
-  `);
-};
-
-window.closeTsTasksModal = function() {
-  document.getElementById('ts-tasks-modal').style.display = 'none';
-};
-
-window.saveTsTasks = function() {
-  if (currentTsCardIdx === -1) return;
-  const inputs = document.querySelectorAll('.ts-task-input');
-  const newTasks = [];
-  inputs.forEach(input => {
-     if (input.value.trim() !== "") newTasks.push(input.value.trim());
-  });
-  cardsData[currentTsCardIdx].printTasks = newTasks;
+  window.recalculateTotals();
+  window.renderCards();
+  window.renderDrawer();
+  window.updateFab();
   window.syncToFirebase();
-  window.closeTsTasksModal();
 };
 
-window.openPrintModal = function() {
-  if (selectedForPrint.size === 0) {
-    alert("Veuillez cocher au moins un superviseur (case en haut à gauche de la carte) pour imprimer sa Timesheet.");
+window.updateFab = function() {
+  const selected = document.querySelectorAll('.worker-pill.sortable-selected, .worker-pill.selected-pill');
+  const fabMove = document.getElementById('fab-move');
+  const fabCount = document.getElementById('fab-count');
+  
+  if (selected.length > 0) {
+    fabMove.style.display = 'flex';
+    fabCount.innerText = selected.length;
+  } else {
+    fabMove.style.display = 'none';
+  }
+};
+
+window.handleFabClick = function(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  
+  const selectedPills = document.querySelectorAll('.worker-pill.sortable-selected, .worker-pill.selected-pill');
+  const count = selectedPills.length;
+  
+  if (count === 0) {
+      alert("Aucun ouvrier n'est actuellement sélectionné.");
+      return;
+  }
+  
+  let html = `<option value="-1">👷 Renvoyer à la Base (Non assigné)</option>`;
+  cardsData.forEach((c, idx) => {
+     const tsInfo = c.timesheetNo ? ` [TS: ${c.timesheetNo}]` : '';
+     html += `<option value="${idx}">➡️ ${c.name}${tsInfo}</option>`;
+  });
+  
+  document.getElementById('modal-sup-select').innerHTML = html;
+  document.getElementById('modal-worker-name').innerText = `Déplacement de ${count} ouvrier(s) sélectionné(s)`;
+  document.getElementById('worker-modal').style.display = 'flex';
+};
+
+window.closeWorkerModal = function() { 
+  document.getElementById('worker-modal').style.display = 'none'; 
+};
+
+window.confirmWorkerMove = function() {
+  if (currentRole === 'viewer' || currentRole === 'cfo') return;
+  const targetCIdx = parseInt(document.getElementById('modal-sup-select').value);
+  const selectedPills = document.querySelectorAll('.worker-pill.sortable-selected, .worker-pill.selected-pill');
+  
+  selectedPills.forEach(pill => {
+      const wId = pill.dataset.wid;
+      const wName = pill.dataset.wname;
+      const wComp = pill.dataset.wcomp;
+      const cIdx = pill.dataset.cidx === "unassigned" ? -1 : parseInt(pill.dataset.cidx);
+      const tIdx = pill.dataset.tidx === "unassigned" ? -1 : parseInt(pill.dataset.tidx);
+      
+      if (targetCIdx === cIdx) return; 
+      
+      const workerObj = { id: wId, name: wName, company: wComp };
+      
+      if (cIdx === -1) { 
+         unassignedWorkers = unassignedWorkers.filter(w => w.id !== wId); 
+      } else {
+         if (cardsData[cIdx] && cardsData[cIdx].tasks[tIdx]) {
+            cardsData[cIdx].tasks[tIdx].workerList = cardsData[cIdx].tasks[tIdx].workerList.filter(w => w.id !== wId);
+         }
+      }
+      
+      if (targetCIdx === -1) { 
+         if(!unassignedWorkers.find(w => w.id === wId)) {
+             unassignedWorkers.push(workerObj); 
+         }
+      } else {
+         let targetTaskIdx = cardsData[targetCIdx].tasks.findIndex(t => t.source === wComp);
+         if (targetTaskIdx === -1) {
+            cardsData[targetCIdx].tasks.push({ desc: 'Affectation de masse', source: wComp, workers: "", workerList: [] });
+            targetTaskIdx = cardsData[targetCIdx].tasks.length - 1;
+         }
+         if (!cardsData[targetCIdx].tasks[targetTaskIdx].workerList) cardsData[targetCIdx].tasks[targetTaskIdx].workerList = [];
+         cardsData[targetCIdx].tasks[targetTaskIdx].workerList.push(workerObj);
+      }
+  });
+  
+  window.closeWorkerModal(); 
+  document.getElementById('fab-move').style.display = 'none';
+  window.recalculateTotals(); 
+  window.renderCards(); 
+  window.renderDrawer(); 
+  window.syncToFirebase();
+};
+
+window.renderDrawer = function() {
+  const dz = document.getElementById('unassigned-dropzone');
+  if (!dz) return;
+  
+  dz.innerHTML = unassignedWorkers.map(w => {
+    let colorClass = 'other';
+    if(w.company === 'SKYBUILDING BRANCH') colorClass = 'skybuilding-branch';
+    else if(w.company === 'SKYBUILDING GREECE') colorClass = 'skybuilding-greece';
+    else if(w.company === 'DSS') colorClass = 'dss';
+    else if(w.company === 'EUROASIA') colorClass = 'euroasia';
+    else if(w.company === 'BIK') colorClass = 'bik';
+    
+    return `<div class="worker-pill ${colorClass}" data-wid="${w.id}" data-wname="${w.name}" data-wcomp="${w.company}" data-cidx="unassigned" data-tidx="unassigned">
+      ${w.id} - ${w.name}
+    </div>`;
+  }).join('');
+
+  const fabDrawerCount = document.getElementById('fab-drawer-count');
+  if (fabDrawerCount) fabDrawerCount.innerText = unassignedWorkers.length;
+  
+  window.initWorkerSortables();
+};
+
+window.addManualWorker = function() {
+  if (currentRole === 'viewer' || currentRole === 'cfo') return;
+  const idInput = document.getElementById('new-w-id');
+  const nameInput = document.getElementById('new-w-name');
+  const comp = document.getElementById('new-w-comp').value;
+  
+  const id = String(idInput.value || '').trim() || "W-" + Math.floor(Math.random()*10000);
+  const name = String(nameInput.value || '').trim();
+
+  if (!name) {
+    alert("Veuillez saisir au moins le Nom de l'ouvrier.");
     return;
   }
-  document.getElementById('print-modal').style.display = 'flex';
+
+  const dup = window.findWorkerDuplicate(id, name);
+  if (dup.found) {
+    alert(`⚠️ DOUBLON DÉTECTÉ !\n\nL'ouvrier "${name}" (ID: ${id}) existe déjà ${dup.location}.\n\nNom existant : ${dup.worker.name}\nID existant : ${dup.worker.id}\nEntreprise : ${dup.worker.company}\n\nAjout annulé.`);
+    return;
+  }
+
+  unassignedWorkers.push({ id, name, company: comp });
+  idInput.value = ""; nameInput.value = "";
+  window.renderDrawer(); 
+  if(document.getElementById('db-modal').style.display === 'flex') window.renderDBTable();
+  window.syncToFirebase();
 };
 
-window.closePrintModal = function() { document.getElementById('print-modal').style.display = 'none'; };
+window.toggleAllImportUpdates = function(checked) {
+    document.querySelectorAll('.import-update-cb').forEach(cb => cb.checked = checked);
+};
 
-window.executePrint = function() {
-  const dateInput = document.getElementById('print-date-input').value;
-  if (!dateInput) { alert("Veuillez sélectionner une date (Lundi)."); return; }
-
-  const baseDate = new Date(dateInput);
-  const printZone = document.getElementById('timesheet-print-zone');
-  let htmlContent = '';
-
-  const daysNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-  const monthsNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-  const WORKERS_PER_PAGE = 15;
-
-  selectedForPrint.forEach(cIdx => {
-    const card = cardsData[cIdx];
-    if (!card) return;
-
-    let taskHeaders = card.printTasks !== undefined ? [...card.printTasks] : card.tasks.map(t => (t.foreman ? `[${t.foreman}] ` : '') + t.desc).filter(d => d.trim() !== "");
-    taskHeaders.push('', ''); 
-
-    let taskThs = taskHeaders.map(th => `<th class="ts-task-col">${th || '&nbsp;'}</th>`).join('');
-
-    const workersMap = new Map();
-    let unnamedCount = 0;
-
-    card.tasks.forEach(t => {
-      const linked = t.workerList ? t.workerList.length : 0;
-      const hasM = t.workers !== undefined && t.workers !== null && String(t.workers) !== "";
-      const manual = hasM ? parseInt(t.workers) : linked;
-      
-      if (t.workerList && linked > 0) {
-        t.workerList.forEach(w => workersMap.set(w.id, w));
-      }
-      if (manual > linked) {
-        unnamedCount += (manual - linked);
-      }
-    });
-
-    const workersList = Array.from(workersMap.values());
-    let allRows = [];
-    
-    workersList.forEach(w => {
-      let taskCells = taskHeaders.map(() => `<td></td>`).join('');
-      allRows.push(`<tr><td>${w.id}</td><td>${w.name}</td><td>${w.company}</td>${taskCells}</tr>`);
+window.confirmImportUpdates = function() {
+    const checkboxes = document.querySelectorAll('.import-update-cb');
+    let count = 0;
+    checkboxes.forEach(cb => {
+        if (cb.checked) {
+            const u = pendingImportUpdates[cb.value];
+            u.worker.id = u.newId;
+            u.worker.company = u.newComp;
+            count++;
+        }
     });
     
-    for(let i=0; i < unnamedCount; i++) {
-      let taskCells = taskHeaders.map(() => `<td></td>`).join('');
-      allRows.push(`<tr><td>-</td><td><em>Ouvrier non identifié</em></td><td>-</td>${taskCells}</tr>`);
-    }
+    document.getElementById('import-validation-modal').style.display = 'none';
+    window.finalizeImport(count);
+};
+
+window.cancelImportUpdates = function() {
+    document.getElementById('import-validation-modal').style.display = 'none';
+    window.finalizeImport(0);
+};
+
+window.finalizeImport = function(updatedCount = 0) {
+    let newWorkersCount = 0;
+    let unmatchedExcelWorkers = [];
     
-    if(allRows.length === 0) {
-       allRows.push(`<tr><td colspan="${3 + taskHeaders.length}" style="text-align:center;">Aucun ouvrier pour cette équipe</td></tr>`);
-    }
+    pendingExcelWorkersMap.forEach((exW) => {
+        if (!exW.matched) {
+            unmatchedExcelWorkers.push({ id: exW.id, name: exW.name, company: exW.company });
+        }
+    });
+    
+    unassignedWorkers.push(...unmatchedExcelWorkers);
+    newWorkersCount = unmatchedExcelWorkers.length;
 
-    const totalPagesPerDay = Math.ceil(allRows.length / WORKERS_PER_PAGE);
+    window.rawImportedDB = Array.from(pendingExcelWorkersMap.values()).map(w => ({id: w.id, name: w.name, company: w.company}));
+    
+    let removedDuplicates = window.cleanDuplicates(true);
 
-    for (let d = 0; d < 6; d++) {
-      let currentDate = new Date(baseDate);
-      currentDate.setDate(currentDate.getDate() + d);
-      let dayStr = `${daysNames[currentDate.getDay()]} ${currentDate.getDate().toString().padStart(2,'0')} ${monthsNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
-
-      for (let p = 0; p < totalPagesPerDay; p++) {
-        let chunkRows = allRows.slice(p * WORKERS_PER_PAGE, (p + 1) * WORKERS_PER_PAGE).join('');
-        let pageIndicator = totalPagesPerDay > 1 ? `<div style="text-align:right; font-size:11px; margin-top:-20px; margin-bottom:10px; color:#475569;">Page ${p + 1} / ${totalPagesPerDay}</div>` : '';
-        
-        let totalsRow = (p === totalPagesPerDay - 1) ? `
-          <tr style="background-color:#f8fafc; font-weight:bold;">
-            <td colspan="3" style="text-align:right;">TOTAL WORKERS :</td>
-            <td colspan="${taskHeaders.length}" style="text-align:center;">${workersList.length + unnamedCount}</td>
-          </tr>` : '';
-
-        htmlContent += `
-          <div class="ts-page">
-            <div class="ts-header">DAILY TIMESHEET</div>
-            ${pageIndicator}
-            <div class="ts-info-box">
-              <div>
-                <div style="margin-bottom:6px;">PROJECT: <span style="font-weight:normal;">Riviera Tower</span></div>
-                <div style="margin-bottom:6px;">SUPERVISOR: <span style="font-weight:normal;">${card.name}</span></div>
-                <div>CATEGORY: <span style="font-weight:normal;">${(CATEGORY_INFO.find(c=>c.id===card.category)||{}).name || card.category}</span></div>
-              </div>
-              <div style="text-align:right;">
-                <div style="margin-bottom:6px;">DATE: <span style="font-weight:normal;">${dayStr}</span></div>
-                <div style="margin-bottom:6px;">TIMESHEET N°: <span style="font-weight:normal;">${card.timesheetNo || '_____'}</span></div>
-                <div>SHIFT: <span style="font-weight:normal;">${card.shiftType || 'Shift 1'} (${card.shiftHours || '07:00 - 15:00'})</span></div>
-              </div>
-            </div>
-
-            <table class="ts-table">
-              <thead>
-                <tr>
-                  <th style="width:10%">ID</th>
-                  <th style="width:25%">Name</th>
-                  <th style="width:15%">Company</th>
-                  ${taskThs}
-                </tr>
-              </thead>
-              <tbody>
-                ${chunkRows}
-                ${totalsRow}
-              </tbody>
-            </table>
-
-            <div class="ts-signatures">
-              <div class="ts-sign-box">Team Leader</div>
-              <div class="ts-sign-box">Supervisor</div>
-              <div class="ts-sign-box">Timekeeper</div>
-            </div>
-          </div>
-        `;
-      }
-    }
-  });
-
-  printZone.innerHTML = htmlContent;
-  window.closePrintModal();
-  
-  document.body.classList.add('print-mode-ts');
-  window.print();
-  setTimeout(() => { document.body.classList.remove('print-mode-ts'); }, 500);
+    window.renderCompanySelects();
+    window.recalculateTotals();
+    window.renderCards();
+    window.renderDrawer(); 
+    if(document.getElementById('db-modal').style.display === 'flex') window.renderDBTable();
+    window.syncToFirebase();
+    
+    alert(`Import et Fusion terminés avec succès !\n\n🔄 Mises à jour validées : ${updatedCount}\n📥 Nouveaux ouvriers envoyés dans la base "Non Assignés" : ${newWorkersCount}\n🧹 Doublons nettoyés automatiquement : ${removedDuplicates}\n\nLes assignations dans l'organigramme ont été conservées.`);
 };
 
-window.exportBackup = function() {
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors}, null, 2));
-  const dlAnchorElem = document.createElement('a');
-  dlAnchorElem.setAttribute("href", dataStr);
-  dlAnchorElem.setAttribute("download", `site_backup_${new Date().toISOString().split('T')[0]}.json`);
-  document.body.appendChild(dlAnchorElem); dlAnchorElem.click(); dlAnchorElem.remove();
-};
-
-window.importBackup = function(event) {
-  if (currentRole === 'viewer') return;
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const parsed = JSON.parse(e.target.result);
-      if (parsed.cardsData) {
-        cardsData = parsed.cardsData;
-        payrollCounts = parsed.payrollCounts || {};
-        unassignedWorkers = parsed.unassignedWorkers || [];
-        if (!Array.isArray(unassignedWorkers)) unassignedWorkers = [];
-        if (parsed.companies) siteCompanies = parsed.companies;
-        if (parsed.supervisors) siteSupervisors = parsed.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
-        if (parsed.rawImportedDB) window.rawImportedDB = parsed.rawImportedDB;
-        
-        window.renderCompanySelects();
-        window.renderPayrollTable();
-        window.renderCards(); 
-        window.renderDrawer(); 
-        window.syncToFirebase();
-        alert("Sauvegarde restaurée avec succès !");
-      } else { alert("Fichier invalide."); }
-    } catch (err) { alert("Erreur : " + err.message); }
-    event.target.value = "";
-  };
-  reader.readAsText(file);
-};
-
+// --- IMPORTATION EXCEL GLOBALE POINTAGE ET BASE RH (FUSION & DÉDUPLICATION) ---
 window.importExcelFile = function(event) {
   if (currentRole === 'viewer' || currentRole === 'cfo') return; 
   const file = event.target.files[0];
