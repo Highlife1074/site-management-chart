@@ -406,7 +406,7 @@
   <div class="modal-box xl" style="height: 85vh;">
     <div class="modal-title">🗃️ Base de Données Globale (Éditeur)</div>
     <div style="display:flex; justify-content: space-between; margin-bottom: 10px; align-items:center;">
-       <span style="font-size:12px; color:#64748b;">Modifiez les champs directement. Toute modification est sauvegardée.</span>
+       <span style="font-size:12px; color:#64748b;">La Base Globale contient tous les ouvriers importés d'Excel + ceux créés manuellement.</span>
        
        <div style="display:flex; gap:8px;">
           <button class="btn btn-blue" onclick="window.verifyImportCoherence()" title="Vérifier les écarts entre la base Excel arrière-plan et le chantier">🔍 Vérifier Cohérence Import</button>
@@ -1511,6 +1511,7 @@ window.openCompaniesModal = function() {
   window.renderCompaniesList();
   document.getElementById('companies-modal').style.display = 'flex';
 };
+
 window.closeCompaniesModal = function() { document.getElementById('companies-modal').style.display = 'none'; };
 
 window.renderCompaniesList = function() {
