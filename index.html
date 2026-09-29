@@ -406,7 +406,7 @@
   <div class="modal-box xl" style="height: 85vh;">
     <div class="modal-title">🗃️ Base de Données Globale (Éditeur)</div>
     <div style="display:flex; justify-content: space-between; margin-bottom: 10px; align-items:center;">
-       <span style="font-size:12px; color:#64748b;">Modifiez les champs directement. Toute modification est sauvegardée.</span>
+       <span style="font-size:12px; color:#64748b;">La Base Globale contient tous les ouvriers importés d'Excel + ceux créés manuellement.</span>
        
        <div style="display:flex; gap:8px;">
           <button class="btn btn-blue" onclick="verifyImportCoherence()" title="Vérifier les écarts entre la base Excel arrière-plan et le chantier">🔍 Vérifier Cohérence Import</button>
@@ -543,33 +543,6 @@
 </div>
 
 <!-- MODAL GESTION ENTREPRISES -->
- <!-- MODAL FUSION MANUELLE -->
-<div id="merge-modal" class="modal-overlay">
-  <div class="modal-box">
-    <div class="modal-title">🔗 Fusionner un ouvrier</div>
-    <p style="font-size:12px; color:#64748b; margin-top:-8px;">
-      Les données de l'ouvrier importé <b>(Non Assigné)</b> vont écraser celles de l'ouvrier <b>Assigné</b> sélectionné ci-dessous. L'ouvrier conservera sa place dans son équipe.
-    </p>
-    
-    <div style="background:#f1f5f9; padding:10px; border-radius:8px; margin-top:8px;">
-      <div style="font-size:11px; font-weight:700; color:#475569;">SOURCE EXCEL (Nouvelles données à conserver) :</div>
-      <div id="merge-source-info" style="font-weight:800; font-size:13px; color:#0f172a; margin-top:4px;"></div>
-    </div>
-    
-    <div style="margin-top:12px;">
-      <label style="font-size:11px; font-weight:700; color:#475569;">CIBLE (Ouvrier assigné sur Timesheet à mettre à jour) :</label>
-      <input type="text" id="merge-search" class="modal-select" style="margin-top:4px; margin-bottom:4px;" placeholder="🔍 Rechercher un nom..." oninput="filterMergeTarget()">
-      <select id="merge-target-select" class="modal-select" size="6" style="margin-top:4px; padding:4px; height: 150px;">
-        <!-- Rempli dynamiquement -->
-      </select>
-    </div>
-    
-    <div class="modal-actions" style="margin-top:16px;">
-      <button class="btn btn-outline" onclick="closeMergeModal()">Annuler</button>
-      <button class="btn btn-success" onclick="confirmMerge()">✅ Appliquer la Fusion</button>
-    </div>
-  </div>
-</div>
 <div id="companies-modal" class="modal-overlay">
   <div class="modal-box">
     <div class="modal-title">🏢 Gérer les Entreprises</div>
@@ -602,7 +575,7 @@
     <input type="text" id="new-w-id" placeholder="ID / N° (ex: W-123)" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;">
     <input type="text" id="new-w-name" placeholder="Nom Complet" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;">
     <select id="new-w-comp" class="dynamic-comp-select" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;"></select>
-    <button class="btn btn-outline" style="font-size:11px; padding:4px; justify-content:center;" onclick="addManualWorker()">+ Ajout Manuel</button>
+    <button class="btn btn-outline" style="font-size:11px; padding:4px; justify-content:center;" onclick="window.addManualWorker()">+ Ajout Manuel</button>
   </div>
 
   <h4 style="font-size:13px; font-weight:800; margin-top:12px; padding-bottom:8px; border-bottom:1px solid #e2e8f0;">Ouvriers Non Assignés</h4>
@@ -729,74 +702,6 @@ try {
       Sortable.mount(new Sortable.MultiDrag());
   }
 } catch(e) { console.warn("Sortable MultiDrag init error:", e); }
-
-// Fonction fantôme pour éviter l'erreur de référence sur des environnements en cache.
-window.migrateSkybuilding = function() {
-    console.log("Migration Skybuilding traitée (Silencieux)");
-};
-
-// Sauvegarde JSON manuelle complète de l'application
-window.exportBackup = function() {
-    try {
-        const data = {
-            cardsData: cardsData,
-            payrollCounts: payrollCounts,
-            unassignedWorkers: unassignedWorkers,
-            companies: siteCompanies,
-            rawImportedDB: window.rawImportedDB,
-            supervisors: siteSupervisors
-        };
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `Riviera_Tower_Backup_${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    } catch (err) {
-        alert("Erreur lors de l'exportation de la sauvegarde : " + err.message);
-    }
-};
-
-// Restauration JSON complète de l'application
-window.importBackup = function(event) {
-    if (currentRole === 'viewer' || currentRole === 'cfo') {
-        alert("Permission refusée. Seul un Admin ou Timekeeper peut restaurer une sauvegarde.");
-        return;
-    }
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const parsed = JSON.parse(e.target.result);
-            if (parsed.cardsData) cardsData = parsed.cardsData;
-            if (parsed.payrollCounts) payrollCounts = parsed.payrollCounts;
-            if (parsed.unassignedWorkers) unassignedWorkers = parsed.unassignedWorkers;
-            if (parsed.companies) siteCompanies = parsed.companies;
-            if (parsed.rawImportedDB) window.rawImportedDB = parsed.rawImportedDB;
-            if (parsed.supervisors) siteSupervisors = parsed.supervisors;
-
-            syncToFirebase();
-            renderCompanySelects();
-            renderPayrollTable();
-            renderCards();
-            if (currentView === 'orgchart') renderOrgChart();
-            if (currentView === 'tree') renderTreeOrgChart();
-            renderDrawer();
-            if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
-            updateFab();
-            alert("✅ Sauvegarde JSON restaurée avec succès !");
-        } catch (err) {
-            alert("❌ Erreur lors de la lecture du fichier de sauvegarde. Fichier corrompu ou invalide. Détails : " + err.message);
-        }
-        event.target.value = ""; // Réinitialiser le champ d'input
-    };
-    reader.readAsText(file);
-};
 
 // Menus
 function toggleAdminMenu() {
@@ -960,6 +865,31 @@ cardsData.forEach(c => {
 });
 siteSupervisors.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
 
+// --- FONCTION UTILITAIRE : VÉRIFICATION DOUBLONS ---
+window.findWorkerDuplicate = function(searchId, searchName, excludeId = null) {
+  const normId = str => String(str || '').trim().toUpperCase();
+  const sId = searchId ? normId(searchId) : null;
+  const sName = searchName ? normalizeName(searchName) : null;
+
+  for (const w of unassignedWorkers) {
+    if (excludeId && normId(w.id) === normId(excludeId)) continue;
+    if (sId && normId(w.id) === sId) return { found: true, location: 'dans la Base (Non assigné)', worker: w };
+    if (sName && normalizeName(w.name) === sName) return { found: true, location: 'dans la Base (Non assigné)', worker: w };
+  }
+
+  for (const card of cardsData) {
+    for (const t of (card.tasks || [])) {
+      for (const w of (t.workerList || [])) {
+        if (excludeId && normId(w.id) === normId(excludeId)) continue;
+        if (sId && normId(w.id) === sId) return { found: true, location: `sur l'équipe de ${card.name}`, worker: w };
+        if (sName && normalizeName(w.name) === sName) return { found: true, location: `sur l'équipe de ${card.name}`, worker: w };
+      }
+    }
+  }
+
+  return { found: false };
+};
+
 // --- 1. INITIALISATION DE L'INTERFACE ---
 function initLayout() {
   document.getElementById('role-selector').value = currentRole;
@@ -1101,8 +1031,6 @@ setTimeout(() => {
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
     db.settings({ experimentalAutoDetectLongPolling: true });
-    
-    // CORRECTION : Il faut utiliser db.collection pour Firebase Compat
     docRef = db.collection("site_charts").doc("current_week");
 
     docRef.onSnapshot((doc) => {
@@ -1119,7 +1047,7 @@ setTimeout(() => {
             if(!siteCompanies.includes('SKYBUILDING GREECE')) siteCompanies.push('SKYBUILDING GREECE');
             siteCompanies = [...new Set(siteCompanies)];
         }
-
+        
         let supsAdded = false;
         cardsData.forEach(c => {
             let n = String(c.name || '').trim().toUpperCase();
@@ -1158,7 +1086,7 @@ setTimeout(() => {
 
 // --- 3. FONCTIONS CLÉS & SYNCHRONISATION ---
 function syncToFirebase() {
-  if (currentRole === 'viewer') return; 
+  if (currentRole === 'viewer' || currentRole === 'cfo') return; 
   try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors})); } catch(e){}
   if (!docRef) return;
   isSaving = true;
@@ -1297,8 +1225,7 @@ function renderDBTable() {
         <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9; font-size:11px; color:#64748b;">
           ${isUnassigned ? '<span style="color:#f59e0b; font-weight:700;">En attente</span>' : `Assigné : <b>${supName}</b>`}
         </td>
-        <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9; white-space:nowrap;">
-           ${isUnassigned ? `<button class="btn btn-blue" style="padding:2px 6px; font-size:10px; margin-right:4px;" onclick="openMergeModal('${w.id}')" title="Fusionner avec un ouvrier assigné">🔗 Fusionner</button>` : ''}
+        <td style="padding:6px 12px; border-bottom:1px solid #f1f5f9;">
            <button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5; padding:2px 8px;" onclick="deleteWorkerFromDB('${w.id}', '${context}', ${cIdx}, ${tIdx})">&times;</button>
         </td>
      </tr>`;
@@ -2309,7 +2236,7 @@ function confirmWorkerMove() {
   syncToFirebase();
 }
 
-function renderDrawer() {
+window.renderDrawer = function() {
   const dz = document.getElementById('unassigned-dropzone');
   if (!dz) return;
   
@@ -2328,9 +2255,12 @@ function renderDrawer() {
 
   const fabDrawerCount = document.getElementById('fab-drawer-count');
   if (fabDrawerCount) fabDrawerCount.innerText = unassignedWorkers.length;
-}
+  
+  // Toujours ré-initialiser le Sortable après modification HTML du dropzone
+  initWorkerSortables();
+};
 
-function addManualWorker() {
+window.addManualWorker = function() {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
   const idInput = document.getElementById('new-w-id');
   const nameInput = document.getElementById('new-w-name');
@@ -2355,7 +2285,7 @@ function addManualWorker() {
   renderDrawer(); 
   if(document.getElementById('db-modal').style.display === 'flex') renderDBTable();
   syncToFirebase();
-}
+};
 
 function reorderCardsBasedOnDOM() {
   if (currentRole === 'viewer' || currentRole === 'cfo') return;
@@ -2749,12 +2679,8 @@ function importExcelFile(event) {
         for (let r = 0; r < rawRows.length; r++) {
           const rowArray = rawRows[r];
           if (!Array.isArray(rowArray)) continue;
-          // Détection ultra-stricte des en-têtes pour ne pas aspirer "Father's Name" ou "Subcontractor's Name"
-          const hasNameHeader = rowArray.some(cell => {
-             const exact = String(cell || "").trim().toUpperCase().replace(/[^A-Z]/g, '');
-             return ["NAME", "SURNAME", "NOM", "PRENOM", "FIRSTNAME", "LASTNAME", "FULLNAME"].includes(exact);
-          });
-          if (hasNameHeader) { headerRowIdx = r; break; }
+          const lineStr = rowArray.map(cell => String(cell || "").toUpperCase()).join(" ");
+          if (lineStr.includes("NAME") || lineStr.includes("SURNAME") || lineStr.includes("NOM")) { headerRowIdx = r; break; }
         }
         if (headerRowIdx === -1) return;
 
@@ -2778,29 +2704,10 @@ function importExcelFile(event) {
              else workerComp = "BIK";
           } 
           else if (isSkyBranch || isSkyGreece) {
-             let dynIdCol = -1, dynWorkerCols = [];
-             const headerRow = rawRows[headerRowIdx] || [];
-             
-             for (let c = 0; c < headerRow.length; c++) {
-               const colName = String(headerRow[c] || "").trim().toUpperCase();
-               const exactCol = colName.replace(/[^A-Z]/g, '');
-               
-               if ((exactCol === "ID" || exactCol === "NO" || colName.includes("COMET") || colName.includes("NEOAXESS")) && dynIdCol === -1) {
-                   dynIdCol = c;
-               }
-               if (["NAME", "SURNAME", "NOM", "PRENOM", "FIRSTNAME", "LASTNAME", "FULLNAME"].includes(exactCol)) {
-                   dynWorkerCols.push(c);
-               }
-             }
-             
-             if (dynIdCol === -1) dynIdCol = 2; // Col C par défaut
-             if (dynWorkerCols.length === 0) dynWorkerCols = [4, 5]; // Col E et F par défaut
-
-             workerId = dynIdCol !== -1 ? String(row[dynIdCol] || "").trim() : "";
-             let dynName = "";
-             dynWorkerCols.forEach(wc => { let val = String(row[wc] || "").trim(); if(val) dynName += val + " "; });
-             workerName = dynName.trim();
-             
+             workerId = String(row[2] || "").trim(); // Col C
+             let surname = String(row[4] || "").trim(); // Col E
+             let name = String(row[5] || "").trim(); // Col F
+             workerName = (surname + " " + name).trim();
              workerComp = isSkyBranch ? "SKYBUILDING BRANCH" : "SKYBUILDING GREECE";
           } 
           else {
@@ -2808,17 +2715,9 @@ function importExcelFile(event) {
              const headerRow = rawRows[headerRowIdx] || [];
              for (let c = 0; c < headerRow.length; c++) {
                const colName = String(headerRow[c] || "").trim().toUpperCase();
-               const exactCol = colName.replace(/[^A-Z]/g, '');
-               
-               if ((exactCol === "ID" || exactCol === "NO" || colName.includes("COMET") || colName.includes("NEOAXESS")) && dynIdCol === -1) {
-                   dynIdCol = c;
-               }
-               if (["NAME", "SURNAME", "NOM", "PRENOM", "FIRSTNAME", "LASTNAME", "FULLNAME"].includes(exactCol)) {
-                   dynWorkerCols.push(c);
-               }
-               if (colName.includes("COMPANY") || colName.includes("SUBCON") || colName === "CO." || colName.includes("ENTREPRISE")) {
-                   dynCompCol = c;
-               }
+               if ((colName.includes("COMET") || colName === "NO." || colName === "ID" || colName.includes("NEOAXESS")) && dynIdCol === -1) dynIdCol = c;
+               if (colName.includes("NAME") || colName.includes("SURNAME") || colName.includes("NOM")) dynWorkerCols.push(c);
+               if (colName.includes("COMPANY") || colName.includes("SUBCON") || colName === "CO." || colName.includes("ENTREPRISE")) dynCompCol = c;
              }
              if (dynWorkerCols.length > 0) {
                  workerId = dynIdCol !== -1 ? String(row[dynIdCol] || "").trim() : "";
@@ -2931,105 +2830,6 @@ function importExcelFile(event) {
 }
 
 window.importWorkersDB = importExcelFile;
- // --- LOGIQUE DE FUSION MANUELLE ---
-let currentMergeSourceId = null;
-let mergeTargetOptions = [];
-
-window.openMergeModal = function(sourceId) {
-  if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  currentMergeSourceId = sourceId;
-  
-  const sourceW = unassignedWorkers.find(w => w.id === sourceId);
-  if (!sourceW) return;
-  
-  document.getElementById('merge-source-info').innerHTML = `${sourceW.name} <br><span style="font-size:11px; color:#64748b;">ID: ${sourceW.id} | Ent: ${sourceW.company}</span>`;
-  
-  mergeTargetOptions = [];
-  cardsData.forEach((c, cIdx) => {
-    c.tasks.forEach((t, tIdx) => {
-      (t.workerList || []).forEach(w => {
-        mergeTargetOptions.push({
-          val: `${cIdx}::${tIdx}::${w.id}`,
-          label: `${w.name} (ID: ${w.id}) - TS: ${c.name}`
-        });
-      });
-    });
-  });
-  
-  // Tri alphabétique pour faciliter la recherche
-  mergeTargetOptions.sort((a,b) => a.label.localeCompare(b.label));
-  
-  document.getElementById('merge-search').value = "";
-  renderMergeSelect(mergeTargetOptions);
-  document.getElementById('merge-modal').style.display = 'flex';
-};
-
-window.renderMergeSelect = function(optionsArray) {
-  const targetSelect = document.getElementById('merge-target-select');
-  if (optionsArray.length === 0) {
-    targetSelect.innerHTML = '<option value="">-- Aucun ouvrier assigné trouvé --</option>';
-    return;
-  }
-  targetSelect.innerHTML = optionsArray.map(opt => `<option value="${opt.val}">${opt.label}</option>`).join('');
-};
-
-window.filterMergeTarget = function() {
-  const query = document.getElementById('merge-search').value.toLowerCase();
-  const filtered = mergeTargetOptions.filter(opt => opt.label.toLowerCase().includes(query));
-  renderMergeSelect(filtered);
-};
-
-window.closeMergeModal = function() {
-  document.getElementById('merge-modal').style.display = 'none';
-  currentMergeSourceId = null;
-};
-
-window.confirmMerge = function() {
-  if (currentRole === 'viewer' || currentRole === 'cfo') return;
-  
-  const targetSelect = document.getElementById('merge-target-select');
-  const targetVal = targetSelect.value;
-  
-  if (!targetVal) {
-    alert("Veuillez sélectionner un ouvrier cible dans la liste.");
-    return;
-  }
-  
-  const sourceIndex = unassignedWorkers.findIndex(w => w.id === currentMergeSourceId);
-  if (sourceIndex === -1) return;
-  const sourceW = unassignedWorkers[sourceIndex];
-  
-  const parts = targetVal.split('::');
-  const cIdx = parseInt(parts[0]);
-  const tIdx = parseInt(parts[1]);
-  const targetWId = parts.slice(2).join('::');
-  
-  const targetW = cardsData[cIdx].tasks[tIdx].workerList.find(w => w.id === targetWId);
-  
-  if (!targetW) {
-    alert("Erreur: L'ouvrier cible n'a pas été trouvé.");
-    return;
-  }
-  
-  // Remplacement pur des données de l'ouvrier assigné (sans toucher à son affectation)
-  targetW.id = sourceW.id;
-  targetW.name = sourceW.name;
-  targetW.company = sourceW.company;
-  targetW.isMissing = false; 
-  
-  // Suppression de l'ouvrier de la base Non Assignée
-  unassignedWorkers.splice(sourceIndex, 1);
-  
-  closeMergeModal();
-  recalculateTotals();
-  syncToFirebase();
-  renderCards();
-  renderDrawer();
-  
-  if (document.getElementById('db-modal').style.display === 'flex') {
-    renderDBTable();
-  }
-};
 </script>
 </body>
 </html>
