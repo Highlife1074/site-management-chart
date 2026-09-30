@@ -337,6 +337,7 @@
     .ts-table th, .ts-table td { border: 1px solid #000; padding: 6px 8px; text-align: left; }
     .ts-table th { background-color: #f1f5f9; font-weight: bold; text-align: center; vertical-align: middle; }
     .ts-task-col { min-width: 80px; text-align: center !important; }
+    .ts-comet-name { font-size: 8px; font-weight: 800; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 3px; }
     .ts-signatures { display: flex; justify-content: space-between; margin-top: 30px; font-size: 14px; font-weight: bold; }
     .ts-sign-box { border-top: 1px solid #000; width: 30%; text-align: center; padding-top: 10px; }
 
@@ -516,14 +517,29 @@
 </div>
 
 <div id="ts-tasks-modal" class="modal-overlay">
-  <div class="modal-box">
+  <div class="modal-box large">
     <div class="modal-title">⚙️ Colonnes de pointage</div>
-    <p style="font-size:12px; color:#64748b; margin-top:-8px;">Définissez les tâches qui apparaîtront en colonnes sur la feuille imprimée.</p>
+    <p style="font-size:12px; color:#64748b; margin-top:-8px;">Une colonne = une tâche du chef, rattachée à une <b>tâche COMET</b> (imprimée au-dessus de la colonne).</p>
     <div id="ts-tasks-list" style="display:flex; flex-direction:column; gap:8px; margin-top:8px; max-height: 250px; overflow-y:auto; padding-right:4px;"></div>
     <button class="btn btn-outline" style="margin-top:8px; justify-content:center;" onclick="addTsTaskInput()">+ Ajouter une colonne</button>
     <div class="modal-actions" style="margin-top:12px;">
       <button class="btn btn-outline" onclick="closeTsTasksModal()">Annuler</button>
       <button class="btn btn-success" onclick="saveTsTasks()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TÂCHES COMET (ajout / suppression : CFO et Admin) -->
+<div id="comet-modal" class="modal-overlay">
+  <div class="modal-box large">
+    <div class="modal-title">🏷️ Tâches COMET <span id="comet-count" style="font-size:12px; color:#64748b; font-weight:600;"></span></div>
+    <p style="font-size:12px; color:#64748b; margin-top:-8px; line-height:1.4;">Liste officielle des tâches COMET. Chaque colonne de Timesheet (⚙️ TS) est rattachée à l'une d'elles par le Timekeeper.<br>Ajout et suppression : <b>CFO et Admin uniquement</b>.</p>
+    <input type="text" id="comet-search" class="modal-select" placeholder="🔍 Rechercher une tâche..." oninput="renderCometList()">
+    <div id="comet-list" style="display:flex; flex-direction:column; gap:4px; max-height:40vh; overflow-y:auto; padding-right:4px;"></div>
+    <textarea id="comet-new-input" class="modal-select" rows="3" style="resize:vertical;" placeholder="Nouvelle(s) tâche(s) COMET — une par ligne (vous pouvez coller une liste)"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeCometModal()">Fermer</button>
+      <button class="btn btn-success" onclick="addCometTasks()">+ Ajouter</button>
     </div>
   </div>
 </div>
@@ -616,6 +632,7 @@
     <div class="divider"></div>
 
     <button class="btn btn-outline" id="btn-db" onclick="openDBModal()" title="La Base de données Globale contient tous les ouvriers Excel + les manuels.">🗃️ Base Globale</button>
+    <button class="btn btn-outline" id="btn-comet" onclick="openCometModal()" title="Liste des tâches COMET (CFO / Admin)">🏷️ Tâches COMET</button>
     <button class="btn btn-outline" id="btn-add-sup" onclick="addNewSupervisor()">+ Ajout Timesheet</button>
     <button class="btn btn-black" id="btn-print-ts" onclick="openPrintModal()">📄 Imprimer TS</button>
     
@@ -736,6 +753,87 @@ const FIRESTORE_DOC = 'current_week';
 // --- MOTS DE PASSE PROFILS (⚠️ visibles côté client : sécurité à revoir, cf. backlog) ---
 const PASSWORDS = { viewer: '', timekeeper: 'timekeeper', cfo: 'cfo', admin: 'admin' };
 
+// --- TÂCHES COMET PAR DÉFAUT (liste fournie par Philippe ; modifiable par le CFO et l'Admin) ---
+const DEFAULT_COMET_TASKS = [
+  "SW - RRD - CORE DRILLING",
+  "SW - TO - CORE DRILLING",
+  "EW - HL - Gravels + geotextile + perforated pipe on top of Podium",
+  "EW - UN - Underground utilities",
+  "EW - CW - Finishes",
+  "EW - CW - External Site",
+  "FA - SL - Work for Glassline",
+  "FA - BA - Work for Technikal",
+  "FA - SL - Filling unused holes",
+  "FA - SL - SHORING TOWER TO DELIVER SLIDING DOOR",
+  "FA - WA - Waterproofing management",
+  "MEP - MC - FP - PIPE WORKS - APARTMENTS",
+  "MEP - MC - FP - PIPE WORKS - COMMON & SHAFTS",
+  "MEP - MC - FP - PW - TESTS",
+  "IN - OSP - CLEANING TRADES",
+  "IN - GS - CRANE AND CPB JUMP PREPARATION",
+  "IN - GS - ELECTRICIAN",
+  "IN - GS - PLUMBER",
+  "IN - OSP - CLEANING TOWER",
+  "IN - GS - GENERAL SERVICES",
+  "IN - CS - SAFETY FENCE MAINTENANCE & JUMP",
+  "IN - LO - SITE DEMOB",
+  "IN - LO - HELP STOREMAN",
+  "IN - LO - MATERIAL TRANSPORTATION",
+  "IN - LO - STOREMAN",
+  "MEP - MC - LOGISTIC",
+  "MEP - MC - SAFETY EVENT",
+  "IN - OSP - HOIST JUMP PREPARATION",
+  "IN - OSP - MAST CLIMBER",
+  "MEP - MC - PL - CORING ON BALCONIES",
+  "MEP - MC - PL - DR - PIPE WORKS - APARTMENTS",
+  "MEP - MC - PL - PR - PIPE WORKS - APARTMENTS",
+  "MEP - MC - PL - SA - FINAL FIX - APARTMENTS",
+  "SW - PO - CONSTRUCTION JOINT PENEBAR (CLIENT REQUEST)",
+  "SW - PO - CRACK MAPPING",
+  "SW - PO - LOGISTIC",
+  "SW - PO - SNAGS",
+  "IN - CS - SAFETY TEAM CARPENTERS",
+  "IN - LO - BOBCAT OPERATOR",
+  "IN - LO - CRANE OPERATOR",
+  "IN - LO - FORKLIFT",
+  "IN - LO - HOIST OPERATOR",
+  "IN - LO - RIGGER",
+  "SW - TO - GRINDING & LEVELING FOR STAIR LANDING",
+  "SW- TO - STRIKE",
+  "SW - TO - POOL TECHNICAL ROOM",
+  "RRD - SW - AS BUILT REPAIRS",
+  "SW - TO - FINISHES - GROUTING",
+  "SW- TO - FINISHES - SIKALASTIC",
+  "SW - TO - FINISHES - TERRACES",
+  "SW - TO - FINISHES - MAST CLIMBER",
+  "SW - TO - POOL",
+  "SW - TO - GROUNTING MEP OPENING",
+  "SW - TO - PLATFORM LIFTING",
+  "SW - TO - CLEANING AND SAFETY LOWER LEVEL",
+  "SW - TO - CRANE & CPB OPENING",
+  "SW - TO - MATERIAL MANAGEMENT",
+  "SW - TO - SNAGS - GENERAL",
+  "SW - TO - MODIFICATION",
+  "FA - WA - WATERPROOFING LOWER LEVEL",
+  "RE - SY - CUT AND BEND",
+  "RE - SY - THREADED BARS",
+  "SW - TO - SNAGS - FLOOR GRINDING",
+  "SW - TO - SNAGS - SIKALASTIC",
+  "SW - TO - SNAGS - SLAB EDGE BALUSTRADE",
+  "SW - TO - SNAGS - POOLS",
+  "AR - SC - FORMWORK FOR SCREED",
+  "AR - PAINTING",
+  "AR - DRY PARTITION",
+  "AR - PLASTERING",
+  "AR - SC - SCREED",
+  "FA - SFS",
+  "FA - SL - LIFT PROTECTION",
+  "FA - SL - WATERPROOFING",
+  "AR - MW - STEEL FRAME",
+  "AR - TI - TILES",
+  "AR - TI - SHOWER SCREED"
+];
+
 // --- ENTREPRISES PAR DÉFAUT (non supprimables) ---
 const DEFAULT_COMPANIES = ['SKYBUILDING BRANCH', 'SKYBUILDING GREECE', 'DSS', 'EUROASIA', 'BIK', 'OTHER'];
 
@@ -792,6 +890,10 @@ function companyClass(company) {
 
 // Le profil actif peut-il modifier les Timesheets et les ouvriers ?
 function canEdit() { return currentRole !== 'viewer' && currentRole !== 'cfo'; }
+// Liste des tâches COMET : ajout / suppression réservés au CFO et à l'Admin
+function canManageComet() { return currentRole === 'cfo' || currentRole === 'admin'; }
+// Nom de tâche COMET nettoyé (espaces en trop retirés)
+function cleanCometName(s) { return String(s ?? '').replace(/\s+/g, ' ').trim(); }
 
 // Donne un ID stable à chaque Timesheet (sert à l'impression et au suivi)
 function ensureCardIds() {
@@ -977,6 +1079,9 @@ let selectedSupervisorsFilter = [];
 // VARIABLES TEMPORAIRES POUR LA VALIDATION DE L'IMPORT
 let pendingImport = null; // import RH en attente de vérification (rien n'est appliqué avant « Appliquer »)
 
+// --- TÂCHES COMET (liste officielle, voir timesheets.js) ---
+let cometTasks = DEFAULT_COMET_TASKS.map(cleanCometName);
+
 // --- RESTAURATION DU CACHE LOCAL (localStorage) ---
 try {
   const localSaved = localStorage.getItem("site_chart_backup");
@@ -990,6 +1095,7 @@ try {
       if (parsed.companies && Array.isArray(parsed.companies)) siteCompanies = parsed.companies;
       if (parsed.supervisors) siteSupervisors = parsed.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
       if (parsed.rawImportedDB) window.rawImportedDB = parsed.rawImportedDB;
+      if (Array.isArray(parsed.cometTasks)) cometTasks = parsed.cometTasks;
     } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
   } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 } catch(e) { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
@@ -1045,6 +1151,8 @@ function applyRolePermissions() {
   // Menu ⚙️ : entreprises et restauration réservées à l'Admin
   show('btn-menu-companies', isAdmin);
   show('btn-menu-restore', isAdmin);
+  // Liste des tâches COMET : CFO et Admin
+  show('btn-comet', isCFO || isAdmin);
 
   document.querySelectorAll('.payroll-input').forEach(el => { el.disabled = isViewer || isTK; });
 
@@ -1131,6 +1239,10 @@ function startFirebase() {
             if(!siteCompanies.includes('SKYBUILDING GREECE')) siteCompanies.push('SKYBUILDING GREECE');
             siteCompanies = [...new Set(siteCompanies)];
         }
+        // Tâches COMET : si la base n'en a pas encore, on y enregistre la liste par défaut
+        let cometSeed = false;
+        if (Array.isArray(data.cometTasks)) cometTasks = data.cometTasks;
+        else cometSeed = true;
 
         let supsAdded = false;
         cardsData.forEach(c => {
@@ -1142,7 +1254,7 @@ function startFirebase() {
                 }
             }
         });
-        if (idsAdded && currentRole !== 'viewer') setTimeout(syncToFirebase, 0);
+        if ((idsAdded || cometSeed) && currentRole !== 'viewer') setTimeout(syncToFirebase, 0);
         if (supsAdded) {
             siteSupervisors.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
             syncToFirebase();
@@ -1171,13 +1283,13 @@ function startFirebase() {
 function syncToFirebase() {
   if (currentRole === 'viewer') return; // Le CFO doit pouvoir enregistrer le Payroll
   if (_syncTimer) { clearTimeout(_syncTimer); _syncTimer = null; }
-  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors})); } catch(e){}
+  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, cometTasks})); } catch(e){}
   if (!docRef) return;
   isSaving = true;
   document.getElementById("sync-text").innerText = "Enregistrement...";
 
   docRef.set({
-    cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors,
+    cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, cometTasks,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   }, { merge: true }).then(() => {
     document.getElementById("sync-dot").style.background = "#16a34a";
@@ -1207,7 +1319,8 @@ function exportBackup() {
     cardsData, payrollCounts, unassignedWorkers,
     companies: siteCompanies,
     supervisors: siteSupervisors,
-    rawImportedDB: window.rawImportedDB
+    rawImportedDB: window.rawImportedDB,
+    cometTasks
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -1248,6 +1361,7 @@ function importBackup(event) {
       unassignedWorkers = Array.isArray(data.unassignedWorkers) ? data.unassignedWorkers : [];
       window.rawImportedDB = Array.isArray(data.rawImportedDB) ? data.rawImportedDB : [];
       if (Array.isArray(data.companies) && data.companies.length) siteCompanies = data.companies;
+      if (Array.isArray(data.cometTasks)) cometTasks = data.cometTasks;
       if (Array.isArray(data.supervisors)) siteSupervisors = data.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
       selectedForPrint.clear();
 
@@ -1781,7 +1895,8 @@ function renderCards() {
                 </select>
                 <span contenteditable="true" data-placeholder="07:00-15:00" onblur="updateShiftHours(${idArg}, this.innerText)">${escapeHtml(sHours)}</span>
               </div>
-              <button class="ts-btn-config" onclick="openTsTasksModal(${idArg})" title="Colonnes">⚙️ TS</button>
+              ${(() => { const nc = colsWithoutComet(card);
+                 return `<button class="ts-btn-config" onclick="openTsTasksModal(${idArg})" title="${nc ? nc + ' colonne(s) sans tâche COMET' : 'Colonnes de pointage (toutes rattachées à COMET)'}">⚙️ TS${nc ? ' ⚠️' : ''}</button>`; })()}
             </div>
           </div>
           <button class="btn-remove-card" onclick="removeSupervisor(${cIdx})">&times;</button>
@@ -1975,13 +2090,17 @@ function removeSupervisor(cIdx) {
    3. IMPRESSION DES TIMESHEETS
    ========================================================== */
 
-// Colonnes de tâches d'une Timesheet imprimée : celles définies via ⚙️ TS,
-// sinon (jamais configurées ou vidées) les lignes de la carte. Même règle pour la fenêtre et l'impression.
+// Colonnes de tâches d'une Timesheet imprimée → [{ label, comet }] :
+// celles définies via ⚙️ TS, sinon (jamais configurées ou vidées) les lignes de la carte (sans COMET).
+// Même règle pour la fenêtre ⚙️ TS et pour l'impression.
 function printColumnsOf(card) {
-  if (Array.isArray(card.printTasks) && card.printTasks.length > 0) return [...card.printTasks];
+  if (Array.isArray(card.printTasks) && card.printTasks.length > 0) {
+    return card.printTasks.map(normPrintCol).filter(c => c.label || c.comet);
+  }
   return (card.tasks || [])
     .map(t => (t.foreman ? `[${t.foreman}] ` : '') + (t.desc || ''))
-    .filter(d => d.trim() !== '');
+    .filter(d => d.trim() !== '')
+    .map(d => ({ label: d.trim(), comet: '' }));
 }
 
 function openTsTasksModal(cardId) {
@@ -1995,27 +2114,31 @@ function openTsTasksModal(cardId) {
   document.getElementById('ts-tasks-modal').style.display = 'flex';
 }
 
-function renderTsTasksList(tasksArray) {
+// Une ligne de la fenêtre ⚙️ TS : tâche COMET (liste) + tâche du chef (texte)
+function tsColumnRowHtml(col) {
+  const c = normPrintCol(col);
+  const known = cometTasks.includes(c.comet);
+  const opts = sortedComet().map(n => `<option value="${escapeHtml(n)}" ${c.comet === n ? 'selected' : ''}>${escapeHtml(n)}</option>`).join('');
+  return `
+    <div class="ts-col-row" style="display:flex; gap:6px; align-items:center;">
+      <select class="modal-select ts-comet-select" style="flex:1 1 45%; min-width:0;" title="Tâche COMET">
+        <option value="">⚠️ -- Tâche COMET --</option>
+        ${opts}
+        ${c.comet && !known ? `<option value="${escapeHtml(c.comet)}" selected>⚠️ ${escapeHtml(c.comet)} (n'existe plus)</option>` : ''}
+      </select>
+      <input type="text" class="modal-select ts-task-input" style="flex:1 1 55%; min-width:0;" value="${escapeHtml(c.label)}" placeholder="Tâche du chef (détail)...">
+      <button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5; padding:4px 8px;" onclick="this.parentElement.remove()">&times;</button>
+    </div>`;
+}
+
+function renderTsTasksList(cols) {
   const list = document.getElementById('ts-tasks-list');
-  list.innerHTML = '';
-  if(tasksArray.length === 0) tasksArray = [""];
-  tasksArray.forEach((t) => {
-     list.insertAdjacentHTML('beforeend', `
-       <div style="display:flex; gap:6px;">
-         <input type="text" class="modal-select ts-task-input" value="${escapeHtml(t)}" placeholder="Nom de la tâche à pointer...">
-         <button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5;" onclick="this.parentElement.remove()" style="padding:4px 8px;">&times;</button>
-       </div>
-     `);
-  });
+  if (!cols || cols.length === 0) cols = [{ label: '', comet: '' }];
+  list.innerHTML = cols.map(tsColumnRowHtml).join('');
 }
 
 function addTsTaskInput() {
-  document.getElementById('ts-tasks-list').insertAdjacentHTML('beforeend', `
-       <div style="display:flex; gap:6px;">
-         <input type="text" class="modal-select ts-task-input" placeholder="Nom de la tâche à pointer...">
-         <button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5;" onclick="this.parentElement.remove()" style="padding:4px 8px;">&times;</button>
-       </div>
-  `);
+  document.getElementById('ts-tasks-list').insertAdjacentHTML('beforeend', tsColumnRowHtml({ label: '', comet: '' }));
 }
 
 function closeTsTasksModal() {
@@ -2030,14 +2153,19 @@ function saveTsTasks() {
     closeTsTasksModal();
     return;
   }
-  const newTasks = [];
-  document.querySelectorAll('.ts-task-input').forEach(input => {
-     if (input.value.trim() !== "") newTasks.push(input.value.trim());
+  const newCols = [];
+  document.querySelectorAll('#ts-tasks-list .ts-col-row').forEach(row => {
+    const label = row.querySelector('.ts-task-input').value.trim();
+    const comet = row.querySelector('.ts-comet-select').value.trim();
+    if (label || comet) newCols.push({ label, comet });
   });
-  card.printTasks = newTasks;
+  const missing = newCols.filter(c => !c.comet).length;
+  if (missing && !confirm(`${missing} colonne(s) sans tâche COMET.\n\nEnregistrer quand même ? (elles seront signalées ⚠️ sur la carte et à l'impression)`)) return;
+  card.printTasks = newCols;
   currentTsCardId = null;
   syncToFirebase();
   closeTsTasksModal();
+  renderCards();
 }
 
 function openPrintModal() {
@@ -2082,10 +2210,23 @@ function executePrint() {
 
   const cardsToPrint = cardsData.filter(c => selectedForPrint.has(c.id));
 
+  // Contrôle COMET : colonnes non rattachées
+  const noComet = cardsToPrint.map(c => ({ c, n: colsWithoutComet(c) })).filter(x => x.n > 0);
+  if (noComet.length && !confirm(
+      `⚠️ Colonnes sans tâche COMET :\n` +
+      noComet.slice(0, 15).map(x => `• ${x.c.name || 'Sans nom'}${x.c.timesheetNo ? ' (TS ' + x.c.timesheetNo + ')' : ''} : ${x.n} colonne(s)`).join('\n') +
+      (noComet.length > 15 ? `\n… et ${noComet.length - 15} autre(s)` : '') +
+      `\n\nImprimer quand même ?`)) return;
+
   cardsToPrint.forEach(card => {
     const taskHeaders = printColumnsOf(card);
-    taskHeaders.push('', '');
-    const taskThs = taskHeaders.map(th => `<th class="ts-task-col">${th ? escapeHtml(th) : '&nbsp;'}</th>`).join('');
+    taskHeaders.push({ label: '', comet: '' }, { label: '', comet: '' }); // 2 colonnes vierges pour ajout manuscrit
+    // En-tête de colonne : tâche COMET (au-dessus) + tâche du chef
+    const taskThs = taskHeaders.map(col => {
+      const top = col.comet ? `<div class="ts-comet-name">${escapeHtml(col.comet)}</div>` : '';
+      const body = col.label ? escapeHtml(col.label) : (col.comet ? '' : '&nbsp;');
+      return `<th class="ts-task-col">${top}${body}</th>`;
+    }).join('');
     const emptyCells = taskHeaders.map(() => `<td></td>`).join('');
 
     // Même règle que les totaux : ouvriers assignés, hors supprimés
@@ -2524,6 +2665,102 @@ function removeCompany(comp) {
      syncToFirebase();
   }
 }
+
+/* ----------------------------------------------------------
+   TÂCHES COMET
+   - Une colonne de Timesheet (⚙️ TS) = une tâche du chef, rattachée à UNE tâche COMET (un nom).
+   - Le Timekeeper choisit la tâche COMET de chaque colonne.
+   - Ajouter / supprimer des tâches COMET : CFO et Admin uniquement.
+   ---------------------------------------------------------- */
+
+// Colonne d'impression : accepte l'ancien format (texte seul) et le nouveau { label, comet }
+function normPrintCol(x) {
+  if (x && typeof x === 'object') return { label: String(x.label ?? '').trim(), comet: String(x.comet ?? '').trim() };
+  return { label: String(x ?? '').trim(), comet: '' };
+}
+
+// Nombre de colonnes d'une Timesheet sans tâche COMET
+function colsWithoutComet(card) {
+  return printColumnsOf(card).filter(c => !c.comet).length;
+}
+
+// Liste triée pour les menus déroulants
+function sortedComet() {
+  return [...cometTasks].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+}
+
+// Nombre de colonnes (toutes Timesheets) rattachées à une tâche COMET
+function cometUsage(name) {
+  let n = 0;
+  cardsData.forEach(c => (c.printTasks || []).forEach(x => { if (normPrintCol(x).comet === name) n++; }));
+  return n;
+}
+
+function openCometModal() {
+  if (!canManageComet()) return;
+  document.getElementById('comet-search').value = '';
+  document.getElementById('comet-new-input').value = '';
+  renderCometList();
+  document.getElementById('comet-modal').style.display = 'flex';
+}
+function closeCometModal() { document.getElementById('comet-modal').style.display = 'none'; }
+
+function renderCometList() {
+  const q = document.getElementById('comet-search').value.trim().toLowerCase();
+  const list = sortedComet().filter(n => !q || n.toLowerCase().includes(q));
+  document.getElementById('comet-count').innerText = `${cometTasks.length} tâche(s)`;
+  document.getElementById('comet-list').innerHTML = list.map(n => {
+    const used = cometUsage(n);
+    return `
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; background:#f8fafc; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px;">
+      <span style="font-size:12px; font-weight:700;">${escapeHtml(n)}</span>
+      <span style="display:flex; align-items:center; gap:8px;">
+        ${used ? `<span style="font-size:10px; color:#64748b;">${used} colonne(s)</span>` : ''}
+        <button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5; padding:2px 6px;" onclick="removeCometTask(${jsArg(n)})" title="Supprimer">&times;</button>
+      </span>
+    </div>`;
+  }).join('') || `<div style="font-size:12px; color:#94a3b8;">Aucune tâche trouvée.</div>`;
+}
+
+// Ajout d'une ou plusieurs tâches (une par ligne)
+function addCometTasks() {
+  if (!canManageComet()) return;
+  const lines = document.getElementById('comet-new-input').value.split('\n').map(cleanCometName).filter(Boolean);
+  const existing = new Set(cometTasks.map(n => n.toLowerCase()));
+  let added = 0, skipped = 0;
+  lines.forEach(n => {
+    if (existing.has(n.toLowerCase())) { skipped++; return; }
+    cometTasks.push(n); existing.add(n.toLowerCase()); added++;
+  });
+  if (!added && !skipped) return;
+  document.getElementById('comet-new-input').value = '';
+  renderCometList();
+  if (added) { syncToFirebase(); renderCards(); }
+  if (skipped) alert(`${added} tâche(s) ajoutée(s). ${skipped} déjà existante(s), ignorée(s).`);
+}
+
+function removeCometTask(name) {
+  if (!canManageComet()) return;
+  const used = cometUsage(name);
+  const msg = used
+    ? `Supprimer la tâche COMET « ${name} » ?\n\nElle est utilisée par ${used} colonne(s) de Timesheet. Ces colonnes seront conservées mais n'auront plus de tâche COMET (⚠️ à rattacher de nouveau).`
+    : `Supprimer la tâche COMET « ${name} » ?`;
+  if (!confirm(msg)) return;
+  cometTasks = cometTasks.filter(n => n !== name);
+  if (used) {
+    cardsData.forEach(c => {
+      if (!Array.isArray(c.printTasks)) return;
+      c.printTasks = c.printTasks.map(x => {
+        const col = normPrintCol(x);
+        return col.comet === name ? { label: col.label, comet: '' } : col;
+      });
+    });
+  }
+  renderCometList();
+  renderCards();
+  syncToFirebase();
+}
+
 
 </script>
 <script>
