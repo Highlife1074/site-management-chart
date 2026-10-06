@@ -3176,10 +3176,22 @@ window.addManualWorker = function() {
   if (!name) { alert("Veuillez saisir au moins le Nom de l'ouvrier."); return; }
   if (!id) id = uid('W');
 
-  const dup = findWorkerDuplicate(id, name);
-  if (dup.found) {
-    alert(`⚠️ DOUBLON DÉTECTÉ !\n\nL'ouvrier "${name}" (ID: ${id}) existe déjà ${dup.location}.\n\nNom existant : ${dup.worker.name}\nID existant : ${dup.worker.id}\nEntreprise : ${dup.worker.company}\n\nAjout annulé.`);
+  // 1) Même ID : toujours refusé
+  const dupId = findWorkerDuplicate(id, null);
+  if (dupId.found) {
+    alert(`⚠️ DOUBLON DÉTECTÉ !\n\nL'ID ${id} existe déjà ${dupId.location}.\n\nNom existant : ${dupId.worker.name}\nID existant : ${dupId.worker.id}\nEntreprise : ${dupId.worker.company}\n\nAjout annulé.`);
     return;
+  }
+
+  // 2) Même nom : homonyme accepté seulement si les deux ont un ID officiel différent
+  const dupName = findWorkerDuplicate(null, name);
+  if (dupName.found) {
+    const ex = dupName.worker;
+    if (!isOfficialWorkerId(id) || !isOfficialWorkerId(ex.id)) {
+      alert(`⚠️ NOM DÉJÀ PRÉSENT ${dupName.location}.\n\n${ex.id} - ${ex.name} (${ex.company})\n\nPour ajouter un homonyme, les deux ouvriers doivent avoir leur ID officiel.\nSaisissez l'ID officiel du nouvel ouvrier${isOfficialWorkerId(ex.id) ? '' : " (et corrigez celui de l'ouvrier existant dans la Base Globale)"}.\n\nAjout annulé.`);
+      return;
+    }
+    if (!confirm(`ℹ️ HOMONYME : un ouvrier porte déjà ce nom ${dupName.location}.\n\nExistant : ${ex.id} - ${ex.name} (${ex.company})\nNouveau : ${id} - ${name} (${comp})\n\nCe sont deux personnes différentes ? Cliquez OK pour ajouter.`)) return;
   }
 
   unassignedWorkers.push({ id, name, company: comp });
@@ -3189,6 +3201,12 @@ window.addManualWorker = function() {
   if (document.getElementById('db-modal').style.display === 'flex') renderDBTable();
   syncToFirebase();
 };
+
+// ID officiel = ID non vide, différent d'un ID provisoire créé par l'appli (« W-… »)
+function isOfficialWorkerId(id) {
+  const k = String(id || '').trim().toUpperCase();
+  return k !== '' && !k.startsWith('W-');
+}
 
 /* ==========================================================
    2. BASE GLOBALE : édition, doublons, export
@@ -3328,12 +3346,29 @@ function editWorker(context, cIdx, tIdx, wIdx, field, newVal) {
   const val = String(newVal || '').trim().replace(/\s+/g, ' ');
 
   if (!val) { alert("Ce champ ne peut pas être vide."); renderDBTable(); return; }
-  if (field === 'id' || field === 'name') {
-    const dup = findWorkerDuplicate(field === 'id' ? val : null, field === 'name' ? val : null, w.id);
+
+  if (field === 'id') {
+    const dup = findWorkerDuplicate(val, null, w.id);
     if (dup.found && dup.worker !== w) {
-      alert(`⚠️ DOUBLON : ${field === 'id' ? "cet ID" : "ce nom"} existe déjà ${dup.location}.\n\n${dup.worker.id} - ${dup.worker.name} (${dup.worker.company})\n\nModification annulée.`);
+      alert(`⚠️ DOUBLON : cet ID existe déjà ${dup.location}.\n\n${dup.worker.id} - ${dup.worker.name} (${dup.worker.company})\n\nModification annulée.`);
       renderDBTable();
       return;
+    }
+  }
+
+  if (field === 'name') {
+    const dup = findWorkerDuplicate(null, val, w.id);
+    if (dup.found && dup.worker !== w) {
+      const ex = dup.worker;
+      if (!isOfficialWorkerId(w.id) || !isOfficialWorkerId(ex.id)) {
+        alert(`⚠️ NOM DÉJÀ PRÉSENT ${dup.location}.\n\n${ex.id} - ${ex.name} (${ex.company})\n\nPour garder deux homonymes, les deux ouvriers doivent avoir leur ID officiel.\nCorrigez d'abord l'ID, puis le nom.\n\nModification annulée.`);
+        renderDBTable();
+        return;
+      }
+      if (!confirm(`ℹ️ HOMONYME : un ouvrier porte déjà ce nom ${dup.location}.\n\nExistant : ${ex.id} - ${ex.name} (${ex.company})\nCelui-ci : ${w.id} (${w.company})\n\nCe sont deux personnes différentes ? Cliquez OK pour enregistrer.`)) {
+        renderDBTable();
+        return;
+      }
     }
   }
 
