@@ -2137,21 +2137,23 @@ function updateManager(cardId, val) { if (updateCardField(cardId, 'manager', val
 function updateTimesheetNo(cardId, val) { if (updateCardField(cardId, 'timesheetNo', val)) refreshOrgViews(); }
 window.updateTimesheetName = function(cardId, val) { if (updateCardField(cardId, 'timesheetName', val)) refreshOrgViews(); };
 function updateShiftHours(cardId, val) { updateCardField(cardId, 'shiftHours', val); }
-// Jour de démarrage de la Timesheet (saisi par le Timekeeper). Vide = Lundi.
-const START_DAYS = ['Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+// Date de démarrage de la Timesheet (saisie par le Timekeeper). Vide = toute la semaine.
+// Champ startDay : date AAAA-MM-JJ. Les anciennes valeurs (« Mardi », « Mercredi »…) sont encore lues.
 const START_DAY_RANK = { Lundi: 1, Mardi: 2, Mercredi: 3, Jeudi: 4, Vendredi: 5, Samedi: 6 };
+const isIsoDate = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''));
+function parseIsoDate(v) { const [y, m, d] = String(v).split('-').map(Number); return new Date(y, m - 1, d); }
 
 function updateStartDay(cardId, val) {
-  if (updateCardField(cardId, 'startDay', START_DAYS.includes(val) ? val : '')) renderCards();
+  if (updateCardField(cardId, 'startDay', isIsoDate(val) ? val : '')) renderCards();
 }
 
-// Petit bloc « Début : [jour] » affiché sur la carte (orange si ce n'est pas le lundi)
+// Petit bloc « Début : [calendrier] » affiché sur la carte (orange si une date est saisie)
 function startDayBadgeHtml(card, idArg) {
-  const cur = START_DAY_RANK[card.startDay] ? card.startDay : '';
-  const opts = ['<option value="">Lundi</option>']
-    .concat(START_DAYS.map(d => `<option value="${d}" ${cur === d ? 'selected' : ''}>${d}</option>`)).join('');
-  const warn = cur ? ' style="background:#fef3c7; border-color:#f59e0b;"' : '';
-  return `<div class="ts-badge"${warn} title="Jour de démarrage de la Timesheet. Les jours avant ne sont pas imprimés.">Début : <select class="ts-select" onchange="updateStartDay(${idArg}, this.value)" ${canEdit() ? '' : 'disabled'}>${opts}</select></div>`;
+  const val = isIsoDate(card.startDay) ? card.startDay : '';
+  const old = !val && START_DAY_RANK[card.startDay] ? card.startDay : '';
+  const warn = (val || old) ? ' style="background:#fef3c7; border-color:#f59e0b;"' : '';
+  const oldTxt = old ? ` <b title="Ancienne saisie : choisissez une date dans le calendrier">(${old})</b>` : '';
+  return `<div class="ts-badge"${warn} title="Date de démarrage de la Timesheet. Les jours avant ne sont pas imprimés.">Début : <input type="date" class="ts-select" value="${val}" onchange="updateStartDay(${idArg}, this.value)" ${canEdit() ? '' : 'disabled'}>${oldTxt}</div>`;
 }
 
 function updateShiftType(cIdx, val) { if (!canEdit()) return; cardsData[cIdx].shiftType = val; syncToFirebase(); }
@@ -2414,6 +2416,7 @@ function executePrint() {
 
   const daysNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
   const monthsNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+  const fmtDay = dt => `${daysNames[dt.getDay()]} ${String(dt.getDate()).padStart(2, '0')} ${monthsNames[dt.getMonth()]} ${dt.getFullYear()}`;
   const WORKERS_PER_PAGE = 15;
   let htmlContent = '';
 
@@ -2427,10 +2430,21 @@ function executePrint() {
       (noComet.length > 15 ? `\n… et ${noComet.length - 15} autre(s)` : '') +
       `\n\nImprimer quand même ?`)) return;
 
+  // Contrôle date de démarrage : TS qui démarrent après le dernier jour imprimé (aucune page)
+  const lastDay = new Date(baseDate);
+  lastDay.setDate(lastDay.getDate() + 5);
+  const tooLate = cardsToPrint.filter(c => isIsoDate(c.startDay) && parseIsoDate(c.startDay) > lastDay);
+  if (tooLate.length && !confirm(
+      `⚠️ Ces Timesheets démarrent après le ${fmtDay(lastDay)} : aucune page ne sera imprimée pour elles :\n` +
+      tooLate.slice(0, 15).map(c => `• ${c.name || 'Sans nom'}${c.timesheetNo ? ' (TS ' + c.timesheetNo + ')' : ''} : début ${fmtDay(parseIsoDate(c.startDay))}`).join('\n') +
+      (tooLate.length > 15 ? `\n… et ${tooLate.length - 15} autre(s)` : '') +
+      `\n\nContinuer ?`)) return;
+
   cardsToPrint.forEach(card => {
-    // Jour de démarrage saisi par le Timekeeper (vide = Lundi) : les jours avant ne sont pas imprimés
-    const startLabel = START_DAY_RANK[card.startDay] ? card.startDay : 'Lundi';
-    const startRank = START_DAY_RANK[startLabel];
+    // Date de démarrage saisie par le Timekeeper : les jours avant ne sont pas imprimés
+    const startDate = isIsoDate(card.startDay) ? parseIsoDate(card.startDay) : null;
+    const oldRank = START_DAY_RANK[card.startDay] || 1; // ancienne saisie par jour de semaine
+    const startLabel = startDate ? fmtDay(startDate) : (START_DAY_RANK[card.startDay] ? card.startDay : fmtDay(baseDate));
 
     const taskHeaders = printColumnsOf(card);
     taskHeaders.push({ label: '', comet: '' }, { label: '', comet: '' }); // 2 colonnes vierges pour ajout manuscrit
@@ -2457,8 +2471,9 @@ function executePrint() {
     for (let d = 0; d < 6; d++) {
       const currentDate = new Date(baseDate);
       currentDate.setDate(currentDate.getDate() + d);
-      if ((currentDate.getDay() || 7) < startRank) continue; // jour avant le démarrage : pas imprimé
-      const dayStr = `${daysNames[currentDate.getDay()]} ${String(currentDate.getDate()).padStart(2, '0')} ${monthsNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+      // Jour avant le démarrage : pas imprimé
+      if (startDate ? currentDate < startDate : (currentDate.getDay() || 7) < oldRank) continue;
+      const dayStr = fmtDay(currentDate);
 
       for (let p = 0; p < totalPagesPerDay; p++) {
         const pageRows = allRows.slice(p * WORKERS_PER_PAGE, (p + 1) * WORKERS_PER_PAGE);
@@ -2517,6 +2532,8 @@ function executePrint() {
       }
     }
   });
+
+  if (!htmlContent) { alert("Aucune page à imprimer pour cette semaine (dates de démarrage postérieures)."); return; }
 
   document.getElementById('timesheet-print-zone').innerHTML = htmlContent;
   closePrintModal();
