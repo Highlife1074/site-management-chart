@@ -514,7 +514,8 @@
   <div class="modal-box">
     <div class="modal-title">🖨️ Génération Timesheets</div>
     <p style="font-size:13px; color:#64748b; margin-top:-8px;">Sélectionnez le premier jour (Lundi) :</p>
-    <input type="date" id="print-date-input" class="modal-select" />
+    <input type="date" id="print-date-input" class="modal-select" oninput="updatePrintDatePreview()" onchange="updatePrintDatePreview()" />
+    <div id="print-date-preview" style="font-size:13px; color:#334155; margin-top:6px; line-height:1.5;"></div>
     <div class="modal-actions" style="margin-top:8px;">
       <button class="btn btn-outline" onclick="closePrintModal()">Annuler</button>
       <button class="btn btn-black" onclick="executePrint()">Générer (6 jours)</button>
@@ -2368,6 +2369,26 @@ function openPrintModal() {
   }
   const input = document.getElementById('print-date-input');
   if (!input.value) input.value = nextMondayISO();
+   // Ex. : "Lundi 12 octobre 2026"
+function formatDayDate(dt) {
+  const jours = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+  const mois = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+  return `${jours[dt.getDay()]} ${String(dt.getDate()).padStart(2, '0')} ${mois[dt.getMonth()]} ${dt.getFullYear()}`;
+}
+   // Aperçu sous le calendrier : premier et dernier jour imprimés (6 jours)
+function updatePrintDatePreview() {
+  const box = document.getElementById('print-date-preview');
+  if (!box) return;
+  const v = document.getElementById('print-date-input').value;
+  if (!v) { box.innerHTML = ''; return; }
+  const [y, m, d] = v.split('-').map(Number);
+  const start = new Date(y, m - 1, d); // date locale (pas de décalage de fuseau)
+  const end = new Date(start);
+  end.setDate(end.getDate() + 5);
+  const warn = start.getDay() !== 1
+    ? `<div style="color:#dc2626; margin-top:4px;">⚠️ Ce jour n'est pas un lundi</div>` : '';
+  box.innerHTML = `📅 Du <b>${formatDayDate(start)}</b><br>au <b>${formatDayDate(end)}</b>${warn}`;
+}
   document.querySelector('#print-modal p').innerText =
     `${selectedForPrint.size} Timesheet(s) sélectionnée(s). Sélectionnez le premier jour (Lundi) :`;
   document.getElementById('print-modal').style.display = 'flex';
