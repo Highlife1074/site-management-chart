@@ -336,19 +336,23 @@
     body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .org-manager-col { break-inside: avoid; border: 1px solid #94a3b8; }
     
     /* PRINT TS */
-    body.print-mode-ts .top-bar, body.print-mode-ts .dashboard-container, body.print-mode-ts #orgchart-view, body.print-mode-ts #tree-view, body.print-mode-ts #workers-drawer, body.print-mode-ts .modal-overlay, body.print-mode-ts #fab-move, body.print-mode-ts #fab-drawer { display: none !important; }
+    body.print-mode-ts .top-bar, body.print-mode-ts #error-banner, body.print-mode-ts .dashboard-container, body.print-mode-ts #orgchart-view, body.print-mode-ts #tree-view, body.print-mode-ts #workers-drawer, body.print-mode-ts .modal-overlay, body.print-mode-ts #fab-move, body.print-mode-ts #fab-drawer { display: none !important; }
     body.print-mode-ts #timesheet-print-zone { display: block !important; width: 100%; }
 
-    .ts-page { page-break-after: always; font-family: Arial, sans-serif; color: #000; width: 100%; position: relative; }
-    .ts-header { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-    .ts-info-box { display: flex; justify-content: space-between; border: 2px solid #000; padding: 12px; margin-bottom: 15px; border-radius: 8px; font-size: 14px; font-weight: bold; line-height: 1.5; }
-    .ts-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
-    .ts-table th, .ts-table td { border: 1px solid #000; padding: 6px 8px; text-align: left; }
+    /* Mise en page compacte : 20 ouvriers + signatures sur une page A4 paysage */
+    .ts-page { page-break-after: always; break-inside: avoid; font-family: Arial, sans-serif; color: #000; width: 100%; position: relative; }
+    .ts-page:last-child { page-break-after: auto; }
+    .ts-header { text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 6px; border-bottom: 2px solid #000; padding-bottom: 4px; }
+    .ts-info-box { display: flex; justify-content: space-between; border: 2px solid #000; padding: 5px 10px; margin-bottom: 6px; border-radius: 6px; font-size: 11px; font-weight: bold; line-height: 1.25; }
+    .ts-info-box div[style*="margin-bottom:6px"] { margin-bottom: 1px !important; }
+    .ts-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11px; }
+    .ts-table tr { break-inside: avoid; }
+    .ts-table th, .ts-table td { border: 1px solid #000; padding: 2px 6px; height: 21px; text-align: left; }
     .ts-table th { background-color: #f1f5f9; font-weight: bold; text-align: center; vertical-align: middle; }
     .ts-task-col { min-width: 80px; text-align: center !important; }
     .ts-comet-name { font-size: 8px; font-weight: 800; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 3px; }
-    .ts-signatures { display: flex; justify-content: space-between; margin-top: 30px; font-size: 14px; font-weight: bold; }
-    .ts-sign-box { border-top: 1px solid #000; width: 30%; text-align: center; padding-top: 10px; }
+    .ts-signatures { display: flex; justify-content: space-between; margin-top: 40px; font-size: 12px; font-weight: bold; break-inside: avoid; }
+    .ts-sign-box { border-top: 1px solid #000; width: 30%; text-align: center; padding-top: 4px; }
 
     /* PRINT DB */
     body.print-mode-db .top-bar, body.print-mode-db .dashboard-container, body.print-mode-db #orgchart-view, body.print-mode-db #tree-view, body.print-mode-db #workers-drawer, body.print-mode-db .modal-overlay, body.print-mode-db #fab-move, body.print-mode-db #fab-drawer { display: none !important; }
@@ -491,7 +495,7 @@
         <li>Check the small <strong>square box (☑)</strong> for every Supervisor who needs a Timesheet.</li>
         <li>Click the black <strong>📄 Imprimer TS</strong> button.</li>
         <li>Select the date of the <strong>next Monday</strong>.</li>
-        <li>The system will automatically generate 6 pages per team (Monday to Saturday), properly paginated (max 15 workers per page), with signature blocks on every page.</li>
+        <li>The system will automatically generate 6 pages per team (Monday to Saturday), properly paginated (max 20 workers per page; above 20 the pages are balanced, e.g. 25 → 13 + 12), with the signature block on the last page of each day.</li>
       </ul>
     </div>
     <div class="modal-actions">
@@ -1088,6 +1092,20 @@ window.findWorkerDuplicate = function(searchId, searchName, excludeId = null) {
   }
 
   return { found: false };
+};
+
+// Tous les ouvriers (non supprimés) portant ce nom, avec leur emplacement
+window.findWorkersByName = function(searchName, excludeWorker = null) {
+  const sName = normalizeName(searchName);
+  const out = [];
+  if (!sName) return out;
+  unassignedWorkers.forEach(w => {
+    if (w !== excludeWorker && normalizeName(w.name) === sName) out.push({ worker: w, location: 'dans la Base (Non assigné)' });
+  });
+  cardsData.forEach(card => (card.tasks || []).forEach(t => (t.workerList || []).forEach(w => {
+    if (w !== excludeWorker && !w.isDeleted && normalizeName(w.name) === sName) out.push({ worker: w, location: `sur l'équipe de ${card.name}` });
+  })));
+  return out;
 };
 
 /* ==========================================================
@@ -2273,7 +2291,7 @@ function printTimesheetCards(cardsToPrint, dateInput) {
 
   const daysNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
   const monthsNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-  const WORKERS_PER_PAGE = 15;
+  const MAX_WORKERS_PER_PAGE = 20; // 20 ouvriers + signatures tiennent sur une page
   let htmlContent = '';
 
   // Contrôle COMET : colonnes non rattachées
@@ -2304,7 +2322,15 @@ function printTimesheetCards(cardsToPrint, dateInput) {
       });
     });
 
-    const totalPagesPerDay = Math.max(1, Math.ceil(allRows.length / WORKERS_PER_PAGE));
+    // Au-delà de 20 : pages équilibrées (ex. 25 → 13 + 12), signatures sur la dernière page seulement
+    const totalPagesPerDay = Math.max(1, Math.ceil(allRows.length / MAX_WORKERS_PER_PAGE));
+    const pageSizes = [];
+    for (let p = 0; p < totalPagesPerDay; p++) {
+      pageSizes.push(Math.floor(allRows.length / totalPagesPerDay) + (p < allRows.length % totalPagesPerDay ? 1 : 0));
+    }
+    const pageStarts = pageSizes.map((_, p) => pageSizes.slice(0, p).reduce((a, b) => a + b, 0));
+    // Lignes vierges : une seule page → jusqu'à 20 ; plusieurs → la dernière a autant de lignes que la première
+    const lastPageLines = totalPagesPerDay === 1 ? MAX_WORKERS_PER_PAGE : pageSizes[0];
     const catName = (CATEGORY_INFO.find(c => c.id === card.category) || {}).name || card.category || '';
 
     for (let d = 0; d < 6; d++) {
@@ -2313,14 +2339,15 @@ function printTimesheetCards(cardsToPrint, dateInput) {
       const dayStr = `${daysNames[currentDate.getDay()]} ${String(currentDate.getDate()).padStart(2, '0')} ${monthsNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
 
       for (let p = 0; p < totalPagesPerDay; p++) {
-        const pageRows = allRows.slice(p * WORKERS_PER_PAGE, (p + 1) * WORKERS_PER_PAGE);
-        let rowsHtml = pageRows.map((r, i) => `<tr><td style="text-align:center;">${p * WORKERS_PER_PAGE + i + 1}</td>${r}</tr>`).join('');
+        const isLastPage = p === totalPagesPerDay - 1;
+        const pageRows = allRows.slice(pageStarts[p], pageStarts[p] + pageSizes[p]);
+        let rowsHtml = pageRows.map((r, i) => `<tr><td style="text-align:center;">${pageStarts[p] + i + 1}</td>${r}</tr>`).join('');
         // Lignes vierges sur la dernière page pour les ajouts manuscrits
-        if (p === totalPagesPerDay - 1) {
-          for (let i = pageRows.length; i < WORKERS_PER_PAGE; i++) rowsHtml += `<tr><td style="height:22px;"></td><td></td><td></td><td></td>${emptyCells}</tr>`;
+        if (isLastPage) {
+          for (let i = pageRows.length; i < lastPageLines; i++) rowsHtml += `<tr><td>&nbsp;</td><td></td><td></td><td></td>${emptyCells}</tr>`;
         }
-        const pageIndicator = totalPagesPerDay > 1 ? `<div style="text-align:right; font-size:11px; margin-top:-20px; margin-bottom:10px; color:#475569;">Page ${p + 1} / ${totalPagesPerDay}</div>` : '';
-        const totalsRow = (p === totalPagesPerDay - 1) ? `
+        const pageIndicator = totalPagesPerDay > 1 ? `<div style="text-align:right; font-size:11px; margin-top:-6px; margin-bottom:4px; color:#475569;">Page ${p + 1} / ${totalPagesPerDay}</div>` : '';
+        const totalsRow = isLastPage ? `
           <tr style="background-color:#f8fafc; font-weight:bold;">
             <td colspan="4" style="text-align:right;">TOTAL WORKERS :</td>
             <td colspan="${taskHeaders.length}" style="text-align:center;">${cc.total}</td>
@@ -2358,11 +2385,11 @@ function printTimesheetCards(cardsToPrint, dateInput) {
                 ${totalsRow}
               </tbody>
             </table>
-            <div class="ts-signatures">
+            ${isLastPage ? `<div class="ts-signatures">
               <div class="ts-sign-box">Team Leader</div>
               <div class="ts-sign-box">Supervisor</div>
               <div class="ts-sign-box">Timekeeper</div>
-            </div>
+            </div>` : ''}
           </div>
         `;
       }
@@ -3402,14 +3429,16 @@ window.addManualWorker = function() {
   }
 
   // 2) Même nom : homonyme accepté seulement si les deux ont un ID officiel différent
-  const dupName = findWorkerDuplicate(null, name);
-  if (dupName.found) {
-    const ex = dupName.worker;
-    if (!isOfficialWorkerId(id) || !isOfficialWorkerId(ex.id)) {
-      alert(`⚠️ NOM DÉJÀ PRÉSENT ${dupName.location}.\n\n${ex.id} - ${ex.name} (${ex.company})\n\nPour ajouter un homonyme, les deux ouvriers doivent avoir leur ID officiel.\nSaisissez l'ID officiel du nouvel ouvrier${isOfficialWorkerId(ex.id) ? '' : " (et corrigez celui de l'ouvrier existant dans la Base Globale)"}.\n\nAjout annulé.`);
+  //    (on vérifie TOUS les ouvriers de même nom, il peut déjà y avoir plusieurs homonymes)
+  const sameName = findWorkersByName(name);
+  if (sameName.length) {
+    const list = sameName.map(d => `${d.worker.id} - ${d.worker.name} (${d.worker.company}) ${d.location}`).join('\n');
+    const noOfficial = sameName.filter(d => !isOfficialWorkerId(d.worker.id));
+    if (!isOfficialWorkerId(id) || noOfficial.length) {
+      alert(`⚠️ NOM DÉJÀ PRÉSENT :\n\n${list}\n\nPour ajouter un homonyme, tous les ouvriers de ce nom doivent avoir leur ID officiel.\nSaisissez l'ID officiel du nouvel ouvrier${noOfficial.length ? " (et corrigez l'ID de l'ouvrier existant dans la Base Globale)" : ''}.\n\nAjout annulé.`);
       return;
     }
-    if (!confirm(`ℹ️ HOMONYME : un ouvrier porte déjà ce nom ${dupName.location}.\n\nExistant : ${ex.id} - ${ex.name} (${ex.company})\nNouveau : ${id} - ${name} (${comp})\n\nCe sont deux personnes différentes ? Cliquez OK pour ajouter.`)) return;
+    if (!confirm(`ℹ️ HOMONYME : ${sameName.length} ouvrier(s) porte(nt) déjà ce nom :\n\n${list}\n\nNouveau : ${id} - ${name} (${comp})\n\nCe sont des personnes différentes ? Cliquez OK pour ajouter.`)) return;
   }
 
   unassignedWorkers.push({ id, name, company: comp });
@@ -3575,15 +3604,15 @@ function editWorker(context, cIdx, tIdx, wIdx, field, newVal) {
   }
 
   if (field === 'name') {
-    const dup = findWorkerDuplicate(null, val, w.id);
-    if (dup.found && dup.worker !== w) {
-      const ex = dup.worker;
-      if (!isOfficialWorkerId(w.id) || !isOfficialWorkerId(ex.id)) {
-        alert(`⚠️ NOM DÉJÀ PRÉSENT ${dup.location}.\n\n${ex.id} - ${ex.name} (${ex.company})\n\nPour garder deux homonymes, les deux ouvriers doivent avoir leur ID officiel.\nCorrigez d'abord l'ID, puis le nom.\n\nModification annulée.`);
+    const sameName = findWorkersByName(val, w).filter(d => String(d.worker.id).trim().toUpperCase() !== String(w.id).trim().toUpperCase());
+    if (sameName.length) {
+      const list = sameName.map(d => `${d.worker.id} - ${d.worker.name} (${d.worker.company}) ${d.location}`).join('\n');
+      if (!isOfficialWorkerId(w.id) || sameName.some(d => !isOfficialWorkerId(d.worker.id))) {
+        alert(`⚠️ NOM DÉJÀ PRÉSENT :\n\n${list}\n\nPour garder des homonymes, tous les ouvriers de ce nom doivent avoir leur ID officiel.\nCorrigez d'abord l'ID, puis le nom.\n\nModification annulée.`);
         renderDBTable();
         return;
       }
-      if (!confirm(`ℹ️ HOMONYME : un ouvrier porte déjà ce nom ${dup.location}.\n\nExistant : ${ex.id} - ${ex.name} (${ex.company})\nCelui-ci : ${w.id} (${w.company})\n\nCe sont deux personnes différentes ? Cliquez OK pour enregistrer.`)) {
+      if (!confirm(`ℹ️ HOMONYME : ${sameName.length} ouvrier(s) porte(nt) déjà ce nom :\n\n${list}\n\nCelui-ci : ${w.id} (${w.company})\n\nCe sont des personnes différentes ? Cliquez OK pour enregistrer.`)) {
         renderDBTable();
         return;
       }
@@ -3630,23 +3659,22 @@ window.verifyImportCoherence = function() {
       return;
   }
 
-  let allCurrentWorkers = new Map();
-  unassignedWorkers.forEach(w => allCurrentWorkers.set(normalizeName(w.name), w));
-  cardsData.forEach(c => c.tasks.forEach(t => (t.workerList || []).forEach(w => allCurrentWorkers.set(normalizeName(w.name), w))));
+  // Clé = ID officiel (les homonymes avec des ID différents restent distincts), sinon le nom
+  const idKey = w => String(w.id || '').trim().toUpperCase();
+  const index = list => {
+    const ids = new Set(), names = new Set();
+    list.forEach(w => { if (isOfficialWorkerId(w.id)) ids.add(idKey(w)); names.add(normalizeName(w.name)); });
+    return { ids, names };
+  };
+  const found = (w, idx) => isOfficialWorkerId(w.id) && idx.ids.has(idKey(w)) ? true
+    : (!isOfficialWorkerId(w.id) || idx.ids.size === 0) && idx.names.has(normalizeName(w.name));
 
-  let missingInApp = [];
-  let extraInApp = [];
+  const appWorkers = [...unassignedWorkers];
+  cardsData.forEach(c => c.tasks.forEach(t => (t.workerList || []).forEach(w => { if (!w.isDeleted) appWorkers.push(w); })));
 
-  let excelMap = new Map();
-  window.rawImportedDB.forEach(wExcel => {
-      let n = normalizeName(wExcel.name);
-      excelMap.set(n, wExcel);
-      if (!allCurrentWorkers.has(n)) missingInApp.push(`${wExcel.id} - ${wExcel.name}`);
-  });
-
-  allCurrentWorkers.forEach((w, n) => {
-      if (!excelMap.has(n)) extraInApp.push(`${w.id} - ${w.name}`);
-  });
+  const appIdx = index(appWorkers), excelIdx = index(window.rawImportedDB);
+  let missingInApp = window.rawImportedDB.filter(w => !found(w, appIdx)).map(w => `${w.id} - ${w.name}`);
+  let extraInApp = appWorkers.filter(w => !found(w, excelIdx)).map(w => `${w.id} - ${w.name}`);
 
   let msg = "📊 RAPPORT DE COHÉRENCE IMPORT EXCEL\n\n";
   if (missingInApp.length === 0 && extraInApp.length === 0) {
