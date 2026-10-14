@@ -351,6 +351,7 @@
     .ts-table th { background-color: #f1f5f9; font-weight: bold; text-align: center; vertical-align: middle; }
     .ts-task-col { min-width: 80px; text-align: center !important; }
     .ts-total-col { background-color: #e2e8f0 !important; font-weight: bold; min-width: 60px; border-left: 2px solid #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .ts-comments-col { width: 16%; vertical-align: top; border-left: 2px solid #000 !important; }
     .ts-comet-name { font-size: 8px; font-weight: 800; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 3px; }
     .ts-signatures { display: flex; justify-content: space-between; margin-top: 40px; font-size: 12px; font-weight: bold; break-inside: avoid; }
     .ts-sign-box { border-top: 1px solid #000; width: 30%; text-align: center; padding-top: 4px; }
@@ -2313,7 +2314,8 @@ function printTimesheetCards(cardsToPrint, dateInput) {
       return `<th class="ts-task-col">${top}${body}</th>`;
     }).join('');
     // Colonne TOTAL (heures par ouvrier) ajoutée automatiquement en fin de tableau, sur toutes les Timesheets
-    const totalTh = `<th class="ts-task-col ts-total-col">TOTAL</th>`;
+    // + espace COMMENTS FOR OVERTIME (manuscrit, chef) : une seule cellule fusionnée sur toute la hauteur du tableau
+    const totalTh = `<th class="ts-task-col ts-total-col">TOTAL</th><th class="ts-comments-col">COMMENTS FOR OVERTIME</th>`;
     const emptyCells = taskHeaders.map(() => `<td></td>`).join('') + `<td class="ts-total-col"></td>`;
 
     // Même règle que les totaux : ouvriers assignés, hors supprimés
@@ -2344,11 +2346,14 @@ function printTimesheetCards(cardsToPrint, dateInput) {
       for (let p = 0; p < totalPagesPerDay; p++) {
         const isLastPage = p === totalPagesPerDay - 1;
         const pageRows = allRows.slice(pageStarts[p], pageStarts[p] + pageSizes[p]);
-        let rowsHtml = pageRows.map((r, i) => `<tr><td style="text-align:center;">${pageStarts[p] + i + 1}</td>${r}</tr>`).join('');
+        const bodyRows = pageRows.map((r, i) => `<td style="text-align:center;">${pageStarts[p] + i + 1}</td>${r}`);
         // Lignes vierges sur la dernière page pour les ajouts manuscrits
         if (isLastPage) {
-          for (let i = pageRows.length; i < lastPageLines; i++) rowsHtml += `<tr><td>&nbsp;</td><td></td><td></td><td></td>${emptyCells}</tr>`;
+          for (let i = pageRows.length; i < lastPageLines; i++) bodyRows.push(`<td>&nbsp;</td><td></td><td></td><td></td>${emptyCells}`);
         }
+        // Cellule COMMENTS FOR OVERTIME fusionnée sur toutes les lignes de la page (+ ligne TOTAL sur la dernière)
+        const commentsCell = `<td class="ts-comments-col" rowspan="${bodyRows.length + (isLastPage ? 1 : 0)}"></td>`;
+        const rowsHtml = bodyRows.map((r, i) => `<tr>${r}${i === 0 ? commentsCell : ''}</tr>`).join('');
         const pageIndicator = totalPagesPerDay > 1 ? `<div style="text-align:right; font-size:11px; margin-top:-6px; margin-bottom:4px; color:#475569;">Page ${p + 1} / ${totalPagesPerDay}</div>` : '';
         const totalsRow = isLastPage ? `
           <tr style="background-color:#f8fafc; font-weight:bold;">
