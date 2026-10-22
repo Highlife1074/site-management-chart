@@ -228,6 +228,11 @@
   .plan-off { font-size: 9px; background: #e2e8f0; color: #475569; border-radius: 4px; padding: 0 4px; margin-left: 4px; }
   .plan-del { float: right; border: 0; background: transparent; color: #94a3b8; cursor: pointer; font-size: 11px; padding: 0 2px; }
   .plan-del:hover { color: #dc2626; }
+  .plan-act { float: right; border: 0; background: transparent; cursor: pointer; font-size: 11px; padding: 0 2px; opacity: 0.55; }
+  .plan-act:hover { opacity: 1; }
+  .plan-grp-paste { margin-left: 8px; border: 0; border-radius: 4px; background: #2563eb; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; cursor: pointer; }
+  .plan-clip { font-size: 11px; background: #eff6ff; border: 1px solid #93c5fd; color: #1e3a8a; border-radius: 6px; padding: 3px 8px; }
+  .plan-clip button { border: 0; background: transparent; cursor: pointer; color: #1e3a8a; font-weight: 700; }
   .plan-toggle .btn.active { background: #0f172a; color: #fff; }
 
   /* ARBRE HIERARCHIQUE CSS (STYLE ORGANIGRAMME) */
@@ -1191,6 +1196,7 @@ let siteSupervisors = [];
 let workerPlanning = {}; // Planning fin : { ID ouvrier : { 'AAAA-MM' : un caractère par jour } } (voir planning.js)
 let planningScopes = {};  // Planning fin : { ID ouvrier : { s1a, s1b, s2a, s2b } } dates des Scopes 1 et 2
 let planningRoster = null; // Planning fin : liste figée des ouvriers (null = pas encore créée)
+let planningScopeNames = []; // Planning fin : liste des noms de Scopes (proposés en liste déroulante)
 let db = null, docRef = null, isSaving = false, currentFilter = 'all';
 let selectedManagersFilter = [];
 let selectedSupervisorsFilter = [];
@@ -1218,6 +1224,7 @@ try {
       if (parsed.planning && typeof parsed.planning === 'object') workerPlanning = parsed.planning;
       if (parsed.planningScopes && typeof parsed.planningScopes === 'object') planningScopes = parsed.planningScopes;
       if (Array.isArray(parsed.planningRoster)) planningRoster = parsed.planningRoster;
+      if (Array.isArray(parsed.planningScopeNames)) planningScopeNames = parsed.planningScopeNames;
     } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
   } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 } catch(e) { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
@@ -1361,6 +1368,7 @@ function startFirebase() {
         if (data.planning && typeof data.planning === 'object') workerPlanning = data.planning;
         if (data.planningScopes && typeof data.planningScopes === 'object') planningScopes = data.planningScopes;
         if (Array.isArray(data.planningRoster)) planningRoster = data.planningRoster;
+        if (Array.isArray(data.planningScopeNames)) planningScopeNames = data.planningScopeNames;
         window._planDataReady = true;
         if (data.supervisors) siteSupervisors = data.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
         if (data.companies) {
@@ -1413,14 +1421,14 @@ function startFirebase() {
 function syncToFirebase() {
   if (currentRole === 'viewer') return; // Le CFO doit pouvoir enregistrer le Payroll
   if (_syncTimer) { clearTimeout(_syncTimer); _syncTimer = null; }
-  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, cometTasks, planning: workerPlanning, planningScopes, planningRoster})); } catch(e){}
+  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, cometTasks, planning: workerPlanning, planningScopes, planningRoster, planningScopeNames})); } catch(e){}
   if (!docRef) return;
   isSaving = true;
   document.getElementById("sync-text").innerText = "Enregistrement...";
 
   const payload = {
     cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, cometTasks,
-    planning: workerPlanning, planningScopes,
+    planning: workerPlanning, planningScopes, planningScopeNames,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
   if (Array.isArray(planningRoster)) payload.planningRoster = planningRoster;
@@ -1455,7 +1463,7 @@ function exportBackup() {
     supervisors: siteSupervisors,
     rawImportedDB: window.rawImportedDB,
     cometTasks,
-    planning: workerPlanning, planningScopes, planningRoster
+    planning: workerPlanning, planningScopes, planningRoster, planningScopeNames
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -1500,6 +1508,7 @@ function importBackup(event) {
       if (data.planning && typeof data.planning === 'object') workerPlanning = data.planning;
       if (data.planningScopes && typeof data.planningScopes === 'object') planningScopes = data.planningScopes;
       if (Array.isArray(data.planningRoster)) planningRoster = data.planningRoster;
+      if (Array.isArray(data.planningScopeNames)) planningScopeNames = data.planningScopeNames;
       if (Array.isArray(data.supervisors)) siteSupervisors = data.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
       selectedForPrint.clear();
 
@@ -4221,6 +4230,145 @@ let planPaintCode = null; // valeur réellement appliquée pendant un glisser
 let planRenderPending = false;
 let planVersionsIndex = {};
 let planShowScopes = true; // colonnes Scopes affichées (masquables pour voir plus de jours)
+let planClipboard = null;  // Scopes copiés (📋) prêts à être collés (📥)
+let planLastGroups = [];   // groupes du dernier affichage (pour « Coller à l'équipe »)
+
+// --- Noms de Scopes : liste enregistrée dans la base, proposée en liste déroulante ---
+function planCleanName(v) { return String(v || '').trim().replace(/\s+/g, ' '); }
+function planAddScopeName(name) {
+  name = planCleanName(name);
+  if (!name || planningScopeNames.some(n => n.toUpperCase() === name.toUpperCase())) return false;
+  planningScopeNames.push(name);
+  planningScopeNames.sort((a, b) => a.localeCompare(b));
+  return true;
+}
+
+// Nom de la Timesheet d'un ouvrier (Timesheet actuelle, sinon celle de l'import) : nom, sinon « TS N° »
+function planTsScopeName(r, live) {
+  const x = live.get(planKey(r.id));
+  const no = x ? x.card.timesheetNo : r.tsNo, nm = x ? x.card.timesheetName : r.tsName;
+  return planCleanName(nm) || (no ? 'TS ' + no : '');
+}
+
+// Scope 1 rempli automatiquement avec le nom de la Timesheet (si jamais renseigné ;
+// un nom effacé volontairement reste vide)
+function planAutoScopeNames() {
+  if (!canEdit() || !Array.isArray(planningRoster)) return false;
+  const live = planLiveMap();
+  let changed = false;
+  planningRoster.forEach(r => {
+    const k = planKey(r.id);
+    const sc = planningScopes[k] || {};
+    if (sc.s1n !== undefined) return;
+    const name = planTsScopeName(r, live);
+    if (!name) return;
+    planningScopes[k] = Object.assign({}, sc, { s1n: name });
+    planAddScopeName(name);
+    changed = true;
+  });
+  // Les noms déjà utilisés par les ouvriers font aussi partie de la liste
+  Object.values(planningScopes).forEach(sc => { [sc.s1n, sc.s2n].forEach(n => { if (planAddScopeName(n)) changed = true; }); });
+  return changed;
+}
+
+// Une entrée de Scopes est gardée tant qu'un champ est rempli (ou que le nom du Scope 1 a été vidé exprès)
+function planStoreScopes(key, sc) {
+  if (PLAN_SCOPE_FIELDS.some(f => sc[f]) || sc.s1n === '') planningScopes[key] = sc; else delete planningScopes[key];
+}
+
+// --- Copier / coller les Scopes (noms et dates) ---
+window.copyPlanScopes = function(key) {
+  const sc = planningScopes[key] || {};
+  planClipboard = {};
+  PLAN_SCOPE_FIELDS.forEach(f => { planClipboard[f] = sc[f] || ''; });
+  renderPlanning(true);
+};
+function planPasteInto(keys) {
+  keys.forEach(k => planStoreScopes(k, Object.assign({}, planClipboard)));
+  syncDebounced();
+  renderPlanning(true);
+}
+window.pastePlanScopes = function(key) { if (canEdit() && planClipboard) planPasteInto([key]); };
+window.pastePlanScopesGroup = function(i) {
+  const g = planLastGroups[i];
+  if (!canEdit() || !planClipboard || !g) return;
+  if (!confirm(`Coller ces Scopes sur les ${g.rows.length} ouvrier(s) de « ${g.title} » ?\n\nLeurs Scopes actuels (noms et dates) seront remplacés.`)) return;
+  planPasteInto(g.rows.map(r => r.key));
+};
+window.clearPlanClipboard = function() { planClipboard = null; renderPlanning(true); };
+function planClipText(c) {
+  const one = (n, a, b) => (n || a || b) ? `${n || 'Sans nom'}${a || b ? ` (${planDateFR(a) || '…'} → ${planDateFR(b) || '…'})` : ''}` : '';
+  return [one(c.s1n, c.s1a, c.s1b), one(c.s2n, c.s2a, c.s2b)].filter(Boolean).join(' · ') || 'Scopes vides';
+}
+
+// --- Gestion de la liste des noms de Scopes ---
+function planScopeUsage(name) {
+  const u = name.toUpperCase();
+  return Object.values(planningScopes).reduce((t, sc) => t + ((sc.s1n || '').toUpperCase() === u ? 1 : 0) + ((sc.s2n || '').toUpperCase() === u ? 1 : 0), 0);
+}
+window.openPlanScopeNames = function() {
+  if (!document.getElementById('plan-names-modal')) {
+    const div = document.createElement('div');
+    div.id = 'plan-names-modal';
+    div.className = 'modal-overlay';
+    div.innerHTML = `
+      <div class="modal-box" style="max-width:560px;">
+        <div class="modal-title">🏷️ Noms de Scopes</div>
+        <p style="font-size:12px; color:#64748b; margin-top:-8px;">Liste proposée dans les cases « nom » des Scopes. Les noms des Timesheets et tout nouveau nom saisi y sont ajoutés automatiquement.</p>
+        <div id="plan-names-add" style="display:flex; gap:6px;"></div>
+        <div id="plan-names-list" style="overflow-y:auto; max-height:50vh; border:1px solid #cbd5e1; border-radius:8px;"></div>
+        <div class="modal-actions"><button class="btn btn-outline" onclick="document.getElementById('plan-names-modal').style.display='none'">Fermer</button></div>
+      </div>`;
+    document.body.appendChild(div);
+  }
+  document.getElementById('plan-names-modal').style.display = 'flex';
+  renderPlanScopeNames();
+};
+function renderPlanScopeNames() {
+  const edit = canEdit();
+  document.getElementById('plan-names-add').innerHTML = edit
+    ? `<input type="text" id="plan-name-new" class="modal-select" style="margin:0; flex:1;" placeholder="Nouveau nom de Scope..." onkeydown="if(event.key==='Enter') addPlanScopeName()"><button class="btn btn-black" onclick="addPlanScopeName()">+ Ajouter</button>`
+    : '';
+  const list = document.getElementById('plan-names-list');
+  list.innerHTML = planningScopeNames.length ? planningScopeNames.map((n, i) => `
+    <div style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-bottom:1px solid #e2e8f0;">
+      <div style="flex:1;"><b>${escapeHtml(n)}</b> <span style="font-size:11px; color:#64748b;">· utilisé ${planScopeUsage(n)} fois</span></div>
+      ${edit ? `<button class="btn btn-outline" onclick="renamePlanScopeName(${i})">✏️ Renommer partout</button>
+      <button class="btn btn-outline" style="color:#dc2626;" title="Retire le nom de la liste (les ouvriers le gardent)" onclick="removePlanScopeName(${i})">🗑️</button>` : ''}
+    </div>`).join('') : `<div style="padding:12px;">Aucun nom pour le moment.</div>`;
+}
+window.addPlanScopeName = function() {
+  const inp = document.getElementById('plan-name-new');
+  if (!canEdit() || !inp) return;
+  if (!planAddScopeName(inp.value)) { if (planCleanName(inp.value)) alert("Ce nom est déjà dans la liste."); return; }
+  syncToFirebase();
+  renderPlanScopeNames();
+  renderPlanning(true);
+};
+window.renamePlanScopeName = function(i) {
+  const old = planningScopeNames[i];
+  if (!canEdit() || old === undefined) return;
+  const nv = planCleanName(prompt(`Nouveau nom pour « ${old} » (changé pour tous les ouvriers) :`, old));
+  if (!nv || nv === old) return;
+  const u = old.toUpperCase();
+  Object.values(planningScopes).forEach(sc => {
+    if ((sc.s1n || '').toUpperCase() === u) sc.s1n = nv;
+    if ((sc.s2n || '').toUpperCase() === u) sc.s2n = nv;
+  });
+  planningScopeNames.splice(i, 1);
+  planAddScopeName(nv);
+  syncToFirebase();
+  renderPlanScopeNames();
+  renderPlanning(true);
+};
+window.removePlanScopeName = function(i) {
+  const n = planningScopeNames[i];
+  if (!canEdit() || n === undefined || !confirm(`Retirer « ${n} » de la liste ?\n\nLes ouvriers qui ont ce Scope le gardent.`)) return;
+  planningScopeNames.splice(i, 1);
+  syncToFirebase();
+  renderPlanScopeNames();
+  renderPlanning(true);
+};
 
 function ymOf(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
 function planKey(id) { return String(id ?? '').trim().toUpperCase(); }
@@ -4386,6 +4534,7 @@ function renderPlanning(force) {
   if (!force && ae && ae.closest && ae.closest('#plan-table-wrap')) { planRenderPending = true; return; }
   planRenderPending = false;
   planEnsureRoster();
+  if (planAutoScopeNames()) syncDebounced();
 
   if (!document.getElementById('plan-table-wrap')) {
     view.innerHTML = `
@@ -4401,11 +4550,13 @@ function renderPlanning(force) {
         <span style="margin-left:auto; display:flex; gap:6px; flex-wrap:wrap;">
           <button class="btn btn-outline" id="plan-import-btn" onclick="importPlanningNames()"></button>
           <button class="btn btn-outline" id="plan-save-btn" onclick="savePlanningVersion()" title="Enregistre une copie figée du planning">💾 Sauvegarder une version</button>
+          <button class="btn btn-outline" onclick="openPlanScopeNames()">🏷️ Noms de Scopes</button>
           <button class="btn btn-outline" onclick="openPlanningVersions()">🗂️ Versions</button>
           <button class="btn btn-outline" onclick="exportPlanningExcel()">📤 Excel</button>
         </span>
       </div>
       <div class="plan-help" id="plan-help"></div>
+      <div id="plan-clip" style="margin-bottom:8px;"></div>
       <div class="plan-wrap" id="plan-table-wrap"></div>`;
   }
 
@@ -4416,6 +4567,9 @@ function renderPlanning(force) {
     ? `${PLAN_MONTHS[m - 1]} ${y}`
     : `${PLAN_MONTHS_SHORT[m - 1]} ${y} → ${PLAN_MONTHS_SHORT[Number(lastMonth.slice(5)) - 1]} ${lastMonth.slice(0, 4)}`;
   document.getElementById('plan-scopes-btn').innerText = planShowScopes ? '◧ Masquer Scopes' : '◨ Afficher Scopes';
+  document.getElementById('plan-clip').innerHTML = planClipboard && edit
+    ? `<span class="plan-clip">📋 Scopes copiés : <b>${escapeHtml(planClipText(planClipboard))}</b> — cliquez 📥 sur un ouvrier ou « Coller à l'équipe » <button title="Vider" onclick="clearPlanClipboard()">✕</button></span>`
+    : '';
   document.getElementById('plan-mode').innerHTML =
     `<button class="btn btn-outline ${planMode === 'days' ? 'active' : ''}" onclick="setPlanMode('days')">Jours</button> ` +
     `<button class="btn btn-outline ${planMode === 'months' ? 'active' : ''}" onclick="setPlanMode('months')">Mois</button>`;
@@ -4445,8 +4599,7 @@ function renderPlanning(force) {
   const scopeHead = `<th class="plan-sc scn sc1n">Scope 1<br>nom</th><th class="plan-sc sc1a">Scope 1<br>début</th><th class="plan-sc sc1b">Scope 1<br>fin</th>` +
     `<th class="plan-sc scn sc2n">Scope 2<br>nom</th><th class="plan-sc sc2a">Scope 2<br>début</th><th class="plan-sc sc2b">Scope 2<br>fin</th>`;
   // Noms de Scopes déjà utilisés : proposés à la saisie
-  const scopeNames = [...new Set(Object.values(planningScopes).flatMap(x => [x.s1n, x.s2n]).filter(Boolean))].sort();
-  const datalist = `<datalist id="plan-scope-names">${scopeNames.map(n => `<option value="${escapeHtml(n)}">`).join('')}</datalist>`;
+  const datalist = `<datalist id="plan-scope-names">${planningScopeNames.map(n => `<option value="${escapeHtml(n)}">`).join('')}</datalist>`;
   const nameSpan = planShowScopes ? 7 : 1;
   const colHead = planMode === 'days'
     ? cols.map(c => `<th class="${c.dow === 0 ? 'sun' : ''} ${c.iso === todayStr ? 'today' : ''}">${PLAN_DAYS[c.dow]}<br>${c.d}</th>`).join('')
@@ -4455,11 +4608,12 @@ function renderPlanning(force) {
 
   const cellValue = (row, c) => planMode === 'days' ? planDayValue(row.id, planMonth, c.d) : planMonthShare(row.id, c.month);
   const groups = planGroups();
+  planLastGroups = groups;
   let body = '';
-  groups.forEach(g => {
+  groups.forEach((g, gi) => {
     const sums = cols.map(c => g.rows.reduce((t, r) => t + cellValue(r, c), 0));
     body += `<tr class="plan-group">
-      <td class="plan-name" colspan="${nameSpan}">${escapeHtml(g.title)} <span class="plan-daysum">— ${escapeHtml(g.sup)} (${g.rows.length})${g.live ? '' : ' · hors Timesheets actuelles'}</span></td>
+      <td class="plan-name" colspan="${nameSpan}">${escapeHtml(g.title)} <span class="plan-daysum">— ${escapeHtml(g.sup)} (${g.rows.length})${g.live ? '' : ' · hors Timesheets actuelles'}</span>${edit && planClipboard ? `<button class="plan-grp-paste" onclick="pastePlanScopesGroup(${gi})">📥 Coller à l'équipe</button>` : ''}</td>
       ${sums.map(v => `<td class="plan-daysum">${planFmt(v)}</td>`).join('')}
       <td class="plan-total">${planFmt(sums.reduce((a, b) => a + b, 0))}</td><td></td>
     </tr>`;
@@ -4487,7 +4641,7 @@ function renderPlanning(force) {
       }
       const total = planMode === 'days' ? planMonthTotal(r.id, planMonth) : cols.reduce((t, c) => t + planMonthShare(r.id, c.month), 0);
       body += `<tr>
-        <td class="plan-name" title="${escapeHtml(r.name + ' — ' + r.id + ' — ' + r.company)}">${edit && Array.isArray(planningRoster) ? `<button class="plan-del" title="Retirer du planning" onclick="removePlanningWorker('${k}')">✕</button>` : ''}${escapeHtml(r.name)} <span class="plan-sub">${escapeHtml(r.id)} · ${escapeHtml(r.company)}</span>${r.onTs ? '' : '<span class="plan-off">hors TS</span>'}</td>
+        <td class="plan-name" title="${escapeHtml(r.name + ' — ' + r.id + ' — ' + r.company)}">${edit && Array.isArray(planningRoster) ? `<button class="plan-del" title="Retirer du planning" onclick="removePlanningWorker('${k}')">✕</button>` : ''}${edit ? `${planClipboard ? `<button class="plan-act" title="Coller les Scopes copiés" onclick="pastePlanScopes('${k}')">📥</button>` : ''}<button class="plan-act" title="Copier les Scopes de cet ouvrier" onclick="copyPlanScopes('${k}')">📋</button>` : ''}${escapeHtml(r.name)} <span class="plan-sub">${escapeHtml(r.id)} · ${escapeHtml(r.company)}</span>${r.onTs ? '' : '<span class="plan-off">hors TS</span>'}</td>
         ${nameCell('1n')}${dateCell('1a')}${dateCell('1b')}${nameCell('2n')}${dateCell('2a')}${dateCell('2b')}
         ${cells}
         <td class="plan-total">${planFmt(total)}</td>
@@ -4531,7 +4685,8 @@ window.setPlanScope = function(key, field, input) {
     return;
   }
   delete input.dataset.invalid;
-  if (PLAN_SCOPE_FIELDS.some(f => sc[f])) planningScopes[key] = sc; else delete planningScopes[key];
+  planStoreScopes(key, sc);
+  if (!isDate) planAddScopeName(val); // un nouveau nom rejoint la liste des Scopes
   syncDebounced();
   // Le tableau est redessiné à la sortie de la case (sinon la saisie de la date serait coupée)
   if (document.activeElement === input) planRenderPending = true; else renderPlanning(true);
