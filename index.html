@@ -178,6 +178,34 @@
   .task-worker-dropzone { min-height: 30px; border: 2px dashed #bae6fd; border-radius: 6px; padding: 4px; background: #ffffff; margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; transition: background 0.2s; }
   .task-worker-dropzone:empty::before { content: "📥 Drop workers here"; font-size: 9px; color: #94a3b8; font-weight: 600; width: 100%; text-align: center; margin-top: 4px; }
 
+  /* PLANNING (estimation des dates de fin) */
+  #planning-view { display: none; padding: 12px 16px; }
+  .plan-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .plan-toolbar .plan-month { font-size: 16px; font-weight: 800; min-width: 150px; text-align: center; }
+  .plan-help { font-size: 12px; color: #64748b; margin-bottom: 8px; line-height: 1.4; }
+  .plan-brush { min-width: 44px; justify-content: center; }
+  .plan-brush.active { outline: 3px solid #2563eb; outline-offset: 1px; }
+  .plan-wrap { overflow: auto; max-height: calc(100vh - 210px); border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
+  .plan-table { border-collapse: separate; border-spacing: 0; font-size: 11px; }
+  .plan-table th, .plan-table td { border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 0; text-align: center; }
+  .plan-table thead th { position: sticky; top: 0; background: #f1f5f9; z-index: 2; padding: 3px 0; font-size: 10px; }
+  .plan-table .plan-name { position: sticky; left: 0; background: #fff; z-index: 1; text-align: left; padding: 3px 8px; min-width: 240px; max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-right: 2px solid #94a3b8; }
+  .plan-table thead .plan-name { z-index: 3; }
+  .plan-sub { font-size: 9px; color: #64748b; font-weight: 400; }
+  .plan-cell { width: 26px; min-width: 26px; height: 24px; cursor: pointer; user-select: none; font-weight: 700; touch-action: none; }
+  .plan-ro .plan-cell { cursor: default; }
+  .plan-table .sun { background: #e2e8f0; }
+  .plan-table th.today { background: #fde68a; }
+  .plan-cell.v-1 { background: #16a34a; color: #fff; }
+  .plan-cell.v-h { background: #86efac; color: #14532d; font-size: 9px; }
+  .plan-cell.v-q { background: #dcfce7; color: #166534; font-size: 8px; letter-spacing: -0.3px; }
+  .plan-cell.end { box-shadow: inset -3px 0 0 #dc2626; }
+  .plan-group td { background: #1e293b; color: #fff; font-weight: 700; }
+  .plan-group td.plan-name { background: #1e293b; color: #fff; }
+  .plan-group .plan-daysum { font-size: 9px; color: #cbd5e1; font-weight: 600; }
+  .plan-table .plan-total, .plan-table .plan-endcol { min-width: 74px; padding: 0 6px; font-weight: 700; white-space: nowrap; }
+  .plan-endcol.past { color: #94a3b8; }
+
   /* ARBRE HIERARCHIQUE CSS (STYLE ORGANIGRAMME) */
   .tree-container { width: 100%; overflow-x: auto; padding: 20px; text-align: center; min-height: 60vh; background: #f8fafc; display: none; }
   .tree { display: inline-block; white-space: nowrap; }
@@ -336,7 +364,7 @@
     body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .org-manager-col { break-inside: avoid; border: 1px solid #94a3b8; }
     
     /* PRINT TS */
-    body.print-mode-ts .top-bar, body.print-mode-ts #error-banner, body.print-mode-ts .dashboard-container, body.print-mode-ts #orgchart-view, body.print-mode-ts #tree-view, body.print-mode-ts #workers-drawer, body.print-mode-ts .modal-overlay, body.print-mode-ts #fab-move, body.print-mode-ts #fab-drawer { display: none !important; }
+    body.print-mode-ts .top-bar, body.print-mode-ts #error-banner, body.print-mode-ts #planning-view, body.print-mode-ts .dashboard-container, body.print-mode-ts #orgchart-view, body.print-mode-ts #tree-view, body.print-mode-ts #workers-drawer, body.print-mode-ts .modal-overlay, body.print-mode-ts #fab-move, body.print-mode-ts #fab-drawer { display: none !important; }
     body.print-mode-ts #timesheet-print-zone { display: block !important; width: 100%; }
 
     /* Mise en page compacte : 20 ouvriers + signatures sur une page A4 paysage */
@@ -360,14 +388,14 @@
     .ts-sign-box { border-top: 1px solid #000; width: 30%; text-align: center; padding-top: 4px; }
 
     /* PRINT DB */
-    body.print-mode-db .top-bar, body.print-mode-db .dashboard-container, body.print-mode-db #orgchart-view, body.print-mode-db #tree-view, body.print-mode-db #workers-drawer, body.print-mode-db .modal-overlay, body.print-mode-db #fab-move, body.print-mode-db #fab-drawer { display: none !important; }
+    body.print-mode-db .top-bar, body.print-mode-db #planning-view, body.print-mode-db .dashboard-container, body.print-mode-db #orgchart-view, body.print-mode-db #tree-view, body.print-mode-db #workers-drawer, body.print-mode-db .modal-overlay, body.print-mode-db #fab-move, body.print-mode-db #fab-drawer { display: none !important; }
     body.print-mode-db #db-print-zone { display: block !important; width: 100%; }
     .db-print-table { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 12px; }
     .db-print-table th, .db-print-table td { border: 1px solid #000; padding: 6px; text-align: left; }
     .db-print-table th { background-color: #f1f5f9; font-weight: bold; }
 
     /* PRINT TREE */
-    body.print-mode-tree .top-bar, body.print-mode-tree .dashboard-container, body.print-mode-tree #orgchart-view, body.print-mode-tree #workers-drawer, body.print-mode-tree .modal-overlay, body.print-mode-tree #fab-move, body.print-mode-tree #fab-drawer { display: none !important; }
+    body.print-mode-tree .top-bar, body.print-mode-tree #planning-view, body.print-mode-tree .dashboard-container, body.print-mode-tree #orgchart-view, body.print-mode-tree #workers-drawer, body.print-mode-tree .modal-overlay, body.print-mode-tree #fab-move, body.print-mode-tree #fab-drawer { display: none !important; }
     body.print-mode-tree #tree-view { display: block !important; width: 100%; overflow: visible !important; background: white; }
     body.print-mode-tree .btn-print-tree { display: none !important; }
   }
@@ -667,6 +695,7 @@
 
     <button id="btn-toggle-view" class="btn btn-outline" onclick="setView('orgchart')">🗺️ Vue Équipes</button>
     <button id="btn-toggle-tree" class="btn btn-outline" onclick="setView('tree')">🌳 Arbre Hiérarchique</button>
+    <button id="btn-toggle-plan" class="btn btn-outline" onclick="setView('planning')" title="Liste des ouvriers des Timesheets et estimation de leur date de fin">📅 Planning fin</button>
     <button id="btn-toggle-dash" class="btn btn-black" onclick="setView('dashboard')" style="display:none;">📊 Tableau de bord</button>
     <div class="divider"></div>
 
@@ -748,6 +777,9 @@
 
 <!-- VUE ARBRE CSS -->
 <div id="tree-view" class="tree-container"></div>
+
+<!-- VUE PLANNING (dates de fin estimées) -->
+<div id="planning-view"></div>
 
 <!-- ZONES D'IMPRESSION CACHÉES -->
 <div id="timesheet-print-zone"></div>
@@ -1132,6 +1164,7 @@ let payrollCounts = {};
 window.rawImportedDB = []; 
 let siteCompanies = [...DEFAULT_COMPANIES];
 let siteSupervisors = []; 
+let workerPlanning = {}; // Planning fin : { ID ouvrier : { 'AAAA-MM' : un caractère par jour } } (voir planning.js)
 let db = null, docRef = null, isSaving = false, currentFilter = 'all';
 let selectedManagersFilter = [];
 let selectedSupervisorsFilter = [];
@@ -1156,6 +1189,7 @@ try {
       if (parsed.supervisors) siteSupervisors = parsed.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
       if (parsed.rawImportedDB) window.rawImportedDB = parsed.rawImportedDB;
       if (Array.isArray(parsed.cometTasks)) cometTasks = parsed.cometTasks;
+      if (parsed.planning && typeof parsed.planning === 'object') workerPlanning = parsed.planning;
     } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
   } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 } catch(e) { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
@@ -1263,6 +1297,7 @@ function refreshAllViews() {
   renderCards();
   if (currentView === 'orgchart') renderOrgChart();
   if (currentView === 'tree') renderTreeOrgChart();
+  if (currentView === 'planning' && !window.planPainting) renderPlanning();
   renderDrawer();
   if (document.getElementById('db-modal').style.display === 'flex') renderDBTable();
   updateFab();
@@ -1295,6 +1330,7 @@ function startFirebase() {
         if (data.payrollCounts) payrollCounts = data.payrollCounts;
         if (data.unassignedWorkers) unassignedWorkers = data.unassignedWorkers;
         if (data.rawImportedDB) window.rawImportedDB = data.rawImportedDB;
+        if (data.planning && typeof data.planning === 'object') workerPlanning = data.planning;
         if (data.supervisors) siteSupervisors = data.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
         if (data.companies) {
             siteCompanies = data.companies.map(c => c === 'SKYBUILDING' ? 'SKYBUILDING BRANCH' : c);
@@ -1345,13 +1381,14 @@ function startFirebase() {
 function syncToFirebase() {
   if (currentRole === 'viewer') return; // Le CFO doit pouvoir enregistrer le Payroll
   if (_syncTimer) { clearTimeout(_syncTimer); _syncTimer = null; }
-  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, cometTasks})); } catch(e){}
+  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, cometTasks, planning: workerPlanning})); } catch(e){}
   if (!docRef) return;
   isSaving = true;
   document.getElementById("sync-text").innerText = "Enregistrement...";
 
   docRef.set({
     cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, cometTasks,
+    planning: workerPlanning,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   }, { merge: true }).then(() => {
     document.getElementById("sync-dot").style.background = "#16a34a";
@@ -1382,7 +1419,8 @@ function exportBackup() {
     companies: siteCompanies,
     supervisors: siteSupervisors,
     rawImportedDB: window.rawImportedDB,
-    cometTasks
+    cometTasks,
+    planning: workerPlanning
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -1424,6 +1462,7 @@ function importBackup(event) {
       window.rawImportedDB = Array.isArray(data.rawImportedDB) ? data.rawImportedDB : [];
       if (Array.isArray(data.companies) && data.companies.length) siteCompanies = data.companies;
       if (Array.isArray(data.cometTasks)) cometTasks = data.cometTasks;
+      if (data.planning && typeof data.planning === 'object') workerPlanning = data.planning;
       if (Array.isArray(data.supervisors)) siteSupervisors = data.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
       selectedForPrint.clear();
 
@@ -1660,6 +1699,8 @@ window.setView = function(viewMode) {
   document.getElementById('dashboard-view').style.display = viewMode === 'dashboard' ? 'flex' : 'none';
   document.getElementById('orgchart-view').style.display = viewMode === 'orgchart' ? 'block' : 'none';
   document.getElementById('tree-view').style.display = viewMode === 'tree' ? 'block' : 'none';
+  document.getElementById('planning-view').style.display = viewMode === 'planning' ? 'block' : 'none';
+  document.getElementById('btn-toggle-plan').style.display = viewMode === 'planning' ? 'none' : 'inline-flex';
   
   document.getElementById('btn-toggle-view').style.display = viewMode === 'orgchart' ? 'none' : 'inline-flex';
   document.getElementById('btn-toggle-tree').style.display = viewMode === 'tree' ? 'none' : 'inline-flex';
@@ -1667,6 +1708,7 @@ window.setView = function(viewMode) {
 
   if (viewMode === 'orgchart') renderOrgChart();
   if (viewMode === 'tree') renderTreeOrgChart();
+  if (viewMode === 'planning') renderPlanning();
 };
 
 function toggleDrawer() { document.getElementById('workers-drawer').classList.toggle('open'); }
@@ -3632,6 +3674,7 @@ function editWorker(context, cIdx, tIdx, wIdx, field, newVal) {
     }
   }
 
+  if (field === 'id') renamePlanningKey(w.id, val);
   w[field] = val;
   renderCards();
   renderDrawer();
@@ -3935,7 +3978,7 @@ function applyImportPlan(plan, acceptedKeys, fileName) {
       return;
     }
     if (m.needsValidation || m.auto) {
-      if (m.newId) w.id = m.newId;
+      if (m.newId) { renamePlanningKey(w.id, m.newId); w.id = m.newId; }
       if (m.newComp) w.company = m.newComp;
       if (m.newName) w.name = m.newName;
       if (m.needsValidation) stats.validated++; else stats.auto++;
@@ -4109,6 +4152,253 @@ function importExcelFile(event) {
 
 window.importWorkersDB = importExcelFile;
 
+</script>
+
+<script>
+/* ===== planning.js ===== */
+/* ==========================================================
+   planning.js — PLANNING FIN (estimation des dates de fin)
+   Liste automatique des ouvriers des Timesheets, groupés par Timesheet,
+   avec un calendrier par mois : 1 / 0.5 / 0.25 par jour.
+   Date de fin estimée = dernier jour renseigné (tous mois confondus).
+   Stockage compact : workerPlanning[ID][AAAA-MM] = un caractère par jour
+   ('1' = 1, 'h' = 0.5, 'q' = 0.25, '-' = vide).
+   ========================================================== */
+
+const PLAN_VALUES = { '1': 1, 'h': 0.5, 'q': 0.25 };
+const PLAN_LABELS = { '1': '1', 'h': '0.5', 'q': '0.25' };
+const PLAN_MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+const PLAN_DAYS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+
+let planMonth = ymOf(new Date());
+let planBrush = '1';      // valeur appliquée au clic : '1', 'h', 'q' ou '-' (effacer)
+let planSearch = '';
+window.planPainting = false;
+let planPaintCode = null; // valeur réellement appliquée pendant un glisser
+
+function ymOf(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+function planKey(id) { return String(id ?? '').trim().toUpperCase(); }
+function planDaysIn(month) { const [y, m] = month.split('-').map(Number); return new Date(y, m, 0).getDate(); }
+function planFmt(n) { return n ? String(Math.round(n * 100) / 100) : ''; }
+
+function planGet(id, month, day) {
+  const s = ((workerPlanning[planKey(id)] || {})[month]) || '';
+  return PLAN_VALUES[s[day - 1]] ? s[day - 1] : '-';
+}
+
+function planSet(id, month, day, code) {
+  const k = planKey(id);
+  if (!k) return;
+  if (!workerPlanning[k]) workerPlanning[k] = {};
+  const chars = (workerPlanning[k][month] || '').padEnd(planDaysIn(month), '-').split('');
+  chars[day - 1] = code;
+  workerPlanning[k][month] = chars.join('');
+}
+
+// Date de fin estimée (AAAA-MM-JJ) = dernier jour renseigné, tous mois confondus
+function planEndDate(id) {
+  const months = workerPlanning[planKey(id)];
+  if (!months) return null;
+  let best = null;
+  Object.keys(months).forEach(mo => {
+    const s = months[mo] || '';
+    for (let i = s.length - 1; i >= 0; i--) {
+      if (PLAN_VALUES[s[i]]) {
+        const d = mo + '-' + String(i + 1).padStart(2, '0');
+        if (!best || d > best) best = d;
+        break;
+      }
+    }
+  });
+  return best;
+}
+
+function planMonthTotal(id, month) {
+  const s = ((workerPlanning[planKey(id)] || {})[month]) || '';
+  let t = 0;
+  for (const c of s) t += PLAN_VALUES[c] || 0;
+  return t;
+}
+
+// Changement d'ID d'un ouvrier (import RH, Base Globale) : son planning le suit
+function renamePlanningKey(oldId, newId) {
+  const a = planKey(oldId), b = planKey(newId);
+  if (!a || !b || a === b || !workerPlanning[a]) return;
+  if (!workerPlanning[b]) workerPlanning[b] = workerPlanning[a];
+  delete workerPlanning[a];
+}
+
+// Ouvriers des Timesheets, groupés par Timesheet (ordre N° TS), sans doublon dans une même Timesheet
+function planGroups() {
+  const q = planSearch.trim().toUpperCase();
+  return sortCardsByTs(cardsData).map(card => {
+    const seen = new Set();
+    const workers = [];
+    (card.tasks || []).forEach(t => activeWorkers(t).forEach(w => {
+      const k = planKey(w.id);
+      if (!k || seen.has(k)) return;
+      seen.add(k);
+      if (q && !(String(w.name || '').toUpperCase().includes(q) || k.includes(q))) return;
+      workers.push({ w, company: w.company || t.source || '' });
+    }));
+    workers.sort((a, b) => String(a.w.name || '').localeCompare(String(b.w.name || '')));
+    return { card, workers };
+  }).filter(g => g.workers.length > 0);
+}
+
+function renderPlanning() {
+  const view = document.getElementById('planning-view');
+  if (!view) return;
+  const [y, m] = planMonth.split('-').map(Number);
+  const brushBtn = (code, label) =>
+    `<button class="btn btn-outline plan-brush ${planBrush === code ? 'active' : ''}" onclick="setPlanBrush('${code}')">${label}</button>`;
+
+  if (!document.getElementById('plan-table-wrap')) {
+    view.innerHTML = `
+      <div class="plan-toolbar">
+        <button class="btn btn-outline" onclick="shiftPlanMonth(-1)" title="Mois précédent">◀</button>
+        <div class="plan-month" id="plan-month-label"></div>
+        <button class="btn btn-outline" onclick="shiftPlanMonth(1)" title="Mois suivant">▶</button>
+        <button class="btn btn-outline" onclick="planMonth = ymOf(new Date()); renderPlanning();">Ce mois</button>
+        <div class="divider"></div>
+        <span style="font-size:12px; font-weight:700; color:#475569;">Valeur :</span>
+        <span id="plan-brushes"></span>
+        <div class="divider"></div>
+        <input type="text" class="modal-select" style="width:200px;" placeholder="🔍 Nom ou ID..." value="${escapeHtml(planSearch)}" oninput="planSearch = this.value; renderPlanning();">
+        <button class="btn btn-outline" style="margin-left:auto;" onclick="exportPlanningExcel()">📤 Export Excel</button>
+      </div>
+      <div class="plan-help" id="plan-help"></div>
+      <div class="plan-wrap" id="plan-table-wrap"></div>`;
+  }
+  document.getElementById('plan-month-label').innerText = `${PLAN_MONTHS[m - 1]} ${y}`;
+  document.getElementById('plan-brushes').innerHTML =
+    brushBtn('1', '1') + ' ' + brushBtn('h', '0.5') + ' ' + brushBtn('q', '0.25') + ' ' + brushBtn('-', '🧽 Effacer');
+  document.getElementById('plan-help').innerHTML = canEdit()
+    ? `Choisissez une valeur puis cliquez (ou glissez) sur les jours. Recliquer une case avec la même valeur l'efface. La <b>date de fin estimée</b> est le dernier jour renseigné (trait rouge), tous mois confondus.`
+    : `👁️ Consultation seule : seuls les profils Timekeeper et Admin peuvent modifier le planning.`;
+
+  const nDays = planDaysIn(planMonth);
+  const now = new Date();
+  const todayStr = ymOf(now) + '-' + String(now.getDate()).padStart(2, '0');
+  const days = [];
+  for (let d = 1; d <= nDays; d++) {
+    const date = new Date(y, m - 1, d);
+    days.push({ d, dow: date.getDay(), iso: `${planMonth}-${String(d).padStart(2, '0')}` });
+  }
+  const dayClass = day => (day.dow === 0 ? 'sun' : '');
+
+  const head = `<tr>
+    <th class="plan-name">Ouvrier</th>
+    ${days.map(day => `<th class="${dayClass(day)} ${day.iso === todayStr ? 'today' : ''}">${PLAN_DAYS[day.dow]}<br>${day.d}</th>`).join('')}
+    <th class="plan-total">Total mois</th>
+    <th class="plan-endcol">Fin estimée</th>
+  </tr>`;
+
+  const groups = planGroups();
+  let body = '';
+  groups.forEach(g => {
+    const card = g.card;
+    const title = [card.timesheetNo ? 'TS ' + card.timesheetNo : '', card.timesheetName || ''].filter(Boolean).join(' - ') || 'Sans N° TS';
+    const sums = days.map(day => g.workers.reduce((t, x) => t + (PLAN_VALUES[planGet(x.w.id, planMonth, day.d)] || 0), 0));
+    const monthSum = sums.reduce((a, b) => a + b, 0);
+    body += `<tr class="plan-group">
+      <td class="plan-name" title="${escapeHtml(title + ' — ' + (card.name || ''))}">${escapeHtml(title)} <span class="plan-daysum">— ${escapeHtml(card.name || '')} (${g.workers.length})</span></td>
+      ${sums.map(v => `<td class="plan-daysum">${planFmt(v)}</td>`).join('')}
+      <td class="plan-total">${planFmt(monthSum)}</td><td></td>
+    </tr>`;
+    g.workers.forEach(({ w, company }) => {
+      const k = planKey(w.id);
+      const end = planEndDate(w.id);
+      const endInMonth = end && end.slice(0, 7) === planMonth ? Number(end.slice(8, 10)) : 0;
+      body += `<tr>
+        <td class="plan-name" title="${escapeHtml(w.name + ' — ' + w.id + ' — ' + company)}">${escapeHtml(w.name)} <span class="plan-sub">${escapeHtml(w.id)} · ${escapeHtml(company)}</span></td>
+        ${days.map(day => {
+          const c = planGet(w.id, planMonth, day.d);
+          return `<td class="plan-cell ${dayClass(day)} ${c !== '-' ? 'v-' + c : ''} ${day.d === endInMonth ? 'end' : ''}" data-k="${escapeHtml(k)}" data-d="${day.d}">${PLAN_LABELS[c] || ''}</td>`;
+        }).join('')}
+        <td class="plan-total">${planFmt(planMonthTotal(w.id, planMonth))}</td>
+        <td class="plan-endcol ${end && end < todayStr ? 'past' : ''}">${end ? end.split('-').reverse().join('/') : '—'}</td>
+      </tr>`;
+    });
+  });
+  if (!body) body = `<tr><td class="plan-name" style="padding:12px;">${planSearch ? 'Aucun ouvrier ne correspond à la recherche.' : 'Aucun ouvrier assigné aux Timesheets.'}</td></tr>`;
+
+  const wrap = document.getElementById('plan-table-wrap');
+  const scroll = [wrap.scrollLeft, wrap.scrollTop];
+  wrap.innerHTML = `<table class="plan-table ${canEdit() ? '' : 'plan-ro'}"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+  [wrap.scrollLeft, wrap.scrollTop] = scroll;
+}
+
+window.setPlanBrush = function(code) { planBrush = code; renderPlanning(); };
+window.shiftPlanMonth = function(delta) {
+  const [y, m] = planMonth.split('-').map(Number);
+  planMonth = ymOf(new Date(y, m - 1 + delta, 1));
+  renderPlanning();
+};
+
+// --- Saisie : clic ou glisser sur les cases (souris et tactile) ---
+function planPaintCell(td) {
+  if (!td || !td.classList.contains('plan-cell')) return;
+  const k = td.dataset.k, d = Number(td.dataset.d);
+  if (planGet(k, planMonth, d) === planPaintCode) return;
+  planSet(k, planMonth, d, planPaintCode);
+  td.classList.remove('v-1', 'v-h', 'v-q');
+  if (planPaintCode !== '-') td.classList.add('v-' + planPaintCode);
+  td.innerText = PLAN_LABELS[planPaintCode] || '';
+}
+
+document.addEventListener('pointerdown', e => {
+  const td = e.target.closest && e.target.closest('#planning-view .plan-cell');
+  if (!td || !canEdit()) return;
+  e.preventDefault();
+  // Recliquer une case qui a déjà la valeur choisie l'efface (et le glisser efface aussi)
+  planPaintCode = planGet(td.dataset.k, planMonth, Number(td.dataset.d)) === planBrush ? '-' : planBrush;
+  window.planPainting = true;
+  planPaintCell(td);
+});
+
+document.addEventListener('pointermove', e => {
+  if (!window.planPainting) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  planPaintCell(el && el.closest && el.closest('#planning-view .plan-cell'));
+});
+
+function planStopPaint() {
+  if (!window.planPainting) return;
+  window.planPainting = false;
+  renderPlanning();   // totaux et dates de fin
+  syncDebounced();
+}
+document.addEventListener('pointerup', planStopPaint);
+document.addEventListener('pointercancel', planStopPaint);
+
+// --- Export Excel : un onglet, une ligne par ouvrier pour le mois affiché ---
+function exportPlanningExcel() {
+  const nDays = planDaysIn(planMonth);
+  const rows = [];
+  planGroups().forEach(g => g.workers.forEach(({ w, company }) => {
+    const end = planEndDate(w.id);
+    const row = {
+      "N° TS": g.card.timesheetNo || '',
+      "Nom TS": g.card.timesheetName || '',
+      "Superviseur": g.card.name || '',
+      "ID": w.id, "Nom": w.name, "Entreprise": company,
+      "Fin estimée": end ? end.split('-').reverse().join('/') : ''
+    };
+    for (let d = 1; d <= nDays; d++) {
+      const c = planGet(w.id, planMonth, d);
+      row[String(d)] = PLAN_VALUES[c] || '';
+    }
+    row["Total mois"] = planMonthTotal(w.id, planMonth);
+    rows.push(row);
+  }));
+  if (!rows.length) { alert("Aucun ouvrier à exporter."); return; }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Planning " + planMonth);
+  XLSX.writeFile(wb, `Planning_Fin_${planMonth}.xlsx`);
+}
+window.exportPlanningExcel = exportPlanningExcel;
 </script>
 </body>
 </html>
