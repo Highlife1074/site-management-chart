@@ -206,12 +206,17 @@
   .plan-table .plan-total, .plan-table .plan-endcol { min-width: 74px; padding: 0 6px; font-weight: 700; white-space: nowrap; }
   .plan-endcol.past { color: #94a3b8; }
   .plan-table th, .plan-table td { box-sizing: border-box; }
-  .plan-table .plan-name { min-width: 220px; max-width: 220px; border-right: 1px solid #e2e8f0; }
-  .plan-table .plan-sc { position: sticky; z-index: 1; background: #fff; min-width: 100px; max-width: 100px; }
+  .plan-table .plan-name { min-width: 200px; max-width: 200px; border-right: 1px solid #e2e8f0; }
+  .plan-table .plan-sc { position: sticky; z-index: 1; background: #fff; min-width: 90px; max-width: 90px; }
+  .plan-table .plan-sc.scn { min-width: 110px; max-width: 110px; }
   .plan-table thead .plan-sc { z-index: 3; }
-  .plan-table .sc1 { left: 220px; } .plan-table .sc2 { left: 320px; } .plan-table .sc3 { left: 420px; } .plan-table .sc4 { left: 520px; border-right: 2px solid #94a3b8; }
-  .plan-table thead .sc1, .plan-table thead .sc2 { background: #dbeafe; }
-  .plan-table thead .sc3, .plan-table thead .sc4 { background: #ede9fe; }
+  .plan-table .sc1n { left: 200px; } .plan-table .sc1a { left: 310px; } .plan-table .sc1b { left: 400px; }
+  .plan-table .sc2n { left: 490px; } .plan-table .sc2a { left: 600px; } .plan-table .sc2b { left: 690px; border-right: 2px solid #94a3b8; }
+  .plan-table thead .sc1n, .plan-table thead .sc1a, .plan-table thead .sc1b { background: #dbeafe; }
+  .plan-table thead .sc2n, .plan-table thead .sc2a, .plan-table thead .sc2b { background: #ede9fe; }
+  .plan-table .plan-sc input[type=text] { font-weight: 600; }
+  .plan-noscopes .plan-sc { display: none; }
+  .plan-noscopes .plan-name { border-right: 2px solid #94a3b8; }
   .plan-table .plan-sc input { width: 100%; border: 0; background: transparent; font-size: 10px; padding: 0 2px; font-family: inherit; }
   .plan-table .plan-sc input:disabled { color: #0f172a; }
   .plan-group td.plan-name { min-width: 0; max-width: none; border-right: 2px solid #94a3b8; }
@@ -4205,7 +4210,7 @@ const PLAN_LABELS = { '1': '1', 'h': '0.5', 'q': '0.25', 'z': '0' };
 const PLAN_MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 const PLAN_MONTHS_SHORT = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
 const PLAN_DAYS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
-const PLAN_SCOPE_FIELDS = ['s1a', 's1b', 's2a', 's2b'];
+const PLAN_SCOPE_FIELDS = ['s1n', 's1a', 's1b', 's2n', 's2a', 's2b']; // n = nom du Scope, a = début, b = fin
 
 let planMonth = ymOf(new Date());
 let planMode = 'days';    // 'days' (un mois, jour par jour) ou 'months' (12 mois)
@@ -4215,6 +4220,7 @@ window.planPainting = false;
 let planPaintCode = null; // valeur réellement appliquée pendant un glisser
 let planRenderPending = false;
 let planVersionsIndex = {};
+let planShowScopes = true; // colonnes Scopes affichées (masquables pour voir plus de jours)
 
 function ymOf(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
 function planKey(id) { return String(id ?? '').trim().toUpperCase(); }
@@ -4389,6 +4395,7 @@ function renderPlanning(force) {
         <button class="btn btn-outline" onclick="shiftPlanMonth(1)" title="Mois suivant">▶</button>
         <button class="btn btn-outline" onclick="planMonth = ymOf(new Date()); renderPlanning(true);">Ce mois</button>
         <span class="plan-toggle" id="plan-mode"></span>
+        <button class="btn btn-outline" id="plan-scopes-btn" onclick="planShowScopes = !planShowScopes; renderPlanning(true);"></button>
         <span id="plan-brushes"></span>
         <input type="text" class="modal-select" style="width:170px; margin:0;" placeholder="🔍 Nom ou ID..." value="${escapeHtml(planSearch)}" oninput="planSearch = this.value; renderPlanning(true);">
         <span style="margin-left:auto; display:flex; gap:6px; flex-wrap:wrap;">
@@ -4408,6 +4415,7 @@ function renderPlanning(force) {
   document.getElementById('plan-month-label').innerText = planMode === 'days'
     ? `${PLAN_MONTHS[m - 1]} ${y}`
     : `${PLAN_MONTHS_SHORT[m - 1]} ${y} → ${PLAN_MONTHS_SHORT[Number(lastMonth.slice(5)) - 1]} ${lastMonth.slice(0, 4)}`;
+  document.getElementById('plan-scopes-btn').innerText = planShowScopes ? '◧ Masquer Scopes' : '◨ Afficher Scopes';
   document.getElementById('plan-mode').innerHTML =
     `<button class="btn btn-outline ${planMode === 'days' ? 'active' : ''}" onclick="setPlanMode('days')">Jours</button> ` +
     `<button class="btn btn-outline ${planMode === 'months' ? 'active' : ''}" onclick="setPlanMode('months')">Mois</button>`;
@@ -4434,7 +4442,12 @@ function renderPlanning(force) {
     for (let i = 0; i < 12; i++) cols.push({ month: planAddMonths(planMonth, i) });
   }
 
-  const scopeHead = `<th class="plan-sc sc1">Scope 1<br>début</th><th class="plan-sc sc2">Scope 1<br>fin</th><th class="plan-sc sc3">Scope 2<br>début</th><th class="plan-sc sc4">Scope 2<br>fin</th>`;
+  const scopeHead = `<th class="plan-sc scn sc1n">Scope 1<br>nom</th><th class="plan-sc sc1a">Scope 1<br>début</th><th class="plan-sc sc1b">Scope 1<br>fin</th>` +
+    `<th class="plan-sc scn sc2n">Scope 2<br>nom</th><th class="plan-sc sc2a">Scope 2<br>début</th><th class="plan-sc sc2b">Scope 2<br>fin</th>`;
+  // Noms de Scopes déjà utilisés : proposés à la saisie
+  const scopeNames = [...new Set(Object.values(planningScopes).flatMap(x => [x.s1n, x.s2n]).filter(Boolean))].sort();
+  const datalist = `<datalist id="plan-scope-names">${scopeNames.map(n => `<option value="${escapeHtml(n)}">`).join('')}</datalist>`;
+  const nameSpan = planShowScopes ? 7 : 1;
   const colHead = planMode === 'days'
     ? cols.map(c => `<th class="${c.dow === 0 ? 'sun' : ''} ${c.iso === todayStr ? 'today' : ''}">${PLAN_DAYS[c.dow]}<br>${c.d}</th>`).join('')
     : cols.map(c => `<th class="${c.month === ymOf(new Date()) ? 'today' : ''}">${PLAN_MONTHS_SHORT[Number(c.month.slice(5)) - 1]}<br>${c.month.slice(0, 4)}</th>`).join('');
@@ -4446,7 +4459,7 @@ function renderPlanning(force) {
   groups.forEach(g => {
     const sums = cols.map(c => g.rows.reduce((t, r) => t + cellValue(r, c), 0));
     body += `<tr class="plan-group">
-      <td class="plan-name" colspan="5">${escapeHtml(g.title)} <span class="plan-daysum">— ${escapeHtml(g.sup)} (${g.rows.length})${g.live ? '' : ' · hors Timesheets actuelles'}</span></td>
+      <td class="plan-name" colspan="${nameSpan}">${escapeHtml(g.title)} <span class="plan-daysum">— ${escapeHtml(g.sup)} (${g.rows.length})${g.live ? '' : ' · hors Timesheets actuelles'}</span></td>
       ${sums.map(v => `<td class="plan-daysum">${planFmt(v)}</td>`).join('')}
       <td class="plan-total">${planFmt(sums.reduce((a, b) => a + b, 0))}</td><td></td>
     </tr>`;
@@ -4454,7 +4467,9 @@ function renderPlanning(force) {
       const sc = planScope(r.id);
       const end = planEndDate(r.id);
       const k = escapeHtml(r.key);
-      const dateCell = (f, cls) => `<td class="plan-sc ${cls}"><input type="date" value="${escapeHtml(sc[f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', '${f}', this)"></td>`;
+      // f = '1a' → champ 's1a' (Scope 1 début), colonne 'sc1a'
+      const dateCell = (f) => `<td class="plan-sc sc${f}"><input type="date" value="${escapeHtml(sc['s' + f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${f}', this)"></td>`;
+      const nameCell = (f) => `<td class="plan-sc scn sc${f}" title="${escapeHtml(sc['s' + f] || '')}"><input type="text" list="plan-scope-names" maxlength="40" placeholder="${edit ? 'Nom…' : ''}" value="${escapeHtml(sc['s' + f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${f}', this)"></td>`;
       let cells;
       if (planMode === 'days') {
         const endDay = end && end.slice(0, 7) === planMonth ? Number(end.slice(8)) : 0;
@@ -4473,18 +4488,18 @@ function renderPlanning(force) {
       const total = planMode === 'days' ? planMonthTotal(r.id, planMonth) : cols.reduce((t, c) => t + planMonthShare(r.id, c.month), 0);
       body += `<tr>
         <td class="plan-name" title="${escapeHtml(r.name + ' — ' + r.id + ' — ' + r.company)}">${edit && Array.isArray(planningRoster) ? `<button class="plan-del" title="Retirer du planning" onclick="removePlanningWorker('${k}')">✕</button>` : ''}${escapeHtml(r.name)} <span class="plan-sub">${escapeHtml(r.id)} · ${escapeHtml(r.company)}</span>${r.onTs ? '' : '<span class="plan-off">hors TS</span>'}</td>
-        ${dateCell('s1a', 'sc1')}${dateCell('s1b', 'sc2')}${dateCell('s2a', 'sc3')}${dateCell('s2b', 'sc4')}
+        ${nameCell('1n')}${dateCell('1a')}${dateCell('1b')}${nameCell('2n')}${dateCell('2a')}${dateCell('2b')}
         ${cells}
         <td class="plan-total">${planFmt(total)}</td>
         <td class="plan-endcol ${end && end < todayStr ? 'past' : ''}">${end ? planDateFR(end) : '—'}</td>
       </tr>`;
     });
   });
-  if (!body) body = `<tr><td class="plan-name" colspan="5" style="padding:12px;">${planSearch ? 'Aucun ouvrier ne correspond à la recherche.' : 'Aucun ouvrier dans le planning.'}</td></tr>`;
+  if (!body) body = `<tr><td class="plan-name" colspan="${nameSpan}" style="padding:12px;">${planSearch ? 'Aucun ouvrier ne correspond à la recherche.' : 'Aucun ouvrier dans le planning.'}</td></tr>`;
 
   const wrap = document.getElementById('plan-table-wrap');
   const scroll = [wrap.scrollLeft, wrap.scrollTop];
-  wrap.innerHTML = `<table class="plan-table ${edit && planMode === 'days' ? '' : 'plan-ro'}"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+  wrap.innerHTML = `${datalist}<table class="plan-table ${edit && planMode === 'days' ? '' : 'plan-ro'} ${planShowScopes ? '' : 'plan-noscopes'}"><thead>${head}</thead><tbody>${body}</tbody></table>`;
   [wrap.scrollLeft, wrap.scrollTop] = scroll;
 }
 
@@ -4499,18 +4514,44 @@ window.shiftPlanMonth = function(delta) { planMonth = planAddMonths(planMonth, d
 
 window.setPlanScope = function(key, field, input) {
   if (!canEdit()) return;
+  const isDate = !field.endsWith('n');
+  const val = isDate ? (input.value || '') : String(input.value || '').trim().replace(/\s+/g, ' ');
+  // Pendant la frappe de l'année, le navigateur envoie des dates partielles (0002, 0020, 0202…) :
+  // on attend une année complète et plausible avant d'enregistrer
+  if (isDate && val) {
+    const y = Number(val.slice(0, 4));
+    if (y < 2000 || y > 2100) return;
+  }
   const sc = Object.assign({}, planningScopes[key] || {});
-  sc[field] = input.value || '';
+  sc[field] = val;
   const n = field[1];
   if (sc['s' + n + 'a'] && sc['s' + n + 'b'] && sc['s' + n + 'a'] > sc['s' + n + 'b']) {
-    alert(`Scope ${n} : la date de fin doit être après la date de début.`);
-    input.value = (planningScopes[key] || {})[field] || '';
+    // Vérifié à la sortie de la case, pour ne pas interrompre la saisie
+    input.dataset.invalid = '1';
     return;
   }
+  delete input.dataset.invalid;
   if (PLAN_SCOPE_FIELDS.some(f => sc[f])) planningScopes[key] = sc; else delete planningScopes[key];
   syncDebounced();
-  renderPlanning(true);
+  // Le tableau est redessiné à la sortie de la case (sinon la saisie de la date serait coupée)
+  if (document.activeElement === input) planRenderPending = true; else renderPlanning(true);
 };
+
+// Sortie d'une case date : date incomplète ou fin avant début → on revient à la valeur enregistrée
+document.addEventListener('focusout', e => {
+  const input = e.target;
+  if (!input || input.type !== 'date' || !input.closest || !input.closest('#plan-table-wrap')) return;
+  const m = (input.getAttribute('onchange') || '').match(/setPlanScope\('([^']*)', '([^']*)'/);
+  if (!m) return;
+  const saved = (planningScopes[m[1]] || {})[m[2]] || '';
+  if (input.dataset.invalid) {
+    alert(`Scope ${m[2][1]} : la date de fin doit être après la date de début.`);
+    input.value = saved;
+  } else if (input.value !== saved) {
+    input.value = saved; // année incomplète ou hors 2000–2100 : non enregistrée
+  }
+  delete input.dataset.invalid;
+}, true);
 
 // --- Saisie jour par jour : clic ou glisser (souris et tactile) ---
 function planPaintCell(td) {
@@ -4669,8 +4710,8 @@ function planExcelRows(groups, firstMonth) {
     const end = planEndDate(r.id);
     const row = {
       "Timesheet": g.title, "Superviseur": g.sup, "ID": r.id, "Nom": r.name, "Entreprise": r.company,
-      "Scope 1 début": planDateFR(sc.s1a), "Scope 1 fin": planDateFR(sc.s1b),
-      "Scope 2 début": planDateFR(sc.s2a), "Scope 2 fin": planDateFR(sc.s2b),
+      "Scope 1": sc.s1n || '', "Scope 1 début": planDateFR(sc.s1a), "Scope 1 fin": planDateFR(sc.s1b),
+      "Scope 2": sc.s2n || '', "Scope 2 début": planDateFR(sc.s2a), "Scope 2 fin": planDateFR(sc.s2b),
       "Fin estimée": planDateFR(end)
     };
     let total = 0;
