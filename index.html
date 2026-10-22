@@ -205,6 +205,25 @@
   .plan-group .plan-daysum { font-size: 9px; color: #cbd5e1; font-weight: 600; }
   .plan-table .plan-total, .plan-table .plan-endcol { min-width: 74px; padding: 0 6px; font-weight: 700; white-space: nowrap; }
   .plan-endcol.past { color: #94a3b8; }
+  .plan-table th, .plan-table td { box-sizing: border-box; }
+  .plan-table .plan-name { min-width: 220px; max-width: 220px; border-right: 1px solid #e2e8f0; }
+  .plan-table .plan-sc { position: sticky; z-index: 1; background: #fff; min-width: 100px; max-width: 100px; }
+  .plan-table thead .plan-sc { z-index: 3; }
+  .plan-table .sc1 { left: 220px; } .plan-table .sc2 { left: 320px; } .plan-table .sc3 { left: 420px; } .plan-table .sc4 { left: 520px; border-right: 2px solid #94a3b8; }
+  .plan-table thead .sc1, .plan-table thead .sc2 { background: #dbeafe; }
+  .plan-table thead .sc3, .plan-table thead .sc4 { background: #ede9fe; }
+  .plan-table .plan-sc input { width: 100%; border: 0; background: transparent; font-size: 10px; padding: 0 2px; font-family: inherit; }
+  .plan-table .plan-sc input:disabled { color: #0f172a; }
+  .plan-group td.plan-name { min-width: 0; max-width: none; border-right: 2px solid #94a3b8; }
+  .plan-cell.auto { background: #bbf7d0; color: #15803d; font-weight: 500; }
+  .plan-cell.v-z { background: #fee2e2; color: #b91c1c; }
+  .plan-mcell { min-width: 64px; height: 24px; font-weight: 700; cursor: pointer; }
+  .plan-mcell.full { background: #16a34a; color: #fff; }
+  .plan-mcell.part { background: #bbf7d0; color: #14532d; }
+  .plan-off { font-size: 9px; background: #e2e8f0; color: #475569; border-radius: 4px; padding: 0 4px; margin-left: 4px; }
+  .plan-del { float: right; border: 0; background: transparent; color: #94a3b8; cursor: pointer; font-size: 11px; padding: 0 2px; }
+  .plan-del:hover { color: #dc2626; }
+  .plan-toggle .btn.active { background: #0f172a; color: #fff; }
 
   /* ARBRE HIERARCHIQUE CSS (STYLE ORGANIGRAMME) */
   .tree-container { width: 100%; overflow-x: auto; padding: 20px; text-align: center; min-height: 60vh; background: #f8fafc; display: none; }
@@ -1165,6 +1184,8 @@ window.rawImportedDB = [];
 let siteCompanies = [...DEFAULT_COMPANIES];
 let siteSupervisors = []; 
 let workerPlanning = {}; // Planning fin : { ID ouvrier : { 'AAAA-MM' : un caractère par jour } } (voir planning.js)
+let planningScopes = {};  // Planning fin : { ID ouvrier : { s1a, s1b, s2a, s2b } } dates des Scopes 1 et 2
+let planningRoster = null; // Planning fin : liste figée des ouvriers (null = pas encore créée)
 let db = null, docRef = null, isSaving = false, currentFilter = 'all';
 let selectedManagersFilter = [];
 let selectedSupervisorsFilter = [];
@@ -1190,6 +1211,8 @@ try {
       if (parsed.rawImportedDB) window.rawImportedDB = parsed.rawImportedDB;
       if (Array.isArray(parsed.cometTasks)) cometTasks = parsed.cometTasks;
       if (parsed.planning && typeof parsed.planning === 'object') workerPlanning = parsed.planning;
+      if (parsed.planningScopes && typeof parsed.planningScopes === 'object') planningScopes = parsed.planningScopes;
+      if (Array.isArray(parsed.planningRoster)) planningRoster = parsed.planningRoster;
     } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
   } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 } catch(e) { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
@@ -1331,6 +1354,9 @@ function startFirebase() {
         if (data.unassignedWorkers) unassignedWorkers = data.unassignedWorkers;
         if (data.rawImportedDB) window.rawImportedDB = data.rawImportedDB;
         if (data.planning && typeof data.planning === 'object') workerPlanning = data.planning;
+        if (data.planningScopes && typeof data.planningScopes === 'object') planningScopes = data.planningScopes;
+        if (Array.isArray(data.planningRoster)) planningRoster = data.planningRoster;
+        window._planDataReady = true;
         if (data.supervisors) siteSupervisors = data.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
         if (data.companies) {
             siteCompanies = data.companies.map(c => c === 'SKYBUILDING' ? 'SKYBUILDING BRANCH' : c);
@@ -1368,6 +1394,7 @@ function startFirebase() {
       document.getElementById("sync-dot").style.background = "#16a34a";
       document.getElementById("sync-text").innerText = statusText;
     }, (err) => {
+      window._planDataReady = true;
       document.getElementById("sync-dot").style.background = "#eab308";
       document.getElementById("sync-text").innerText = "Mode local / Hors-ligne";
     });
@@ -1381,16 +1408,19 @@ function startFirebase() {
 function syncToFirebase() {
   if (currentRole === 'viewer') return; // Le CFO doit pouvoir enregistrer le Payroll
   if (_syncTimer) { clearTimeout(_syncTimer); _syncTimer = null; }
-  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, cometTasks, planning: workerPlanning})); } catch(e){}
+  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, cometTasks, planning: workerPlanning, planningScopes, planningRoster})); } catch(e){}
   if (!docRef) return;
   isSaving = true;
   document.getElementById("sync-text").innerText = "Enregistrement...";
 
-  docRef.set({
+  const payload = {
     cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, cometTasks,
-    planning: workerPlanning,
+    planning: workerPlanning, planningScopes,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  }, { merge: true }).then(() => {
+  };
+  if (Array.isArray(planningRoster)) payload.planningRoster = planningRoster;
+  // mergeFields : chaque champ est remplacé en entier (une case effacée du planning l'est aussi dans Firebase)
+  docRef.set(payload, { mergeFields: Object.keys(payload) }).then(() => {
     document.getElementById("sync-dot").style.background = "#16a34a";
     document.getElementById("sync-text").innerText = "Connecté à Firebase";
     setTimeout(() => { isSaving = false; }, 300);
@@ -1420,7 +1450,7 @@ function exportBackup() {
     supervisors: siteSupervisors,
     rawImportedDB: window.rawImportedDB,
     cometTasks,
-    planning: workerPlanning
+    planning: workerPlanning, planningScopes, planningRoster
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -1463,6 +1493,8 @@ function importBackup(event) {
       if (Array.isArray(data.companies) && data.companies.length) siteCompanies = data.companies;
       if (Array.isArray(data.cometTasks)) cometTasks = data.cometTasks;
       if (data.planning && typeof data.planning === 'object') workerPlanning = data.planning;
+      if (data.planningScopes && typeof data.planningScopes === 'object') planningScopes = data.planningScopes;
+      if (Array.isArray(data.planningRoster)) planningRoster = data.planningRoster;
       if (Array.isArray(data.supervisors)) siteSupervisors = data.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
       selectedForPrint.clear();
 
@@ -4158,32 +4190,45 @@ window.importWorkersDB = importExcelFile;
 /* ===== planning.js ===== */
 /* ==========================================================
    planning.js — PLANNING FIN (estimation des dates de fin)
-   Liste automatique des ouvriers des Timesheets, groupés par Timesheet,
-   avec un calendrier par mois : 1 / 0.5 / 0.25 par jour.
-   Date de fin estimée = dernier jour renseigné (tous mois confondus).
+   - Liste figée des ouvriers (planningRoster), complétée avec « Importer les nouveaux noms »
+   - Scope 1 et Scope 2 : date de début et de fin → 1 chaque jour entre ces dates
+   - Saisie manuelle par jour (1 / 0.5 / 0.25 / 0) : prioritaire sur les Scopes
+   - Vue Jours (un mois) ou vue Mois (12 mois, valeur = part du mois travaillée,
+     ex. fin le 15/09 → 0.5 en septembre)
+   - Versions sauvegardées dans Firebase (collection des archives)
    Stockage compact : workerPlanning[ID][AAAA-MM] = un caractère par jour
-   ('1' = 1, 'h' = 0.5, 'q' = 0.25, '-' = vide).
+   ('1' = 1, 'h' = 0.5, 'q' = 0.25, 'z' = 0, '-' = rien de saisi).
    ========================================================== */
 
-const PLAN_VALUES = { '1': 1, 'h': 0.5, 'q': 0.25 };
-const PLAN_LABELS = { '1': '1', 'h': '0.5', 'q': '0.25' };
+const PLAN_CODES = { '1': 1, 'h': 0.5, 'q': 0.25, 'z': 0 };
+const PLAN_LABELS = { '1': '1', 'h': '0.5', 'q': '0.25', 'z': '0' };
 const PLAN_MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+const PLAN_MONTHS_SHORT = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
 const PLAN_DAYS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+const PLAN_SCOPE_FIELDS = ['s1a', 's1b', 's2a', 's2b'];
 
 let planMonth = ymOf(new Date());
-let planBrush = '1';      // valeur appliquée au clic : '1', 'h', 'q' ou '-' (effacer)
+let planMode = 'days';    // 'days' (un mois, jour par jour) ou 'months' (12 mois)
+let planBrush = '1';      // valeur appliquée au clic : '1', 'h', 'q', 'z' ou '-' (effacer)
 let planSearch = '';
 window.planPainting = false;
 let planPaintCode = null; // valeur réellement appliquée pendant un glisser
+let planRenderPending = false;
+let planVersionsIndex = {};
 
 function ymOf(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
 function planKey(id) { return String(id ?? '').trim().toUpperCase(); }
 function planDaysIn(month) { const [y, m] = month.split('-').map(Number); return new Date(y, m, 0).getDate(); }
 function planFmt(n) { return n ? String(Math.round(n * 100) / 100) : ''; }
+function planDateFR(iso) { return iso ? iso.split('-').reverse().join('/') : ''; }
+function planIso(month, d) { return month + '-' + String(d).padStart(2, '0'); }
+function planAddMonths(month, n) { const [y, m] = month.split('-').map(Number); return ymOf(new Date(y, m - 1 + n, 1)); }
+function planTodayIso() { const n = new Date(); return planIso(ymOf(n), n.getDate()); }
 
+// --- Saisie manuelle par jour ---
 function planGet(id, month, day) {
   const s = ((workerPlanning[planKey(id)] || {})[month]) || '';
-  return PLAN_VALUES[s[day - 1]] ? s[day - 1] : '-';
+  return (s[day - 1] in PLAN_CODES) ? s[day - 1] : '-';
 }
 
 function planSet(id, month, day, code) {
@@ -4192,66 +4237,149 @@ function planSet(id, month, day, code) {
   if (!workerPlanning[k]) workerPlanning[k] = {};
   const chars = (workerPlanning[k][month] || '').padEnd(planDaysIn(month), '-').split('');
   chars[day - 1] = code;
-  workerPlanning[k][month] = chars.join('');
+  const str = chars.join('');
+  if (/^-*$/.test(str)) delete workerPlanning[k][month]; else workerPlanning[k][month] = str;
+  if (!Object.keys(workerPlanning[k]).length) delete workerPlanning[k];
 }
 
-// Date de fin estimée (AAAA-MM-JJ) = dernier jour renseigné, tous mois confondus
+// --- Scopes ---
+function planScope(id) { return planningScopes[planKey(id)] || {}; }
+function planInScope(id, iso) {
+  const s = planScope(id);
+  return (s.s1a && s.s1b && iso >= s.s1a && iso <= s.s1b) || (s.s2a && s.s2b && iso >= s.s2a && iso <= s.s2b);
+}
+
+// Valeur d'un jour : saisie manuelle si présente, sinon 1 dans un Scope, sinon 0
+function planDayValue(id, month, d) {
+  const c = planGet(id, month, d);
+  if (c !== '-') return PLAN_CODES[c];
+  return planInScope(id, planIso(month, d)) ? 1 : 0;
+}
+
+function planMonthTotal(id, month) {
+  let t = 0;
+  for (let d = 1, n = planDaysIn(month); d <= n; d++) t += planDayValue(id, month, d);
+  return t;
+}
+
+// Part du mois travaillée (ex. fin le 15/09 → 15/30 = 0.5)
+function planMonthShare(id, month) { return planMonthTotal(id, month) / planDaysIn(month); }
+
+// Date de fin estimée = la plus tardive entre la fin des Scopes et le dernier jour saisi (> 0)
 function planEndDate(id) {
-  const months = workerPlanning[planKey(id)];
-  if (!months) return null;
   let best = null;
+  const s = planScope(id);
+  [s.s1b, s.s2b].forEach(d => { if (d && (!best || d > best)) best = d; });
+  const months = workerPlanning[planKey(id)] || {};
   Object.keys(months).forEach(mo => {
-    const s = months[mo] || '';
-    for (let i = s.length - 1; i >= 0; i--) {
-      if (PLAN_VALUES[s[i]]) {
-        const d = mo + '-' + String(i + 1).padStart(2, '0');
-        if (!best || d > best) best = d;
-        break;
-      }
+    const str = months[mo] || '';
+    for (let i = str.length - 1; i >= 0; i--) {
+      if (PLAN_CODES[str[i]]) { const d = planIso(mo, i + 1); if (!best || d > best) best = d; break; }
     }
   });
   return best;
 }
 
-function planMonthTotal(id, month) {
-  const s = ((workerPlanning[planKey(id)] || {})[month]) || '';
-  let t = 0;
-  for (const c of s) t += PLAN_VALUES[c] || 0;
-  return t;
-}
-
 // Changement d'ID d'un ouvrier (import RH, Base Globale) : son planning le suit
 function renamePlanningKey(oldId, newId) {
   const a = planKey(oldId), b = planKey(newId);
-  if (!a || !b || a === b || !workerPlanning[a]) return;
-  if (!workerPlanning[b]) workerPlanning[b] = workerPlanning[a];
-  delete workerPlanning[a];
+  if (!a || !b || a === b) return;
+  if (workerPlanning[a]) { if (!workerPlanning[b]) workerPlanning[b] = workerPlanning[a]; delete workerPlanning[a]; }
+  if (planningScopes[a]) { if (!planningScopes[b]) planningScopes[b] = planningScopes[a]; delete planningScopes[a]; }
+  if (Array.isArray(planningRoster)) planningRoster.forEach(r => { if (planKey(r.id) === a) r.id = newId; });
 }
 
-// Ouvriers des Timesheets, groupés par Timesheet (ordre N° TS), sans doublon dans une même Timesheet
+// --- Liste des ouvriers ---
+// Ouvriers actuellement sur les Timesheets : clé → { w, company, card } (première Timesheet dans l'ordre N° TS)
+function planLiveMap() {
+  const map = new Map();
+  sortCardsByTs(cardsData).forEach(card => (card.tasks || []).forEach(t => activeWorkers(t).forEach(w => {
+    const k = planKey(w.id);
+    if (k && !map.has(k)) map.set(k, { w, company: w.company || t.source || '', card });
+  })));
+  return map;
+}
+
+function planRosterEntry(live) {
+  return {
+    id: live.w.id, name: live.w.name || '', company: live.company,
+    cardId: live.card.id || '', tsNo: live.card.timesheetNo || '', tsName: live.card.timesheetName || '', sup: live.card.name || ''
+  };
+}
+
+// Liste figée créée automatiquement la première fois (une fois les données Firebase reçues)
+function planEnsureRoster() {
+  if (Array.isArray(planningRoster)) return;
+  if (!canEdit() || !(window._planDataReady || !docRef)) return;
+  planningRoster = [...planLiveMap().values()].map(planRosterEntry);
+  syncToFirebase();
+}
+
+function planNewNames() {
+  const inRoster = new Set((planningRoster || []).map(r => planKey(r.id)));
+  return [...planLiveMap().values()].filter(x => !inRoster.has(planKey(x.w.id)));
+}
+
+window.importPlanningNames = function() {
+  if (!canEdit()) return;
+  planEnsureRoster();
+  if (!Array.isArray(planningRoster)) return;
+  const live = planLiveMap();
+  // Infos à jour (nom, entreprise, Timesheet) pour les ouvriers déjà présents
+  planningRoster.forEach(r => { const x = live.get(planKey(r.id)); if (x) Object.assign(r, planRosterEntry(x)); });
+  const added = planNewNames();
+  added.forEach(x => planningRoster.push(planRosterEntry(x)));
+  syncToFirebase();
+  renderPlanning(true);
+  alert(added.length
+    ? `✅ ${added.length} nouvel(s) ouvrier(s) ajouté(s) au planning :\n\n` + added.slice(0, 20).map(x => `• ${x.w.name} (${x.w.id})`).join('\n') + (added.length > 20 ? `\n… et ${added.length - 20} autre(s)` : '')
+    : "👌 Aucun nouveau nom : tous les ouvriers des Timesheets sont déjà dans le planning.");
+};
+
+window.removePlanningWorker = function(key) {
+  if (!canEdit() || !Array.isArray(planningRoster)) return;
+  const r = planningRoster.find(x => planKey(x.id) === key);
+  if (!r || !confirm(`Retirer ${r.name} (${r.id}) du planning ?\n\nSes dates et valeurs sont conservées : il reviendra avec « Importer les nouveaux noms » s'il est sur une Timesheet.`)) return;
+  planningRoster = planningRoster.filter(x => planKey(x.id) !== key);
+  syncToFirebase();
+  renderPlanning(true);
+};
+
+// Lignes affichées, groupées par Timesheet (actuelle si l'ouvrier y est encore, sinon celle de l'import)
 function planGroups() {
+  const live = planLiveMap();
+  const roster = Array.isArray(planningRoster) ? planningRoster : [...live.values()].map(planRosterEntry);
   const q = planSearch.trim().toUpperCase();
-  return sortCardsByTs(cardsData).map(card => {
-    const seen = new Set();
-    const workers = [];
-    (card.tasks || []).forEach(t => activeWorkers(t).forEach(w => {
-      const k = planKey(w.id);
-      if (!k || seen.has(k)) return;
-      seen.add(k);
-      if (q && !(String(w.name || '').toUpperCase().includes(q) || k.includes(q))) return;
-      workers.push({ w, company: w.company || t.source || '' });
-    }));
-    workers.sort((a, b) => String(a.w.name || '').localeCompare(String(b.w.name || '')));
-    return { card, workers };
-  }).filter(g => g.workers.length > 0);
+  const groups = new Map();
+  const order = sortCardsByTs(cardsData).map(c => c.id);
+  roster.forEach(r => {
+    const k = planKey(r.id);
+    if (!k) return;
+    const x = live.get(k);
+    const row = { key: k, id: x ? x.w.id : r.id, name: x ? x.w.name : r.name, company: x ? x.company : r.company, onTs: !!x };
+    if (q && !(String(row.name || '').toUpperCase().includes(q) || k.includes(q))) return;
+    const gid = x ? 'c:' + x.card.id : 'o:' + (r.cardId || r.tsNo || r.sup || '');
+    if (!groups.has(gid)) {
+      const src = x ? { no: x.card.timesheetNo, name: x.card.timesheetName, sup: x.card.name } : { no: r.tsNo, name: r.tsName, sup: r.sup };
+      const title = [src.no ? 'TS ' + src.no : '', src.name || ''].filter(Boolean).join(' - ') || 'Sans N° TS';
+      groups.set(gid, { gid, title, sup: src.sup || '', live: !!x, rank: x ? order.indexOf(x.card.id) : 1e6, tsNo: String(src.no || ''), rows: [] });
+    }
+    groups.get(gid).rows.push(row);
+  });
+  const list = [...groups.values()];
+  list.forEach(g => g.rows.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''))));
+  return list.sort((a, b) => a.rank - b.rank || a.tsNo.localeCompare(b.tsNo, undefined, { numeric: true }));
 }
 
-function renderPlanning() {
+// --- Affichage ---
+function renderPlanning(force) {
   const view = document.getElementById('planning-view');
   if (!view) return;
-  const [y, m] = planMonth.split('-').map(Number);
-  const brushBtn = (code, label) =>
-    `<button class="btn btn-outline plan-brush ${planBrush === code ? 'active' : ''}" onclick="setPlanBrush('${code}')">${label}</button>`;
+  // Mise à jour reçue pendant la saisie d'une date : affichée à la fin de la saisie
+  const ae = document.activeElement;
+  if (!force && ae && ae.closest && ae.closest('#plan-table-wrap')) { planRenderPending = true; return; }
+  planRenderPending = false;
+  planEnsureRoster();
 
   if (!document.getElementById('plan-table-wrap')) {
     view.innerHTML = `
@@ -4259,92 +4387,141 @@ function renderPlanning() {
         <button class="btn btn-outline" onclick="shiftPlanMonth(-1)" title="Mois précédent">◀</button>
         <div class="plan-month" id="plan-month-label"></div>
         <button class="btn btn-outline" onclick="shiftPlanMonth(1)" title="Mois suivant">▶</button>
-        <button class="btn btn-outline" onclick="planMonth = ymOf(new Date()); renderPlanning();">Ce mois</button>
-        <div class="divider"></div>
-        <span style="font-size:12px; font-weight:700; color:#475569;">Valeur :</span>
+        <button class="btn btn-outline" onclick="planMonth = ymOf(new Date()); renderPlanning(true);">Ce mois</button>
+        <span class="plan-toggle" id="plan-mode"></span>
         <span id="plan-brushes"></span>
-        <div class="divider"></div>
-        <input type="text" class="modal-select" style="width:200px;" placeholder="🔍 Nom ou ID..." value="${escapeHtml(planSearch)}" oninput="planSearch = this.value; renderPlanning();">
-        <button class="btn btn-outline" style="margin-left:auto;" onclick="exportPlanningExcel()">📤 Export Excel</button>
+        <input type="text" class="modal-select" style="width:170px; margin:0;" placeholder="🔍 Nom ou ID..." value="${escapeHtml(planSearch)}" oninput="planSearch = this.value; renderPlanning(true);">
+        <span style="margin-left:auto; display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="btn btn-outline" id="plan-import-btn" onclick="importPlanningNames()"></button>
+          <button class="btn btn-outline" id="plan-save-btn" onclick="savePlanningVersion()" title="Enregistre une copie figée du planning">💾 Sauvegarder une version</button>
+          <button class="btn btn-outline" onclick="openPlanningVersions()">🗂️ Versions</button>
+          <button class="btn btn-outline" onclick="exportPlanningExcel()">📤 Excel</button>
+        </span>
       </div>
       <div class="plan-help" id="plan-help"></div>
       <div class="plan-wrap" id="plan-table-wrap"></div>`;
   }
-  document.getElementById('plan-month-label').innerText = `${PLAN_MONTHS[m - 1]} ${y}`;
-  document.getElementById('plan-brushes').innerHTML =
-    brushBtn('1', '1') + ' ' + brushBtn('h', '0.5') + ' ' + brushBtn('q', '0.25') + ' ' + brushBtn('-', '🧽 Effacer');
-  document.getElementById('plan-help').innerHTML = canEdit()
-    ? `Choisissez une valeur puis cliquez (ou glissez) sur les jours. Recliquer une case avec la même valeur l'efface. La <b>date de fin estimée</b> est le dernier jour renseigné (trait rouge), tous mois confondus.`
-    : `👁️ Consultation seule : seuls les profils Timekeeper et Admin peuvent modifier le planning.`;
 
-  const nDays = planDaysIn(planMonth);
-  const now = new Date();
-  const todayStr = ymOf(now) + '-' + String(now.getDate()).padStart(2, '0');
-  const days = [];
-  for (let d = 1; d <= nDays; d++) {
-    const date = new Date(y, m - 1, d);
-    days.push({ d, dow: date.getDay(), iso: `${planMonth}-${String(d).padStart(2, '0')}` });
+  const [y, m] = planMonth.split('-').map(Number);
+  const edit = canEdit();
+  const lastMonth = planAddMonths(planMonth, 11);
+  document.getElementById('plan-month-label').innerText = planMode === 'days'
+    ? `${PLAN_MONTHS[m - 1]} ${y}`
+    : `${PLAN_MONTHS_SHORT[m - 1]} ${y} → ${PLAN_MONTHS_SHORT[Number(lastMonth.slice(5)) - 1]} ${lastMonth.slice(0, 4)}`;
+  document.getElementById('plan-mode').innerHTML =
+    `<button class="btn btn-outline ${planMode === 'days' ? 'active' : ''}" onclick="setPlanMode('days')">Jours</button> ` +
+    `<button class="btn btn-outline ${planMode === 'months' ? 'active' : ''}" onclick="setPlanMode('months')">Mois</button>`;
+  const brushBtn = (code, label) => `<button class="btn btn-outline plan-brush ${planBrush === code ? 'active' : ''}" onclick="setPlanBrush('${code}')">${label}</button>`;
+  document.getElementById('plan-brushes').innerHTML = (planMode === 'days' && edit)
+    ? `<span style="font-size:12px; font-weight:700; color:#475569;">Valeur :</span> ` + brushBtn('1', '1') + ' ' + brushBtn('h', '0.5') + ' ' + brushBtn('q', '0.25') + ' ' + brushBtn('z', '0') + ' ' + brushBtn('-', '🧽 Effacer')
+    : '';
+  const nNew = Array.isArray(planningRoster) ? planNewNames().length : 0;
+  const imp = document.getElementById('plan-import-btn');
+  imp.innerHTML = `📥 Importer les nouveaux noms${nNew ? ` <b style="background:#dc2626; color:#fff; border-radius:9px; padding:0 6px; margin-left:4px;">${nNew}</b>` : ''}`;
+  imp.style.display = edit ? '' : 'none';
+  document.getElementById('plan-save-btn').style.display = edit ? '' : 'none';
+  document.getElementById('plan-help').innerHTML = !edit
+    ? `👁️ Consultation seule : seuls les profils Timekeeper et Admin peuvent modifier le planning.`
+    : planMode === 'days'
+      ? `Entre les dates de début et de fin d'un <b>Scope</b>, chaque jour vaut 1 (vert clair). Pour corriger un jour, choisissez une valeur puis cliquez ou glissez (0 = absent) ; « Effacer » revient au Scope. <b>Fin estimée</b> = fin de Scope ou dernier jour saisi, le plus tardif (trait rouge).`
+      : `Chaque case = part du mois travaillée (ex. fin le 15/09 → 0.5 en septembre). Cliquez sur un mois pour le détail jour par jour.`;
+
+  const todayStr = planTodayIso();
+  let cols = [];
+  if (planMode === 'days') {
+    for (let d = 1, n = planDaysIn(planMonth); d <= n; d++) cols.push({ d, dow: new Date(y, m - 1, d).getDay(), iso: planIso(planMonth, d) });
+  } else {
+    for (let i = 0; i < 12; i++) cols.push({ month: planAddMonths(planMonth, i) });
   }
-  const dayClass = day => (day.dow === 0 ? 'sun' : '');
 
-  const head = `<tr>
-    <th class="plan-name">Ouvrier</th>
-    ${days.map(day => `<th class="${dayClass(day)} ${day.iso === todayStr ? 'today' : ''}">${PLAN_DAYS[day.dow]}<br>${day.d}</th>`).join('')}
-    <th class="plan-total">Total mois</th>
-    <th class="plan-endcol">Fin estimée</th>
-  </tr>`;
+  const scopeHead = `<th class="plan-sc sc1">Scope 1<br>début</th><th class="plan-sc sc2">Scope 1<br>fin</th><th class="plan-sc sc3">Scope 2<br>début</th><th class="plan-sc sc4">Scope 2<br>fin</th>`;
+  const colHead = planMode === 'days'
+    ? cols.map(c => `<th class="${c.dow === 0 ? 'sun' : ''} ${c.iso === todayStr ? 'today' : ''}">${PLAN_DAYS[c.dow]}<br>${c.d}</th>`).join('')
+    : cols.map(c => `<th class="${c.month === ymOf(new Date()) ? 'today' : ''}">${PLAN_MONTHS_SHORT[Number(c.month.slice(5)) - 1]}<br>${c.month.slice(0, 4)}</th>`).join('');
+  const head = `<tr><th class="plan-name">Ouvrier</th>${scopeHead}${colHead}<th class="plan-total">${planMode === 'days' ? 'Total mois' : 'Total'}</th><th class="plan-endcol">Fin estimée</th></tr>`;
 
+  const cellValue = (row, c) => planMode === 'days' ? planDayValue(row.id, planMonth, c.d) : planMonthShare(row.id, c.month);
   const groups = planGroups();
   let body = '';
   groups.forEach(g => {
-    const card = g.card;
-    const title = [card.timesheetNo ? 'TS ' + card.timesheetNo : '', card.timesheetName || ''].filter(Boolean).join(' - ') || 'Sans N° TS';
-    const sums = days.map(day => g.workers.reduce((t, x) => t + (PLAN_VALUES[planGet(x.w.id, planMonth, day.d)] || 0), 0));
-    const monthSum = sums.reduce((a, b) => a + b, 0);
+    const sums = cols.map(c => g.rows.reduce((t, r) => t + cellValue(r, c), 0));
     body += `<tr class="plan-group">
-      <td class="plan-name" title="${escapeHtml(title + ' — ' + (card.name || ''))}">${escapeHtml(title)} <span class="plan-daysum">— ${escapeHtml(card.name || '')} (${g.workers.length})</span></td>
+      <td class="plan-name" colspan="5">${escapeHtml(g.title)} <span class="plan-daysum">— ${escapeHtml(g.sup)} (${g.rows.length})${g.live ? '' : ' · hors Timesheets actuelles'}</span></td>
       ${sums.map(v => `<td class="plan-daysum">${planFmt(v)}</td>`).join('')}
-      <td class="plan-total">${planFmt(monthSum)}</td><td></td>
+      <td class="plan-total">${planFmt(sums.reduce((a, b) => a + b, 0))}</td><td></td>
     </tr>`;
-    g.workers.forEach(({ w, company }) => {
-      const k = planKey(w.id);
-      const end = planEndDate(w.id);
-      const endInMonth = end && end.slice(0, 7) === planMonth ? Number(end.slice(8, 10)) : 0;
+    g.rows.forEach(r => {
+      const sc = planScope(r.id);
+      const end = planEndDate(r.id);
+      const k = escapeHtml(r.key);
+      const dateCell = (f, cls) => `<td class="plan-sc ${cls}"><input type="date" value="${escapeHtml(sc[f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', '${f}', this)"></td>`;
+      let cells;
+      if (planMode === 'days') {
+        const endDay = end && end.slice(0, 7) === planMonth ? Number(end.slice(8)) : 0;
+        cells = cols.map(c => {
+          const code = planGet(r.id, planMonth, c.d);
+          const auto = code === '-' && planInScope(r.id, c.iso);
+          const cls = code !== '-' ? 'v-' + code : (auto ? 'auto' : '');
+          return `<td class="plan-cell ${c.dow === 0 ? 'sun' : ''} ${cls} ${c.d === endDay ? 'end' : ''}" data-k="${k}" data-d="${c.d}">${code !== '-' ? PLAN_LABELS[code] : (auto ? '1' : '')}</td>`;
+        }).join('');
+      } else {
+        cells = cols.map(c => {
+          const v = planMonthShare(r.id, c.month);
+          return `<td class="plan-mcell ${v >= 0.999 ? 'full' : (v > 0 ? 'part' : '')}" onclick="openPlanMonth('${c.month}')">${planFmt(v)}</td>`;
+        }).join('');
+      }
+      const total = planMode === 'days' ? planMonthTotal(r.id, planMonth) : cols.reduce((t, c) => t + planMonthShare(r.id, c.month), 0);
       body += `<tr>
-        <td class="plan-name" title="${escapeHtml(w.name + ' — ' + w.id + ' — ' + company)}">${escapeHtml(w.name)} <span class="plan-sub">${escapeHtml(w.id)} · ${escapeHtml(company)}</span></td>
-        ${days.map(day => {
-          const c = planGet(w.id, planMonth, day.d);
-          return `<td class="plan-cell ${dayClass(day)} ${c !== '-' ? 'v-' + c : ''} ${day.d === endInMonth ? 'end' : ''}" data-k="${escapeHtml(k)}" data-d="${day.d}">${PLAN_LABELS[c] || ''}</td>`;
-        }).join('')}
-        <td class="plan-total">${planFmt(planMonthTotal(w.id, planMonth))}</td>
-        <td class="plan-endcol ${end && end < todayStr ? 'past' : ''}">${end ? end.split('-').reverse().join('/') : '—'}</td>
+        <td class="plan-name" title="${escapeHtml(r.name + ' — ' + r.id + ' — ' + r.company)}">${edit && Array.isArray(planningRoster) ? `<button class="plan-del" title="Retirer du planning" onclick="removePlanningWorker('${k}')">✕</button>` : ''}${escapeHtml(r.name)} <span class="plan-sub">${escapeHtml(r.id)} · ${escapeHtml(r.company)}</span>${r.onTs ? '' : '<span class="plan-off">hors TS</span>'}</td>
+        ${dateCell('s1a', 'sc1')}${dateCell('s1b', 'sc2')}${dateCell('s2a', 'sc3')}${dateCell('s2b', 'sc4')}
+        ${cells}
+        <td class="plan-total">${planFmt(total)}</td>
+        <td class="plan-endcol ${end && end < todayStr ? 'past' : ''}">${end ? planDateFR(end) : '—'}</td>
       </tr>`;
     });
   });
-  if (!body) body = `<tr><td class="plan-name" style="padding:12px;">${planSearch ? 'Aucun ouvrier ne correspond à la recherche.' : 'Aucun ouvrier assigné aux Timesheets.'}</td></tr>`;
+  if (!body) body = `<tr><td class="plan-name" colspan="5" style="padding:12px;">${planSearch ? 'Aucun ouvrier ne correspond à la recherche.' : 'Aucun ouvrier dans le planning.'}</td></tr>`;
 
   const wrap = document.getElementById('plan-table-wrap');
   const scroll = [wrap.scrollLeft, wrap.scrollTop];
-  wrap.innerHTML = `<table class="plan-table ${canEdit() ? '' : 'plan-ro'}"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+  wrap.innerHTML = `<table class="plan-table ${edit && planMode === 'days' ? '' : 'plan-ro'}"><thead>${head}</thead><tbody>${body}</tbody></table>`;
   [wrap.scrollLeft, wrap.scrollTop] = scroll;
 }
 
-window.setPlanBrush = function(code) { planBrush = code; renderPlanning(); };
-window.shiftPlanMonth = function(delta) {
-  const [y, m] = planMonth.split('-').map(Number);
-  planMonth = ymOf(new Date(y, m - 1 + delta, 1));
-  renderPlanning();
+document.addEventListener('focusout', e => {
+  if (planRenderPending && e.target.closest && e.target.closest('#plan-table-wrap')) setTimeout(() => renderPlanning(), 0);
+});
+
+window.setPlanBrush = function(code) { planBrush = code; renderPlanning(true); };
+window.setPlanMode = function(mode) { planMode = mode; renderPlanning(true); };
+window.openPlanMonth = function(month) { planMonth = month; planMode = 'days'; renderPlanning(true); };
+window.shiftPlanMonth = function(delta) { planMonth = planAddMonths(planMonth, delta); renderPlanning(true); };
+
+window.setPlanScope = function(key, field, input) {
+  if (!canEdit()) return;
+  const sc = Object.assign({}, planningScopes[key] || {});
+  sc[field] = input.value || '';
+  const n = field[1];
+  if (sc['s' + n + 'a'] && sc['s' + n + 'b'] && sc['s' + n + 'a'] > sc['s' + n + 'b']) {
+    alert(`Scope ${n} : la date de fin doit être après la date de début.`);
+    input.value = (planningScopes[key] || {})[field] || '';
+    return;
+  }
+  if (PLAN_SCOPE_FIELDS.some(f => sc[f])) planningScopes[key] = sc; else delete planningScopes[key];
+  syncDebounced();
+  renderPlanning(true);
 };
 
-// --- Saisie : clic ou glisser sur les cases (souris et tactile) ---
+// --- Saisie jour par jour : clic ou glisser (souris et tactile) ---
 function planPaintCell(td) {
   if (!td || !td.classList.contains('plan-cell')) return;
   const k = td.dataset.k, d = Number(td.dataset.d);
   if (planGet(k, planMonth, d) === planPaintCode) return;
   planSet(k, planMonth, d, planPaintCode);
-  td.classList.remove('v-1', 'v-h', 'v-q');
-  if (planPaintCode !== '-') td.classList.add('v-' + planPaintCode);
-  td.innerText = PLAN_LABELS[planPaintCode] || '';
+  const auto = planPaintCode === '-' && planInScope(k, planIso(planMonth, d));
+  td.classList.remove('v-1', 'v-h', 'v-q', 'v-z', 'auto');
+  if (planPaintCode !== '-') td.classList.add('v-' + planPaintCode); else if (auto) td.classList.add('auto');
+  td.innerText = planPaintCode !== '-' ? PLAN_LABELS[planPaintCode] : (auto ? '1' : '');
 }
 
 document.addEventListener('pointerdown', e => {
@@ -4366,39 +4543,178 @@ document.addEventListener('pointermove', e => {
 function planStopPaint() {
   if (!window.planPainting) return;
   window.planPainting = false;
-  renderPlanning();   // totaux et dates de fin
+  renderPlanning(true);   // totaux et dates de fin
   syncDebounced();
 }
 document.addEventListener('pointerup', planStopPaint);
 document.addEventListener('pointercancel', planStopPaint);
 
-// --- Export Excel : un onglet, une ligne par ouvrier pour le mois affiché ---
-function exportPlanningExcel() {
-  const nDays = planDaysIn(planMonth);
+// --- Versions (copies figées dans Firebase) ---
+function planVersionPayload() {
+  return {
+    roster: Array.isArray(planningRoster) ? planningRoster : [...planLiveMap().values()].map(planRosterEntry),
+    planning: workerPlanning,
+    scopes: planningScopes
+  };
+}
+
+window.savePlanningVersion = async function() {
+  if (!canEdit()) return;
+  const refs = archiveRefs();
+  if (!refs) { alert("Pas de connexion à Firebase : impossible de sauvegarder une version pour le moment."); return; }
+  const now = new Date();
+  const label = prompt("Nom de la version :", `Planning du ${now.toLocaleDateString('fr-FR')} ${now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`);
+  if (label === null) return;
+  const p = (n) => String(n).padStart(2, '0');
+  const id = `plan_${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}_${p(now.getHours())}${p(now.getMinutes())}${p(now.getSeconds())}`;
+  const data = planVersionPayload();
+  const summary = { label: label.trim() || id, savedAt: now.toISOString(), count: data.roster.length, by: currentRole };
+  try {
+    const batch = db.batch();
+    batch.set(refs.col.doc(id), { type: 'planning', ...summary, ...data });
+    batch.set(refs.index, { planVersions: { [id]: summary } }, { merge: true });
+    await batch.commit();
+    alert(`✅ Version « ${summary.label} » sauvegardée (${summary.count} ouvrier(s)).`);
+  } catch (err) {
+    alert(`❌ Sauvegarde impossible : ${err.message}`);
+  }
+};
+
+function planEnsureVersionsModal() {
+  if (document.getElementById('plan-versions-modal')) return;
+  const div = document.createElement('div');
+  div.id = 'plan-versions-modal';
+  div.className = 'modal-overlay';
+  div.innerHTML = `
+    <div class="modal-box" style="max-width:640px;">
+      <div class="modal-title">🗂️ Versions du planning</div>
+      <p style="font-size:12px; color:#64748b; margin-top:-8px;">Chaque version est une copie figée (ouvriers, Scopes et valeurs). « Restaurer » remplace le planning actuel par la version choisie.</p>
+      <div id="plan-versions-list" style="overflow-y:auto; max-height:55vh; border:1px solid #cbd5e1; border-radius:8px;"></div>
+      <div class="modal-actions"><button class="btn btn-outline" onclick="document.getElementById('plan-versions-modal').style.display='none'">Fermer</button></div>
+    </div>`;
+  document.body.appendChild(div);
+}
+
+window.openPlanningVersions = async function() {
+  planEnsureVersionsModal();
+  document.getElementById('plan-versions-modal').style.display = 'flex';
+  const list = document.getElementById('plan-versions-list');
+  const refs = archiveRefs();
+  if (!refs) { list.innerHTML = `<div style="padding:12px;">Pas de connexion à Firebase.</div>`; return; }
+  list.innerHTML = `<div style="padding:12px;">Chargement…</div>`;
+  try {
+    const doc = await refs.index.get();
+    planVersionsIndex = (doc.exists && doc.data() && doc.data().planVersions) || {};
+  } catch (err) {
+    list.innerHTML = `<div style="padding:12px; color:#dc2626;">Erreur de lecture : ${escapeHtml(err.message)}</div>`;
+    return;
+  }
+  const ids = Object.keys(planVersionsIndex).sort().reverse();
+  if (!ids.length) { list.innerHTML = `<div style="padding:12px;">Aucune version sauvegardée pour le moment.</div>`; return; }
+  list.innerHTML = ids.map(id => {
+    const v = planVersionsIndex[id] || {};
+    const when = v.savedAt ? new Date(v.savedAt).toLocaleString('fr-FR') : id;
+    return `<div style="display:flex; align-items:center; gap:8px; padding:8px 10px; border-bottom:1px solid #e2e8f0;">
+      <div style="flex:1;"><b>${escapeHtml(v.label || id)}</b><div style="font-size:11px; color:#64748b;">${escapeHtml(when)} · ${v.count ?? '?'} ouvrier(s)</div></div>
+      <button class="btn btn-outline" onclick="exportPlanningVersion('${escapeHtml(id)}')">📤 Excel</button>
+      ${canEdit() ? `<button class="btn btn-outline" onclick="restorePlanningVersion('${escapeHtml(id)}')">♻️ Restaurer</button>` : ''}
+      ${currentRole === 'admin' ? `<button class="btn btn-outline" style="color:#dc2626;" onclick="deletePlanningVersion('${escapeHtml(id)}')">🗑️</button>` : ''}
+    </div>`;
+  }).join('');
+};
+
+async function planLoadVersion(id) {
+  const refs = archiveRefs();
+  if (!refs) throw new Error("Pas de connexion à Firebase");
+  const doc = await refs.col.doc(id).get();
+  if (!doc.exists) throw new Error("Version introuvable");
+  return doc.data();
+}
+
+window.restorePlanningVersion = async function(id) {
+  if (!canEdit()) return;
+  const v = planVersionsIndex[id] || {};
+  if (!confirm(`Restaurer la version « ${v.label || id} » ?\n\n⚠️ Le planning actuel (ouvriers, Scopes, valeurs) sera remplacé pour tous les utilisateurs.\nConseil : sauvegardez d'abord une version du planning actuel.`)) return;
+  try {
+    const data = await planLoadVersion(id);
+    planningRoster = Array.isArray(data.roster) ? data.roster : [];
+    workerPlanning = data.planning || {};
+    planningScopes = data.scopes || {};
+    syncToFirebase();
+    document.getElementById('plan-versions-modal').style.display = 'none';
+    renderPlanning(true);
+    alert("✅ Version restaurée. Utilisez « Importer les nouveaux noms » pour ajouter les ouvriers arrivés depuis.");
+  } catch (err) { alert(`❌ Restauration impossible : ${err.message}`); }
+};
+
+window.deletePlanningVersion = async function(id) {
+  if (currentRole !== 'admin') return;
+  const v = planVersionsIndex[id] || {};
+  if (!confirm(`Supprimer définitivement la version « ${v.label || id} » ?`)) return;
+  const refs = archiveRefs();
+  try {
+    const batch = db.batch();
+    batch.delete(refs.col.doc(id));
+    batch.set(refs.index, { planVersions: { [id]: firebase.firestore.FieldValue.delete() } }, { merge: true });
+    await batch.commit();
+    openPlanningVersions();
+  } catch (err) { alert(`❌ Suppression impossible : ${err.message}`); }
+};
+
+// --- Export Excel : Scopes, fin estimée et les 12 mois (part du mois) ---
+function planExcelRows(groups, firstMonth) {
   const rows = [];
-  planGroups().forEach(g => g.workers.forEach(({ w, company }) => {
-    const end = planEndDate(w.id);
+  groups.forEach(g => g.rows.forEach(r => {
+    const sc = planScope(r.id);
+    const end = planEndDate(r.id);
     const row = {
-      "N° TS": g.card.timesheetNo || '',
-      "Nom TS": g.card.timesheetName || '',
-      "Superviseur": g.card.name || '',
-      "ID": w.id, "Nom": w.name, "Entreprise": company,
-      "Fin estimée": end ? end.split('-').reverse().join('/') : ''
+      "Timesheet": g.title, "Superviseur": g.sup, "ID": r.id, "Nom": r.name, "Entreprise": r.company,
+      "Scope 1 début": planDateFR(sc.s1a), "Scope 1 fin": planDateFR(sc.s1b),
+      "Scope 2 début": planDateFR(sc.s2a), "Scope 2 fin": planDateFR(sc.s2b),
+      "Fin estimée": planDateFR(end)
     };
-    for (let d = 1; d <= nDays; d++) {
-      const c = planGet(w.id, planMonth, d);
-      row[String(d)] = PLAN_VALUES[c] || '';
+    let total = 0;
+    for (let i = 0; i < 12; i++) {
+      const mo = planAddMonths(firstMonth, i);
+      const v = Math.round(planMonthShare(r.id, mo) * 100) / 100;
+      row[`${PLAN_MONTHS_SHORT[Number(mo.slice(5)) - 1]} ${mo.slice(0, 4)}`] = v || '';
+      total += v;
     }
-    row["Total mois"] = planMonthTotal(w.id, planMonth);
+    row["Total (mois)"] = Math.round(total * 100) / 100;
     rows.push(row);
   }));
+  return rows;
+}
+
+function planWriteExcel(rows, fileName) {
   if (!rows.length) { alert("Aucun ouvrier à exporter."); return; }
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Planning " + planMonth);
-  XLSX.writeFile(wb, `Planning_Fin_${planMonth}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, ws, "Planning");
+  XLSX.writeFile(wb, fileName);
+}
+
+function exportPlanningExcel() {
+  planWriteExcel(planExcelRows(planGroups(), planMonth), `Planning_Fin_${planMonth}.xlsx`);
 }
 window.exportPlanningExcel = exportPlanningExcel;
+
+// Export d'une version : on l'affiche le temps du calcul, sans rien modifier ni enregistrer
+window.exportPlanningVersion = async function(id) {
+  try {
+    const data = await planLoadVersion(id);
+    const saved = [planningRoster, workerPlanning, planningScopes, planSearch];
+    try {
+      planningRoster = Array.isArray(data.roster) ? data.roster : [];
+      workerPlanning = data.planning || {};
+      planningScopes = data.scopes || {};
+      planSearch = '';
+      planWriteExcel(planExcelRows(planGroups(), planMonth), `Planning_Version_${id.replace('plan_', '')}.xlsx`);
+    } finally {
+      [planningRoster, workerPlanning, planningScopes, planSearch] = saved;
+    }
+  } catch (err) { alert(`❌ Export impossible : ${err.message}`); }
+};
 </script>
 </body>
 </html>
