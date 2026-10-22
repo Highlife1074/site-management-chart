@@ -4232,6 +4232,7 @@ let planVersionsIndex = {};
 let planShowScopes = true; // colonnes Scopes affichées (masquables pour voir plus de jours)
 let planClipboard = null;  // Scopes copiés (📋) prêts à être collés (📥)
 let planLastGroups = [];   // groupes du dernier affichage (pour « Coller à l'équipe »)
+let planLastCols = [];     // colonnes (jours ou mois) du dernier affichage
 
 // --- Noms de Scopes : liste enregistrée dans la base, proposée en liste déroulante ---
 function planCleanName(v) { return String(v || '').trim().replace(/\s+/g, ' '); }
@@ -4606,46 +4607,25 @@ function renderPlanning(force) {
     : cols.map(c => `<th class="${c.month === ymOf(new Date()) ? 'today' : ''}">${PLAN_MONTHS_SHORT[Number(c.month.slice(5)) - 1]}<br>${c.month.slice(0, 4)}</th>`).join('');
   const head = `<tr><th class="plan-name">Ouvrier</th>${scopeHead}${colHead}<th class="plan-total">${planMode === 'days' ? 'Total mois' : 'Total'}</th><th class="plan-endcol">Fin estimée</th></tr>`;
 
-  const cellValue = (row, c) => planMode === 'days' ? planDayValue(row.id, planMonth, c.d) : planMonthShare(row.id, c.month);
   const groups = planGroups();
   planLastGroups = groups;
+  planLastCols = cols;
   let body = '';
   groups.forEach((g, gi) => {
-    const sums = cols.map(c => g.rows.reduce((t, r) => t + cellValue(r, c), 0));
-    body += `<tr class="plan-group">
+    body += `<tr class="plan-group" data-g="${gi}">
       <td class="plan-name" colspan="${nameSpan}">${escapeHtml(g.title)} <span class="plan-daysum">— ${escapeHtml(g.sup)} (${g.rows.length})${g.live ? '' : ' · hors Timesheets actuelles'}</span>${edit && planClipboard ? `<button class="plan-grp-paste" onclick="pastePlanScopesGroup(${gi})">📥 Coller à l'équipe</button>` : ''}</td>
-      ${sums.map(v => `<td class="plan-daysum">${planFmt(v)}</td>`).join('')}
-      <td class="plan-total">${planFmt(sums.reduce((a, b) => a + b, 0))}</td><td></td>
+      ${planGroupTail(g, cols)}
     </tr>`;
     g.rows.forEach(r => {
       const sc = planScope(r.id);
-      const end = planEndDate(r.id);
       const k = escapeHtml(r.key);
       // f = '1a' → champ 's1a' (Scope 1 début), colonne 'sc1a'
       const dateCell = (f) => `<td class="plan-sc sc${f}"><input type="date" value="${escapeHtml(sc['s' + f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${f}', this)"></td>`;
       const nameCell = (f) => `<td class="plan-sc scn sc${f}" title="${escapeHtml(sc['s' + f] || '')}"><input type="text" list="plan-scope-names" maxlength="40" placeholder="${edit ? 'Nom…' : ''}" value="${escapeHtml(sc['s' + f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${f}', this)"></td>`;
-      let cells;
-      if (planMode === 'days') {
-        const endDay = end && end.slice(0, 7) === planMonth ? Number(end.slice(8)) : 0;
-        cells = cols.map(c => {
-          const code = planGet(r.id, planMonth, c.d);
-          const auto = code === '-' && planInScope(r.id, c.iso);
-          const cls = code !== '-' ? 'v-' + code : (auto ? 'auto' : '');
-          return `<td class="plan-cell ${c.dow === 0 ? 'sun' : ''} ${cls} ${c.d === endDay ? 'end' : ''}" data-k="${k}" data-d="${c.d}">${code !== '-' ? PLAN_LABELS[code] : (auto ? '1' : '')}</td>`;
-        }).join('');
-      } else {
-        cells = cols.map(c => {
-          const v = planMonthShare(r.id, c.month);
-          return `<td class="plan-mcell ${v >= 0.999 ? 'full' : (v > 0 ? 'part' : '')}" onclick="openPlanMonth('${c.month}')">${planFmt(v)}</td>`;
-        }).join('');
-      }
-      const total = planMode === 'days' ? planMonthTotal(r.id, planMonth) : cols.reduce((t, c) => t + planMonthShare(r.id, c.month), 0);
-      body += `<tr>
+      body += `<tr data-k="${k}">
         <td class="plan-name" title="${escapeHtml(r.name + ' — ' + r.id + ' — ' + r.company)}">${edit && Array.isArray(planningRoster) ? `<button class="plan-del" title="Retirer du planning" onclick="removePlanningWorker('${k}')">✕</button>` : ''}${edit ? `${planClipboard ? `<button class="plan-act" title="Coller les Scopes copiés" onclick="pastePlanScopes('${k}')">📥</button>` : ''}<button class="plan-act" title="Copier les Scopes de cet ouvrier" onclick="copyPlanScopes('${k}')">📋</button>` : ''}${escapeHtml(r.name)} <span class="plan-sub">${escapeHtml(r.id)} · ${escapeHtml(r.company)}</span>${r.onTs ? '' : '<span class="plan-off">hors TS</span>'}</td>
         ${nameCell('1n')}${dateCell('1a')}${dateCell('1b')}${nameCell('2n')}${dateCell('2a')}${dateCell('2b')}
-        ${cells}
-        <td class="plan-total">${planFmt(total)}</td>
-        <td class="plan-endcol ${end && end < todayStr ? 'past' : ''}">${end ? planDateFR(end) : '—'}</td>
+        ${planRowTail(r, cols)}
       </tr>`;
     });
   });
@@ -4655,6 +4635,58 @@ function renderPlanning(force) {
   const scroll = [wrap.scrollLeft, wrap.scrollTop];
   wrap.innerHTML = `${datalist}<table class="plan-table ${edit && planMode === 'days' ? '' : 'plan-ro'} ${planShowScopes ? '' : 'plan-noscopes'}"><thead>${head}</thead><tbody>${body}</tbody></table>`;
   [wrap.scrollLeft, wrap.scrollTop] = scroll;
+}
+
+// Cases calculées d'une ligne (jours ou mois, total, fin estimée) : après les 7 cases nom + Scopes
+function planRowTail(r, cols) {
+  const k = escapeHtml(r.key);
+  const end = planEndDate(r.id);
+  let cells;
+  if (planMode === 'days') {
+    const endDay = end && end.slice(0, 7) === planMonth ? Number(end.slice(8)) : 0;
+    cells = cols.map(c => {
+      const code = planGet(r.id, planMonth, c.d);
+      const auto = code === '-' && planInScope(r.id, c.iso);
+      const cls = code !== '-' ? 'v-' + code : (auto ? 'auto' : '');
+      return `<td class="plan-cell ${c.dow === 0 ? 'sun' : ''} ${cls} ${c.d === endDay ? 'end' : ''}" data-k="${k}" data-d="${c.d}">${code !== '-' ? PLAN_LABELS[code] : (auto ? '1' : '')}</td>`;
+    }).join('');
+  } else {
+    cells = cols.map(c => {
+      const v = planMonthShare(r.id, c.month);
+      return `<td class="plan-mcell ${v >= 0.999 ? 'full' : (v > 0 ? 'part' : '')}" onclick="openPlanMonth('${c.month}')">${planFmt(v)}</td>`;
+    }).join('');
+  }
+  const total = planMode === 'days' ? planMonthTotal(r.id, planMonth) : cols.reduce((t, c) => t + planMonthShare(r.id, c.month), 0);
+  return `${cells}<td class="plan-total">${planFmt(total)}</td>
+    <td class="plan-endcol ${end && end < planTodayIso() ? 'past' : ''}">${end ? planDateFR(end) : '—'}</td>`;
+}
+
+// Totaux d'une Timesheet (par jour ou par mois) : après la case titre
+function planGroupTail(g, cols) {
+  const val = (r, c) => planMode === 'days' ? planDayValue(r.id, planMonth, c.d) : planMonthShare(r.id, c.month);
+  const sums = cols.map(c => g.rows.reduce((t, r) => t + val(r, c), 0));
+  return `${sums.map(v => `<td class="plan-daysum">${planFmt(v)}</td>`).join('')}
+    <td class="plan-total">${planFmt(sums.reduce((a, b) => a + b, 0))}</td><td></td>`;
+}
+
+// Mise à jour immédiate d'un ouvrier (et des totaux de son équipe) sans redessiner le tableau :
+// les cases de saisie restent intactes, la frappe d'une date n'est pas coupée
+function planRefreshRow(key) {
+  const wrap = document.getElementById('plan-table-wrap');
+  if (!wrap) return;
+  const gi = planLastGroups.findIndex(g => g.rows.some(r => r.key === key));
+  if (gi < 0) return;
+  const g = planLastGroups[gi];
+  const tr = wrap.querySelector(`tr[data-k="${CSS.escape(key)}"]`);
+  if (tr) {
+    while (tr.cells.length > 7) tr.deleteCell(7);
+    tr.insertAdjacentHTML('beforeend', planRowTail(g.rows.find(r => r.key === key), planLastCols));
+  }
+  const gtr = wrap.querySelector(`tr[data-g="${gi}"]`);
+  if (gtr) {
+    while (gtr.cells.length > 1) gtr.deleteCell(1);
+    gtr.insertAdjacentHTML('beforeend', planGroupTail(g, planLastCols));
+  }
 }
 
 document.addEventListener('focusout', e => {
@@ -4688,8 +4720,10 @@ window.setPlanScope = function(key, field, input) {
   planStoreScopes(key, sc);
   if (!isDate) planAddScopeName(val); // un nouveau nom rejoint la liste des Scopes
   syncDebounced();
-  // Le tableau est redessiné à la sortie de la case (sinon la saisie de la date serait coupée)
-  if (document.activeElement === input) planRenderPending = true; else renderPlanning(true);
+  // Grille, total et fin estimée de l'ouvrier mis à jour tout de suite, sans toucher aux cases de saisie
+  planRefreshRow(key);
+  // Un nouveau nom rejoint la liste déroulante : mise à jour à la sortie de la case
+  if (!isDate) { if (document.activeElement === input) planRenderPending = true; else renderPlanning(true); }
 };
 
 // Sortie d'une case date : date incomplète ou fin avant début → on revient à la valeur enregistrée
