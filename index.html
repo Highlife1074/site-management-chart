@@ -232,6 +232,7 @@
   .plan-act:hover { opacity: 1; }
   .plan-grp-paste { margin-left: 8px; border: 0; border-radius: 4px; background: #2563eb; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; cursor: pointer; }
   .plan-clip { font-size: 11px; background: #eff6ff; border: 1px solid #93c5fd; color: #1e3a8a; border-radius: 6px; padding: 3px 8px; }
+  .plan-copied { outline: 2px solid #2563eb; outline-offset: -2px; }
   .plan-clip button { border: 0; background: transparent; cursor: pointer; color: #1e3a8a; font-weight: 700; }
   .plan-toggle .btn.active { background: #0f172a; color: #fff; }
 
@@ -714,12 +715,7 @@
 
     <div class="role-container">
       <span class="role-label">PROFIL :</span>
-      <select id="role-selector" class="role-select" onchange="changeRole(this.value)">
-        <option value="viewer">👁️ Lecteur</option>
-        <option value="timekeeper">⏱️ Timekeeper</option>
-        <option value="cfo">💰 CFO</option>
-        <option value="admin">⚙️ Admin</option>
-      </select>
+      <select id="role-selector" class="role-select" onchange="changeRole(this.value)"></select>
     </div>
 
     <button id="btn-toggle-view" class="btn btn-outline" onclick="setView('orgchart')">🗺️ Vue Équipes</button>
@@ -742,6 +738,7 @@
       <span style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase;">Configuration</span>
       <button class="btn btn-outline" id="btn-menu-companies" style="width:100%; justify-content:left;" onclick="openCompaniesModal()">🏢 Gérer Entreprises</button>
       <button class="btn btn-outline" style="width:100%; justify-content:left; margin-top:4px;" onclick="openSupervisorsModal()">🧑‍💼 Gérer Superviseurs</button>
+      <button class="btn btn-outline" id="btn-menu-profiles" style="width:100%; justify-content:left; margin-top:4px;" onclick="openProfilesModal()">👤 Profils & mots de passe</button>
       <hr style="border:0; border-top:1px solid #e2e8f0; margin:4px 0;">
       <span style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase;">Données</span>
       <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display:none" onchange="importExcelFile(event)">
@@ -857,7 +854,28 @@ const FIRESTORE_ARCHIVE_COLLECTION = 'site_charts_archive';
 const FIRESTORE_ARCHIVE_INDEX = 'archive_index'; // document dans la collection site_charts
 
 // --- MOTS DE PASSE PROFILS (⚠️ visibles côté client : sécurité à revoir, cf. backlog) ---
+// Mots de passe par défaut ; l'Admin peut les changer (fenêtre « 👤 Profils & mots de passe »)
 const PASSWORDS = { viewer: '', timekeeper: 'timekeeper', cfo: 'cfo', admin: 'admin' };
+const FIRESTORE_PROFILES_DOC = 'profiles'; // document dans la collection site_charts
+const BASE_ROLES = { viewer: '👁️ Lecteur', timekeeper: '⏱️ Timekeeper', cfo: '💰 CFO', admin: '⚙️ Admin' };
+// Profils enregistrés : { passwords: { timekeeper, cfo, admin }, custom: [{ id, name, base, planning, password }] }
+//   base = droits sur les Timesheets (identiques à un profil de base), planning = peut modifier le Planning fin
+let appProfiles = { passwords: {}, custom: [] };
+try {
+  const p = JSON.parse(localStorage.getItem('app_profiles') || 'null');
+  if (p && typeof p === 'object') appProfiles = { passwords: p.passwords || {}, custom: Array.isArray(p.custom) ? p.custom : [] };
+} catch (e) {}
+function profilePassword(id) {
+  const c = appProfiles.custom.find(x => x.id === id);
+  if (c) return c.password || '';
+  return appProfiles.passwords[id] ?? PASSWORDS[id] ?? null;
+}
+// Profil choisi → droits sur les Timesheets (rôle de base)
+function profileBaseRole(id) {
+  if (BASE_ROLES[id]) return id;
+  const c = appProfiles.custom.find(x => x.id === id);
+  return c && BASE_ROLES[c.base] ? c.base : 'viewer';
+}
 
 // --- TÂCHES COMET PAR DÉFAUT (liste fournie par Philippe ; modifiable par le CFO et l'Admin) ---
 const DEFAULT_COMET_TASKS = [
@@ -1179,7 +1197,9 @@ window.findWorkersByName = function(searchName, excludeWorker = null) {
    ========================================================== */
 
 // --- ÉTAT INTERFACE ---
-let currentRole = localStorage.getItem('app_role') || 'viewer';
+let currentProfile = localStorage.getItem('app_profile') || localStorage.getItem('app_role') || 'viewer';
+if (!BASE_ROLES[currentProfile] && !appProfiles.custom.some(c => c.id === currentProfile)) currentProfile = 'viewer';
+let currentRole = profileBaseRole(currentProfile); // droits sur les Timesheets
 let currentView = 'dashboard';
 let sortableInstances = [];
 let workerSortables = [];
@@ -1244,20 +1264,46 @@ siteSupervisors.sort((a, b) => String(a.name || '').localeCompare(String(b.name 
    4. PROFILS & DROITS
    ========================================================== */
 
-function changeRole(newRole) {
-  if (newRole !== 'viewer') {
-    const pwd = prompt(`Mot de passe pour le profil ${newRole.toUpperCase()} :`);
-    if (pwd !== PASSWORDS[newRole]) {
-      alert("Mot de passe incorrect.");
-      document.getElementById('role-selector').value = currentRole;
-      return;
-    }
-  }
-  currentRole = newRole;
+// Le profil actif peut-il modifier le Planning fin ?
+function canEditPlanning() {
+  const c = appProfiles.custom.find(x => x.id === currentProfile);
+  return c ? !!c.planning : canEdit();
+}
+
+function profileLabel(id) {
+  const c = appProfiles.custom.find(x => x.id === id);
+  return c ? '👤 ' + c.name : (BASE_ROLES[id] || id);
+}
+
+// Liste déroulante PROFIL : profils de base + profils créés par l'Admin
+function renderRoleSelector() {
+  const sel = document.getElementById('role-selector');
+  if (!sel) return;
+  sel.innerHTML = Object.keys(BASE_ROLES).concat(appProfiles.custom.map(c => c.id))
+    .map(id => `<option value="${escapeHtml(id)}">${escapeHtml(profileLabel(id))}</option>`).join('');
+  sel.value = currentProfile;
+}
+
+function setCurrentProfile(id) {
+  currentProfile = id;
+  currentRole = profileBaseRole(id);
+  localStorage.setItem('app_profile', currentProfile);
   localStorage.setItem('app_role', currentRole);
-  document.getElementById('role-selector').value = currentRole;
+  renderRoleSelector();
   applyRolePermissions();
-  initWorkerSortables(); 
+  initWorkerSortables();
+  if (currentView === 'planning') renderPlanning(true);
+}
+
+function changeRole(newProfile) {
+  const pwd = profilePassword(newProfile);
+  if (pwd === null) { renderRoleSelector(); return; }
+  if (pwd !== '' && prompt(`Mot de passe pour le profil ${profileLabel(newProfile)} :`) !== pwd) {
+    alert("Mot de passe incorrect.");
+    renderRoleSelector();
+    return;
+  }
+  setCurrentProfile(newProfile);
 }
 
 function applyRolePermissions() {
@@ -1280,6 +1326,7 @@ function applyRolePermissions() {
   // Menu ⚙️ : entreprises et restauration réservées à l'Admin
   show('btn-menu-companies', isAdmin);
   show('btn-menu-restore', isAdmin);
+  show('btn-menu-profiles', isAdmin);
   // Liste des tâches COMET : CFO et Admin
   show('btn-comet', isCFO || isAdmin);
   // Clôture de semaine : Timekeeper et Admin
@@ -1352,6 +1399,7 @@ function startFirebase() {
     db = firebase.firestore();
     db.settings({ experimentalAutoDetectLongPolling: true });
     docRef = db.collection(FIRESTORE_COLLECTION).doc(FIRESTORE_DOC);
+    startProfilesSync();
 
     docRef.onSnapshot((doc) => {
       if (isSaving || _syncTimer) return; // on ne remplace pas une saisie en cours
@@ -1419,7 +1467,7 @@ function startFirebase() {
 
 // --- 3. FONCTIONS CLÉS & SYNCHRONISATION ---
 function syncToFirebase() {
-  if (currentRole === 'viewer') return; // Le CFO doit pouvoir enregistrer le Payroll
+  if (currentRole === 'viewer' && !canEditPlanning()) return; // Le CFO doit pouvoir enregistrer le Payroll
   if (_syncTimer) { clearTimeout(_syncTimer); _syncTimer = null; }
   try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, cometTasks, planning: workerPlanning, planningScopes, planningRoster, planningScopeNames})); } catch(e){}
   if (!docRef) return;
@@ -1762,7 +1810,7 @@ function toggleDrawer() { document.getElementById('workers-drawer').classList.to
 
 // --- 1. INITIALISATION DE L'INTERFACE ---
 function initLayout() {
-  document.getElementById('role-selector').value = currentRole;
+  renderRoleSelector();
 
   const filterBar = document.getElementById('filter-bar');
   filterBar.innerHTML = `
@@ -4254,7 +4302,7 @@ function planTsScopeName(r, live) {
 // Scope 1 rempli automatiquement avec le nom de la Timesheet (si jamais renseigné ;
 // un nom effacé volontairement reste vide)
 function planAutoScopeNames() {
-  if (!canEdit() || !Array.isArray(planningRoster)) return false;
+  if (!canEditPlanning() || !Array.isArray(planningRoster)) return false;
   const live = planLiveMap();
   let changed = false;
   planningRoster.forEach(r => {
@@ -4277,30 +4325,76 @@ function planStoreScopes(key, sc) {
   if (PLAN_SCOPE_FIELDS.some(f => sc[f]) || sc.s1n === '') planningScopes[key] = sc; else delete planningScopes[key];
 }
 
-// --- Copier / coller les Scopes (noms et dates) ---
+// --- Copier / coller le planning d'un ouvrier (Scopes : noms et dates, + jours saisis à la main) ---
 window.copyPlanScopes = function(key) {
   const sc = planningScopes[key] || {};
-  planClipboard = {};
+  planClipboard = { days: JSON.parse(JSON.stringify(workerPlanning[key] || {})) };
   PLAN_SCOPE_FIELDS.forEach(f => { planClipboard[f] = sc[f] || ''; });
   renderPlanning(true);
 };
 function planPasteInto(keys) {
-  keys.forEach(k => planStoreScopes(k, Object.assign({}, planClipboard)));
+  keys.forEach(k => {
+    const sc = {};
+    PLAN_SCOPE_FIELDS.forEach(f => { sc[f] = planClipboard[f]; });
+    planStoreScopes(k, sc);
+    if (Object.keys(planClipboard.days).length) workerPlanning[k] = JSON.parse(JSON.stringify(planClipboard.days));
+    else delete workerPlanning[k];
+  });
   syncDebounced();
   renderPlanning(true);
 }
-window.pastePlanScopes = function(key) { if (canEdit() && planClipboard) planPasteInto([key]); };
+window.pastePlanScopes = function(key) { if (canEditPlanning() && planClipboard) planPasteInto([key]); };
 window.pastePlanScopesGroup = function(i) {
   const g = planLastGroups[i];
-  if (!canEdit() || !planClipboard || !g) return;
-  if (!confirm(`Coller ces Scopes sur les ${g.rows.length} ouvrier(s) de « ${g.title} » ?\n\nLeurs Scopes actuels (noms et dates) seront remplacés.`)) return;
+  if (!canEditPlanning() || !planClipboard || !g) return;
+  if (!confirm(`Coller ces Scopes sur les ${g.rows.length} ouvrier(s) de « ${g.title} » ?\n\nLeurs Scopes actuels (noms et dates) et leurs jours saisis seront remplacés.`)) return;
   planPasteInto(g.rows.map(r => r.key));
 };
 window.clearPlanClipboard = function() { planClipboard = null; renderPlanning(true); };
 function planClipText(c) {
   const one = (n, a, b) => (n || a || b) ? `${n || 'Sans nom'}${a || b ? ` (${planDateFR(a) || '…'} → ${planDateFR(b) || '…'})` : ''}` : '';
-  return [one(c.s1n, c.s1a, c.s1b), one(c.s2n, c.s2a, c.s2b)].filter(Boolean).join(' · ') || 'Scopes vides';
+  const nDays = Object.values(c.days || {}).reduce((t, str) => t + str.replace(/-/g, '').length, 0);
+  return [one(c.s1n, c.s1a, c.s1b), one(c.s2n, c.s2a, c.s2b)].filter(Boolean).join(' · ') + (nDays ? ` + ${nDays} jour(s) saisi(s)` : '') || 'Scopes vides';
 }
+
+// --- Copier / coller une date au clavier (Ctrl+C / Ctrl+V dans une case date de Scope) ---
+let planDateClip = ''; // dernière date copiée (AAAA-MM-JJ)
+function planParseDate(txt) {
+  txt = String(txt || '').trim();
+  let m = txt.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  m = txt.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2}|\d{4})$/);
+  if (m) return `${m[3].length === 2 ? '20' + m[3] : m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  return '';
+}
+function planPasteDate(input, iso) {
+  if (!iso || input.disabled || !canEditPlanning()) return;
+  input.value = iso;
+  if (input.value !== iso) return; // date impossible
+  input.dispatchEvent(new Event('change'));
+}
+document.addEventListener('keydown', e => {
+  const input = e.target;
+  if (!input || input.type !== 'date' || !input.closest || !input.closest('#plan-table-wrap')) return;
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+  const key = e.key.toLowerCase();
+  if (key === 'c' || key === 'x') {
+    if (!input.value) return;
+    e.preventDefault();
+    planDateClip = input.value;
+    try { navigator.clipboard.writeText(planDateFR(input.value)); } catch (err) {}
+    const td = input.closest('td');
+    td.classList.add('plan-copied');
+    setTimeout(() => td.classList.remove('plan-copied'), 600);
+  } else if (key === 'v') {
+    e.preventDefault();
+    // Presse-papiers du système (ex. date copiée depuis Excel), sinon dernière date copiée ici
+    const fallback = () => planPasteDate(input, planDateClip);
+    try {
+      navigator.clipboard.readText().then(t => { const iso = planParseDate(t); iso ? planPasteDate(input, iso) : fallback(); }, fallback);
+    } catch (err) { fallback(); }
+  }
+});
 
 // --- Gestion de la liste des noms de Scopes ---
 function planScopeUsage(name) {
@@ -4326,7 +4420,7 @@ window.openPlanScopeNames = function() {
   renderPlanScopeNames();
 };
 function renderPlanScopeNames() {
-  const edit = canEdit();
+  const edit = canEditPlanning();
   document.getElementById('plan-names-add').innerHTML = edit
     ? `<input type="text" id="plan-name-new" class="modal-select" style="margin:0; flex:1;" placeholder="Nouveau nom de Scope..." onkeydown="if(event.key==='Enter') addPlanScopeName()"><button class="btn btn-black" onclick="addPlanScopeName()">+ Ajouter</button>`
     : '';
@@ -4340,7 +4434,7 @@ function renderPlanScopeNames() {
 }
 window.addPlanScopeName = function() {
   const inp = document.getElementById('plan-name-new');
-  if (!canEdit() || !inp) return;
+  if (!canEditPlanning() || !inp) return;
   if (!planAddScopeName(inp.value)) { if (planCleanName(inp.value)) alert("Ce nom est déjà dans la liste."); return; }
   syncToFirebase();
   renderPlanScopeNames();
@@ -4348,7 +4442,7 @@ window.addPlanScopeName = function() {
 };
 window.renamePlanScopeName = function(i) {
   const old = planningScopeNames[i];
-  if (!canEdit() || old === undefined) return;
+  if (!canEditPlanning() || old === undefined) return;
   const nv = planCleanName(prompt(`Nouveau nom pour « ${old} » (changé pour tous les ouvriers) :`, old));
   if (!nv || nv === old) return;
   const u = old.toUpperCase();
@@ -4364,7 +4458,7 @@ window.renamePlanScopeName = function(i) {
 };
 window.removePlanScopeName = function(i) {
   const n = planningScopeNames[i];
-  if (!canEdit() || n === undefined || !confirm(`Retirer « ${n} » de la liste ?\n\nLes ouvriers qui ont ce Scope le gardent.`)) return;
+  if (!canEditPlanning() || n === undefined || !confirm(`Retirer « ${n} » de la liste ?\n\nLes ouvriers qui ont ce Scope le gardent.`)) return;
   planningScopeNames.splice(i, 1);
   syncToFirebase();
   renderPlanScopeNames();
@@ -4465,7 +4559,7 @@ function planRosterEntry(live) {
 // Liste figée créée automatiquement la première fois (une fois les données Firebase reçues)
 function planEnsureRoster() {
   if (Array.isArray(planningRoster)) return;
-  if (!canEdit() || !(window._planDataReady || !docRef)) return;
+  if (!canEditPlanning() || !(window._planDataReady || !docRef)) return;
   planningRoster = [...planLiveMap().values()].map(planRosterEntry);
   syncToFirebase();
 }
@@ -4476,7 +4570,7 @@ function planNewNames() {
 }
 
 window.importPlanningNames = function() {
-  if (!canEdit()) return;
+  if (!canEditPlanning()) return;
   planEnsureRoster();
   if (!Array.isArray(planningRoster)) return;
   const live = planLiveMap();
@@ -4492,7 +4586,7 @@ window.importPlanningNames = function() {
 };
 
 window.removePlanningWorker = function(key) {
-  if (!canEdit() || !Array.isArray(planningRoster)) return;
+  if (!canEditPlanning() || !Array.isArray(planningRoster)) return;
   const r = planningRoster.find(x => planKey(x.id) === key);
   if (!r || !confirm(`Retirer ${r.name} (${r.id}) du planning ?\n\nSes dates et valeurs sont conservées : il reviendra avec « Importer les nouveaux noms » s'il est sur une Timesheet.`)) return;
   planningRoster = planningRoster.filter(x => planKey(x.id) !== key);
@@ -4562,14 +4656,14 @@ function renderPlanning(force) {
   }
 
   const [y, m] = planMonth.split('-').map(Number);
-  const edit = canEdit();
+  const edit = canEditPlanning();
   const lastMonth = planAddMonths(planMonth, 11);
   document.getElementById('plan-month-label').innerText = planMode === 'days'
     ? `${PLAN_MONTHS[m - 1]} ${y}`
     : `${PLAN_MONTHS_SHORT[m - 1]} ${y} → ${PLAN_MONTHS_SHORT[Number(lastMonth.slice(5)) - 1]} ${lastMonth.slice(0, 4)}`;
   document.getElementById('plan-scopes-btn').innerText = planShowScopes ? '◧ Masquer Scopes' : '◨ Afficher Scopes';
   document.getElementById('plan-clip').innerHTML = planClipboard && edit
-    ? `<span class="plan-clip">📋 Scopes copiés : <b>${escapeHtml(planClipText(planClipboard))}</b> — cliquez 📥 sur un ouvrier ou « Coller à l'équipe » <button title="Vider" onclick="clearPlanClipboard()">✕</button></span>`
+    ? `<span class="plan-clip">📋 Planning copié : <b>${escapeHtml(planClipText(planClipboard))}</b> — cliquez 📥 sur un ouvrier ou « Coller à l'équipe » <button title="Vider" onclick="clearPlanClipboard()">✕</button></span>`
     : '';
   document.getElementById('plan-mode').innerHTML =
     `<button class="btn btn-outline ${planMode === 'days' ? 'active' : ''}" onclick="setPlanMode('days')">Jours</button> ` +
@@ -4584,9 +4678,9 @@ function renderPlanning(force) {
   imp.style.display = edit ? '' : 'none';
   document.getElementById('plan-save-btn').style.display = edit ? '' : 'none';
   document.getElementById('plan-help').innerHTML = !edit
-    ? `👁️ Consultation seule : seuls les profils Timekeeper et Admin peuvent modifier le planning.`
+    ? `👁️ Consultation seule : votre profil ne permet pas de modifier le planning (voir l'Admin : ⚙️ → 👤 Profils & mots de passe).`
     : planMode === 'days'
-      ? `Entre les dates de début et de fin d'un <b>Scope</b>, chaque jour vaut 1 (vert clair). Pour corriger un jour, choisissez une valeur puis cliquez ou glissez (0 = absent) ; « Effacer » revient au Scope. <b>Fin estimée</b> = fin de Scope ou dernier jour saisi, le plus tardif (trait rouge).`
+      ? `Entre les dates de début et de fin d'un <b>Scope</b>, chaque jour vaut 1 (vert clair). Pour corriger un jour, choisissez une valeur puis cliquez ou glissez (0 = absent) ; « Effacer » revient au Scope. Une date se copie-colle d'un ouvrier à l'autre avec <b>Ctrl+C / Ctrl+V</b> ; 📋 / 📥 copie tout le planning d'un ouvrier. <b>Fin estimée</b> = fin de Scope ou dernier jour saisi, le plus tardif (trait rouge).`
       : `Chaque case = part du mois travaillée (ex. fin le 15/09 → 0.5 en septembre). Cliquez sur un mois pour le détail jour par jour.`;
 
   const todayStr = planTodayIso();
@@ -4623,7 +4717,7 @@ function renderPlanning(force) {
       const dateCell = (f) => `<td class="plan-sc sc${f}"><input type="date" value="${escapeHtml(sc['s' + f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${f}', this)"></td>`;
       const nameCell = (f) => `<td class="plan-sc scn sc${f}" title="${escapeHtml(sc['s' + f] || '')}"><input type="text" list="plan-scope-names" maxlength="40" placeholder="${edit ? 'Nom…' : ''}" value="${escapeHtml(sc['s' + f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${f}', this)"></td>`;
       body += `<tr data-k="${k}">
-        <td class="plan-name" title="${escapeHtml(r.name + ' — ' + r.id + ' — ' + r.company)}">${edit && Array.isArray(planningRoster) ? `<button class="plan-del" title="Retirer du planning" onclick="removePlanningWorker('${k}')">✕</button>` : ''}${edit ? `${planClipboard ? `<button class="plan-act" title="Coller les Scopes copiés" onclick="pastePlanScopes('${k}')">📥</button>` : ''}<button class="plan-act" title="Copier les Scopes de cet ouvrier" onclick="copyPlanScopes('${k}')">📋</button>` : ''}${escapeHtml(r.name)} <span class="plan-sub">${escapeHtml(r.id)} · ${escapeHtml(r.company)}</span>${r.onTs ? '' : '<span class="plan-off">hors TS</span>'}</td>
+        <td class="plan-name" title="${escapeHtml(r.name + ' — ' + r.id + ' — ' + r.company)}">${edit && Array.isArray(planningRoster) ? `<button class="plan-del" title="Retirer du planning" onclick="removePlanningWorker('${k}')">✕</button>` : ''}${edit ? `${planClipboard ? `<button class="plan-act" title="Coller le planning copié (Scopes + jours saisis)" onclick="pastePlanScopes('${k}')">📥</button>` : ''}<button class="plan-act" title="Copier le planning de cet ouvrier (Scopes + jours saisis)" onclick="copyPlanScopes('${k}')">📋</button>` : ''}${escapeHtml(r.name)} <span class="plan-sub">${escapeHtml(r.id)} · ${escapeHtml(r.company)}</span>${r.onTs ? '' : '<span class="plan-off">hors TS</span>'}</td>
         ${nameCell('1n')}${dateCell('1a')}${dateCell('1b')}${nameCell('2n')}${dateCell('2a')}${dateCell('2b')}
         ${planRowTail(r, cols)}
       </tr>`;
@@ -4699,7 +4793,7 @@ window.openPlanMonth = function(month) { planMonth = month; planMode = 'days'; r
 window.shiftPlanMonth = function(delta) { planMonth = planAddMonths(planMonth, delta); renderPlanning(true); };
 
 window.setPlanScope = function(key, field, input) {
-  if (!canEdit()) return;
+  if (!canEditPlanning()) return;
   const isDate = !field.endsWith('n');
   const val = isDate ? (input.value || '') : String(input.value || '').trim().replace(/\s+/g, ' ');
   // Pendant la frappe de l'année, le navigateur envoie des dates partielles (0002, 0020, 0202…) :
@@ -4756,7 +4850,7 @@ function planPaintCell(td) {
 
 document.addEventListener('pointerdown', e => {
   const td = e.target.closest && e.target.closest('#planning-view .plan-cell');
-  if (!td || !canEdit()) return;
+  if (!td || !canEditPlanning()) return;
   e.preventDefault();
   // Recliquer une case qui a déjà la valeur choisie l'efface (et le glisser efface aussi)
   planPaintCode = planGet(td.dataset.k, planMonth, Number(td.dataset.d)) === planBrush ? '-' : planBrush;
@@ -4789,7 +4883,7 @@ function planVersionPayload() {
 }
 
 window.savePlanningVersion = async function() {
-  if (!canEdit()) return;
+  if (!canEditPlanning()) return;
   const refs = archiveRefs();
   if (!refs) { alert("Pas de connexion à Firebase : impossible de sauvegarder une version pour le moment."); return; }
   const now = new Date();
@@ -4847,7 +4941,7 @@ window.openPlanningVersions = async function() {
     return `<div style="display:flex; align-items:center; gap:8px; padding:8px 10px; border-bottom:1px solid #e2e8f0;">
       <div style="flex:1;"><b>${escapeHtml(v.label || id)}</b><div style="font-size:11px; color:#64748b;">${escapeHtml(when)} · ${v.count ?? '?'} ouvrier(s)</div></div>
       <button class="btn btn-outline" onclick="exportPlanningVersion('${escapeHtml(id)}')">📤 Excel</button>
-      ${canEdit() ? `<button class="btn btn-outline" onclick="restorePlanningVersion('${escapeHtml(id)}')">♻️ Restaurer</button>` : ''}
+      ${canEditPlanning() ? `<button class="btn btn-outline" onclick="restorePlanningVersion('${escapeHtml(id)}')">♻️ Restaurer</button>` : ''}
       ${currentRole === 'admin' ? `<button class="btn btn-outline" style="color:#dc2626;" onclick="deletePlanningVersion('${escapeHtml(id)}')">🗑️</button>` : ''}
     </div>`;
   }).join('');
@@ -4862,7 +4956,7 @@ async function planLoadVersion(id) {
 }
 
 window.restorePlanningVersion = async function(id) {
-  if (!canEdit()) return;
+  if (!canEditPlanning()) return;
   const v = planVersionsIndex[id] || {};
   if (!confirm(`Restaurer la version « ${v.label || id} » ?\n\n⚠️ Le planning actuel (ouvriers, Scopes, valeurs) sera remplacé pour tous les utilisateurs.\nConseil : sauvegardez d'abord une version du planning actuel.`)) return;
   try {
@@ -4944,6 +5038,175 @@ window.exportPlanningVersion = async function(id) {
       [planningRoster, workerPlanning, planningScopes, planSearch] = saved;
     }
   } catch (err) { alert(`❌ Export impossible : ${err.message}`); }
+};
+</script>
+
+<script>
+/* ===== profiles.js ===== */
+/* ==========================================================
+   profiles.js — PROFILS & MOTS DE PASSE (Admin uniquement)
+   - Mots de passe des profils de base (Timekeeper, CFO, Admin) modifiables
+   - Profils créés par l'Admin : nom, mot de passe, droits sur les Timesheets
+     (identiques à un profil de base) et droit de modifier le Planning fin
+   - Enregistrés dans Firebase (document site_charts/profiles) + copie locale
+   ========================================================== */
+
+let profilesRef = null;
+
+function profilesSaveLocal() {
+  try { localStorage.setItem('app_profiles', JSON.stringify(appProfiles)); } catch (e) {}
+}
+
+// Profil actif supprimé ou mot de passe changé ailleurs : il reste actif, sauf s'il n'existe plus
+function profilesApply() {
+  profilesSaveLocal();
+  if (!BASE_ROLES[currentProfile] && !appProfiles.custom.some(c => c.id === currentProfile)) {
+    setCurrentProfile('viewer');
+    return;
+  }
+  currentRole = profileBaseRole(currentProfile); // droits d'un profil modifiés par l'Admin
+  renderRoleSelector();
+  applyRolePermissions();
+  if (currentView === 'planning') renderPlanning(true);
+  if (document.getElementById('profiles-modal')?.style.display === 'flex') renderProfilesModal();
+}
+
+function startProfilesSync() {
+  profilesRef = db.collection(FIRESTORE_COLLECTION).doc(FIRESTORE_PROFILES_DOC);
+  profilesRef.onSnapshot(doc => {
+    const d = doc && doc.exists ? doc.data() : {};
+    appProfiles = { passwords: d.passwords || {}, custom: Array.isArray(d.custom) ? d.custom : [] };
+    profilesApply();
+  }, () => {});
+}
+
+function saveProfiles() {
+  profilesApply();
+  if (!profilesRef) { alert("Hors connexion : les profils sont enregistrés sur cet appareil seulement."); return; }
+  profilesRef.set({ passwords: appProfiles.passwords, custom: appProfiles.custom, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+    .catch(err => alert("Enregistrement des profils impossible : " + err.message));
+}
+
+window.openProfilesModal = function() {
+  if (currentRole !== 'admin') return;
+  if (!document.getElementById('profiles-modal')) {
+    const div = document.createElement('div');
+    div.id = 'profiles-modal';
+    div.className = 'modal-overlay';
+    div.innerHTML = `
+      <div class="modal-box" style="max-width:720px;">
+        <div class="modal-title">👤 Profils & mots de passe</div>
+        <p style="font-size:12px; color:#64748b; margin-top:-8px;">Créez un profil en choisissant ses droits, ou changez le mot de passe d'un profil existant. Les profils apparaissent dans la liste « PROFIL » en haut de l'écran.</p>
+        <div id="profiles-body" style="overflow-y:auto; max-height:60vh;"></div>
+        <div class="modal-actions" style="margin-top:16px;">
+          <button class="btn btn-outline" onclick="document.getElementById('profiles-modal').style.display='none'">Fermer</button>
+        </div>
+      </div>`;
+    document.body.appendChild(div);
+  }
+  renderProfilesModal();
+  document.getElementById('profiles-modal').style.display = 'flex';
+};
+
+function renderProfilesModal() {
+  const baseOpts = (sel) => Object.keys(BASE_ROLES).map(r => `<option value="${r}" ${r === sel ? 'selected' : ''}>${BASE_ROLES[r]}</option>`).join('');
+  const th = 'style="text-align:left; font-size:11px; color:#475569; padding:4px;"';
+  const td = 'style="padding:4px; border-top:1px solid #e2e8f0; font-size:12px;"';
+  const inp = 'class="modal-select" style="margin:0; width:100%;"';
+
+  const builtIn = ['timekeeper', 'cfo', 'admin'].map(r => `<tr>
+      <td ${td}><b>${BASE_ROLES[r]}</b></td>
+      <td ${td}>${r === 'admin' ? 'Tous les droits' : r === 'cfo' ? 'Payroll, tâches COMET (Planning fin : consultation)' : 'Timesheets, impression, Planning fin'}</td>
+      <td ${td}><input type="text" ${inp} id="pf-pwd-${r}" value="${escapeHtml(profilePassword(r))}"></td>
+      <td ${td}><button class="btn btn-outline" onclick="setBuiltInPassword('${r}')">💾</button></td>
+    </tr>`).join('');
+
+  const custom = appProfiles.custom.map(c => {
+    const id = escapeHtml(c.id);
+    return `<tr>
+      <td ${td}><input type="text" ${inp} id="pf-name-${id}" maxlength="30" value="${escapeHtml(c.name)}"></td>
+      <td ${td}>
+        Timesheets : <select ${inp} id="pf-base-${id}" style="margin:0 0 4px; width:100%;">${baseOpts(c.base)}</select>
+        <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pf-plan-${id}" ${c.planning ? 'checked' : ''}> Modifier le Planning fin</label>
+      </td>
+      <td ${td}><input type="text" ${inp} id="pf-pwd-${id}" value="${escapeHtml(c.password)}"></td>
+      <td ${td} style="white-space:nowrap;"><button class="btn btn-outline" onclick="saveCustomProfile('${id}')" title="Enregistrer">💾</button>
+        <button class="btn btn-outline" style="color:#dc2626;" onclick="deleteCustomProfile('${id}')" title="Supprimer">🗑️</button></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('profiles-body').innerHTML = `
+    <table style="width:100%; border-collapse:collapse;">
+      <tr><th ${th}>Profil</th><th ${th}>Droits</th><th ${th}>Mot de passe</th><th ${th}></th></tr>
+      <tr><td ${td}><b>${BASE_ROLES.viewer}</b></td><td ${td}>Consultation seule</td><td ${td} style="color:#94a3b8;">(aucun)</td><td ${td}></td></tr>
+      ${builtIn}
+      ${custom}
+      <tr><td colspan="4" style="padding:10px 4px 4px; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase;">Nouveau profil</td></tr>
+      <tr>
+        <td ${td}><input type="text" ${inp} id="pf-name-new" maxlength="30" placeholder="Nom (ex. Planning)"></td>
+        <td ${td}>
+          Timesheets : <select ${inp} id="pf-base-new" style="margin:0 0 4px; width:100%;">${baseOpts('viewer')}</select>
+          <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pf-plan-new" checked> Modifier le Planning fin</label>
+        </td>
+        <td ${td}><input type="text" ${inp} id="pf-pwd-new" placeholder="Mot de passe"></td>
+        <td ${td}><button class="btn btn-black" onclick="addCustomProfile()">+ Créer</button></td>
+      </tr>
+    </table>`;
+}
+
+// Valeurs saisies sur une ligne de la fenêtre (id du profil, ou 'new' pour la ligne « Nouveau profil »)
+function profileFormValues(id) {
+  return {
+    name: String(document.getElementById('pf-name-' + id).value || '').trim().replace(/\s+/g, ' '),
+    base: document.getElementById('pf-base-' + id).value,
+    planning: document.getElementById('pf-plan-' + id).checked,
+    password: document.getElementById('pf-pwd-' + id).value
+  };
+}
+function profileFormError(v, id) {
+  if (!v.name) return "Donnez un nom au profil.";
+  if (!v.password) return "Choisissez un mot de passe.";
+  const u = v.name.toUpperCase();
+  const taken = ['LECTEUR', 'TIMEKEEPER', 'CFO', 'ADMIN'].includes(u)
+    || appProfiles.custom.some(c => c.id !== id && c.name.toUpperCase() === u);
+  return taken ? `Le nom « ${v.name} » est déjà utilisé.` : '';
+}
+
+window.addCustomProfile = function() {
+  if (currentRole !== 'admin') return;
+  const v = profileFormValues('new');
+  const err = profileFormError(v);
+  if (err) { alert(err); return; }
+  appProfiles.custom.push({ id: 'p_' + Date.now().toString(36), ...v });
+  saveProfiles();
+};
+
+window.saveCustomProfile = function(id) {
+  if (currentRole !== 'admin') return;
+  const c = appProfiles.custom.find(x => x.id === id);
+  if (!c) return;
+  const v = profileFormValues(id);
+  const err = profileFormError(v, id);
+  if (err) { alert(err); return; }
+  Object.assign(c, v);
+  saveProfiles();
+};
+
+window.deleteCustomProfile = function(id) {
+  if (currentRole !== 'admin') return;
+  const c = appProfiles.custom.find(x => x.id === id);
+  if (!c || !confirm(`Supprimer le profil « ${c.name} » ?\n\nLes personnes qui l'utilisent repasseront en Lecteur.`)) return;
+  appProfiles.custom = appProfiles.custom.filter(x => x.id !== id);
+  saveProfiles();
+};
+
+window.setBuiltInPassword = function(role) {
+  if (currentRole !== 'admin') return;
+  const pwd = document.getElementById('pf-pwd-' + role).value;
+  if (!pwd) { alert("Le mot de passe ne peut pas être vide."); return; }
+  appProfiles.passwords = { ...appProfiles.passwords, [role]: pwd };
+  saveProfiles();
+  alert(`Mot de passe du profil ${BASE_ROLES[role]} enregistré.`);
 };
 </script>
 </body>
