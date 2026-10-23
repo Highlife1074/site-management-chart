@@ -232,6 +232,7 @@
   .plan-act:hover { opacity: 1; }
   .plan-grp-paste { margin-left: 8px; border: 0; border-radius: 4px; background: #2563eb; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; cursor: pointer; }
   .plan-clip { font-size: 11px; background: #eff6ff; border: 1px solid #93c5fd; color: #1e3a8a; border-radius: 6px; padding: 3px 8px; }
+  .plan-copied { outline: 2px solid #2563eb; outline-offset: -2px; }
   .plan-clip button { border: 0; background: transparent; cursor: pointer; color: #1e3a8a; font-weight: 700; }
   .plan-toggle .btn.active { background: #0f172a; color: #fff; }
 
@@ -4277,15 +4278,21 @@ function planStoreScopes(key, sc) {
   if (PLAN_SCOPE_FIELDS.some(f => sc[f]) || sc.s1n === '') planningScopes[key] = sc; else delete planningScopes[key];
 }
 
-// --- Copier / coller les Scopes (noms et dates) ---
+// --- Copier / coller le planning d'un ouvrier (Scopes : noms et dates, + jours saisis à la main) ---
 window.copyPlanScopes = function(key) {
   const sc = planningScopes[key] || {};
-  planClipboard = {};
+  planClipboard = { days: JSON.parse(JSON.stringify(workerPlanning[key] || {})) };
   PLAN_SCOPE_FIELDS.forEach(f => { planClipboard[f] = sc[f] || ''; });
   renderPlanning(true);
 };
 function planPasteInto(keys) {
-  keys.forEach(k => planStoreScopes(k, Object.assign({}, planClipboard)));
+  keys.forEach(k => {
+    const sc = {};
+    PLAN_SCOPE_FIELDS.forEach(f => { sc[f] = planClipboard[f]; });
+    planStoreScopes(k, sc);
+    if (Object.keys(planClipboard.days).length) workerPlanning[k] = JSON.parse(JSON.stringify(planClipboard.days));
+    else delete workerPlanning[k];
+  });
   syncDebounced();
   renderPlanning(true);
 }
@@ -4293,14 +4300,54 @@ window.pastePlanScopes = function(key) { if (canEdit() && planClipboard) planPas
 window.pastePlanScopesGroup = function(i) {
   const g = planLastGroups[i];
   if (!canEdit() || !planClipboard || !g) return;
-  if (!confirm(`Coller ces Scopes sur les ${g.rows.length} ouvrier(s) de « ${g.title} » ?\n\nLeurs Scopes actuels (noms et dates) seront remplacés.`)) return;
+  if (!confirm(`Coller ces Scopes sur les ${g.rows.length} ouvrier(s) de « ${g.title} » ?\n\nLeurs Scopes actuels (noms et dates) et leurs jours saisis seront remplacés.`)) return;
   planPasteInto(g.rows.map(r => r.key));
 };
 window.clearPlanClipboard = function() { planClipboard = null; renderPlanning(true); };
 function planClipText(c) {
   const one = (n, a, b) => (n || a || b) ? `${n || 'Sans nom'}${a || b ? ` (${planDateFR(a) || '…'} → ${planDateFR(b) || '…'})` : ''}` : '';
-  return [one(c.s1n, c.s1a, c.s1b), one(c.s2n, c.s2a, c.s2b)].filter(Boolean).join(' · ') || 'Scopes vides';
+  const nDays = Object.values(c.days || {}).reduce((t, str) => t + str.replace(/-/g, '').length, 0);
+  return [one(c.s1n, c.s1a, c.s1b), one(c.s2n, c.s2a, c.s2b)].filter(Boolean).join(' · ') + (nDays ? ` + ${nDays} jour(s) saisi(s)` : '') || 'Scopes vides';
 }
+
+// --- Copier / coller une date au clavier (Ctrl+C / Ctrl+V dans une case date de Scope) ---
+let planDateClip = ''; // dernière date copiée (AAAA-MM-JJ)
+function planParseDate(txt) {
+  txt = String(txt || '').trim();
+  let m = txt.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  m = txt.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2}|\d{4})$/);
+  if (m) return `${m[3].length === 2 ? '20' + m[3] : m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  return '';
+}
+function planPasteDate(input, iso) {
+  if (!iso || input.disabled || !canEdit()) return;
+  input.value = iso;
+  if (input.value !== iso) return; // date impossible
+  input.dispatchEvent(new Event('change'));
+}
+document.addEventListener('keydown', e => {
+  const input = e.target;
+  if (!input || input.type !== 'date' || !input.closest || !input.closest('#plan-table-wrap')) return;
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+  const key = e.key.toLowerCase();
+  if (key === 'c' || key === 'x') {
+    if (!input.value) return;
+    e.preventDefault();
+    planDateClip = input.value;
+    try { navigator.clipboard.writeText(planDateFR(input.value)); } catch (err) {}
+    const td = input.closest('td');
+    td.classList.add('plan-copied');
+    setTimeout(() => td.classList.remove('plan-copied'), 600);
+  } else if (key === 'v') {
+    e.preventDefault();
+    // Presse-papiers du système (ex. date copiée depuis Excel), sinon dernière date copiée ici
+    const fallback = () => planPasteDate(input, planDateClip);
+    try {
+      navigator.clipboard.readText().then(t => { const iso = planParseDate(t); iso ? planPasteDate(input, iso) : fallback(); }, fallback);
+    } catch (err) { fallback(); }
+  }
+});
 
 // --- Gestion de la liste des noms de Scopes ---
 function planScopeUsage(name) {
@@ -4569,7 +4616,7 @@ function renderPlanning(force) {
     : `${PLAN_MONTHS_SHORT[m - 1]} ${y} → ${PLAN_MONTHS_SHORT[Number(lastMonth.slice(5)) - 1]} ${lastMonth.slice(0, 4)}`;
   document.getElementById('plan-scopes-btn').innerText = planShowScopes ? '◧ Masquer Scopes' : '◨ Afficher Scopes';
   document.getElementById('plan-clip').innerHTML = planClipboard && edit
-    ? `<span class="plan-clip">📋 Scopes copiés : <b>${escapeHtml(planClipText(planClipboard))}</b> — cliquez 📥 sur un ouvrier ou « Coller à l'équipe » <button title="Vider" onclick="clearPlanClipboard()">✕</button></span>`
+    ? `<span class="plan-clip">📋 Planning copié : <b>${escapeHtml(planClipText(planClipboard))}</b> — cliquez 📥 sur un ouvrier ou « Coller à l'équipe » <button title="Vider" onclick="clearPlanClipboard()">✕</button></span>`
     : '';
   document.getElementById('plan-mode').innerHTML =
     `<button class="btn btn-outline ${planMode === 'days' ? 'active' : ''}" onclick="setPlanMode('days')">Jours</button> ` +
@@ -4586,7 +4633,7 @@ function renderPlanning(force) {
   document.getElementById('plan-help').innerHTML = !edit
     ? `👁️ Consultation seule : seuls les profils Timekeeper et Admin peuvent modifier le planning.`
     : planMode === 'days'
-      ? `Entre les dates de début et de fin d'un <b>Scope</b>, chaque jour vaut 1 (vert clair). Pour corriger un jour, choisissez une valeur puis cliquez ou glissez (0 = absent) ; « Effacer » revient au Scope. <b>Fin estimée</b> = fin de Scope ou dernier jour saisi, le plus tardif (trait rouge).`
+      ? `Entre les dates de début et de fin d'un <b>Scope</b>, chaque jour vaut 1 (vert clair). Pour corriger un jour, choisissez une valeur puis cliquez ou glissez (0 = absent) ; « Effacer » revient au Scope. Une date se copie-colle d'un ouvrier à l'autre avec <b>Ctrl+C / Ctrl+V</b> ; 📋 / 📥 copie tout le planning d'un ouvrier. <b>Fin estimée</b> = fin de Scope ou dernier jour saisi, le plus tardif (trait rouge).`
       : `Chaque case = part du mois travaillée (ex. fin le 15/09 → 0.5 en septembre). Cliquez sur un mois pour le détail jour par jour.`;
 
   const todayStr = planTodayIso();
@@ -4623,7 +4670,7 @@ function renderPlanning(force) {
       const dateCell = (f) => `<td class="plan-sc sc${f}"><input type="date" value="${escapeHtml(sc['s' + f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${f}', this)"></td>`;
       const nameCell = (f) => `<td class="plan-sc scn sc${f}" title="${escapeHtml(sc['s' + f] || '')}"><input type="text" list="plan-scope-names" maxlength="40" placeholder="${edit ? 'Nom…' : ''}" value="${escapeHtml(sc['s' + f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${f}', this)"></td>`;
       body += `<tr data-k="${k}">
-        <td class="plan-name" title="${escapeHtml(r.name + ' — ' + r.id + ' — ' + r.company)}">${edit && Array.isArray(planningRoster) ? `<button class="plan-del" title="Retirer du planning" onclick="removePlanningWorker('${k}')">✕</button>` : ''}${edit ? `${planClipboard ? `<button class="plan-act" title="Coller les Scopes copiés" onclick="pastePlanScopes('${k}')">📥</button>` : ''}<button class="plan-act" title="Copier les Scopes de cet ouvrier" onclick="copyPlanScopes('${k}')">📋</button>` : ''}${escapeHtml(r.name)} <span class="plan-sub">${escapeHtml(r.id)} · ${escapeHtml(r.company)}</span>${r.onTs ? '' : '<span class="plan-off">hors TS</span>'}</td>
+        <td class="plan-name" title="${escapeHtml(r.name + ' — ' + r.id + ' — ' + r.company)}">${edit && Array.isArray(planningRoster) ? `<button class="plan-del" title="Retirer du planning" onclick="removePlanningWorker('${k}')">✕</button>` : ''}${edit ? `${planClipboard ? `<button class="plan-act" title="Coller le planning copié (Scopes + jours saisis)" onclick="pastePlanScopes('${k}')">📥</button>` : ''}<button class="plan-act" title="Copier le planning de cet ouvrier (Scopes + jours saisis)" onclick="copyPlanScopes('${k}')">📋</button>` : ''}${escapeHtml(r.name)} <span class="plan-sub">${escapeHtml(r.id)} · ${escapeHtml(r.company)}</span>${r.onTs ? '' : '<span class="plan-off">hors TS</span>'}</td>
         ${nameCell('1n')}${dateCell('1a')}${dateCell('1b')}${nameCell('2n')}${dateCell('2a')}${dateCell('2b')}
         ${planRowTail(r, cols)}
       </tr>`;
