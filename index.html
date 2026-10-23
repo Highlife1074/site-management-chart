@@ -597,26 +597,26 @@
     <div class="modal-title">⚙️ Colonnes de pointage</div>
     <p style="font-size:12px; color:#64748b; margin-top:-8px;">Une colonne = une tâche du chef, rattachée à une <b>tâche COMET</b> (imprimée au-dessus de la colonne).</p>
     <div id="ts-tasks-list" style="display:flex; flex-direction:column; gap:8px; margin-top:8px; max-height: 250px; overflow-y:auto; padding-right:4px;"></div>
-    <button class="btn btn-outline" style="margin-top:8px; justify-content:center;" onclick="addTsTaskInput()">+ Ajouter une colonne</button>
+    <button class="btn btn-outline" id="btn-ts-add-col" style="margin-top:8px; justify-content:center;" onclick="addTsTaskInput()">+ Ajouter une colonne</button>
     <div class="modal-actions" style="margin-top:12px;">
-      <button class="btn btn-outline" onclick="closeTsTasksModal()">Annuler</button>
-      <button class="btn btn-success" onclick="saveTsTasks()">Enregistrer</button>
+      <button class="btn btn-outline" id="btn-ts-cancel" onclick="closeTsTasksModal()">Annuler</button>
+      <button class="btn btn-success" id="btn-ts-save" onclick="saveTsTasks()">Enregistrer</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL TÂCHES COMET (ajout / suppression : CFO et Admin) -->
+<!-- MODAL TÂCHES COMET (consultation : tous ; ajout / suppression : CFO, Admin et profils autorisés) -->
 <div id="comet-modal" class="modal-overlay">
   <div class="modal-box large">
     <div class="modal-title">🏷️ Tâches COMET <span id="comet-count" style="font-size:12px; color:#64748b; font-weight:600;"></span></div>
-    <p style="font-size:12px; color:#64748b; margin-top:-8px; line-height:1.4;">Liste officielle des tâches COMET. Chaque colonne de Timesheet (⚙️ TS) est rattachée à l'une d'elles par le Timekeeper.<br>Ajout et suppression : <b>CFO et Admin uniquement</b>.</p>
+    <p style="font-size:12px; color:#64748b; margin-top:-8px; line-height:1.4;">Liste officielle des tâches COMET. Chaque colonne de Timesheet (⚙️ TS) est rattachée à l'une d'elles par le Timekeeper.<br>Ajout et suppression : <b>CFO, Admin et profils autorisés</b> (les autres profils consultent la liste).</p>
     <input type="text" id="comet-search" class="modal-select" placeholder="🔍 Rechercher une tâche..." oninput="renderCometList()">
     <div id="comet-list" style="display:flex; flex-direction:column; gap:4px; max-height:40vh; overflow-y:auto; padding-right:4px;"></div>
     <textarea id="comet-new-input" class="modal-select" rows="3" style="resize:vertical;" placeholder="Nouvelle(s) tâche(s) COMET — une par ligne (vous pouvez coller une liste)"></textarea>
     <div class="modal-actions">
       <button class="btn btn-outline" style="margin-right:auto;" onclick="exportCometTasksExcel()" title="Excel : tâche COMET / tâches des Timesheets">📤 Export Excel</button>
       <button class="btn btn-outline" onclick="closeCometModal()">Fermer</button>
-      <button class="btn btn-success" onclick="addCometTasks()">+ Ajouter</button>
+      <button class="btn btn-success" id="btn-comet-add" onclick="addCometTasks()">+ Ajouter</button>
     </div>
   </div>
 </div>
@@ -725,7 +725,7 @@
     <div class="divider"></div>
 
     <button class="btn btn-outline" id="btn-db" onclick="openDBModal()" title="La Base de données Globale contient tous les ouvriers Excel + les manuels.">🗃️ Base Globale</button>
-    <button class="btn btn-outline" id="btn-comet" onclick="openCometModal()" title="Liste des tâches COMET (CFO / Admin)">🏷️ Tâches COMET</button>
+    <button class="btn btn-outline" id="btn-comet" onclick="openCometModal()" title="Liste des tâches COMET (modification : CFO / Admin / profils autorisés)">🏷️ Tâches COMET</button>
     <button class="btn btn-outline" id="btn-add-sup" onclick="addNewSupervisor()">+ Ajout Timesheet</button>
     <button class="btn btn-black" id="btn-print-ts" onclick="openPrintModal()">📄 Imprimer TS</button>
     <button class="btn btn-outline" id="btn-close-week" onclick="closeWeek()" title="Archiver l'état actuel des Timesheets (Timekeeper / Admin). Rien n'est remis à zéro.">📦 Clôturer la semaine</button>
@@ -859,7 +859,8 @@ const PASSWORDS = { viewer: '', timekeeper: 'timekeeper', cfo: 'cfo', admin: 'ad
 const FIRESTORE_PROFILES_DOC = 'profiles'; // document dans la collection site_charts
 const BASE_ROLES = { viewer: '👁️ Lecteur', timekeeper: '⏱️ Timekeeper', cfo: '💰 CFO', admin: '⚙️ Admin' };
 // Profils enregistrés : { passwords: { timekeeper, cfo, admin }, custom: [{ id, name, base, planning, password }] }
-//   base = droits sur les Timesheets (identiques à un profil de base), planning = peut modifier le Planning fin
+//   base = droits sur les Timesheets (identiques à un profil de base), planning = peut modifier le Planning fin,
+//   comet = peut ajouter / supprimer des tâches COMET
 let appProfiles = { passwords: {}, custom: [] };
 try {
   const p = JSON.parse(localStorage.getItem('app_profiles') || 'null');
@@ -1014,8 +1015,12 @@ function companyClass(company) {
 
 // Le profil actif peut-il modifier les Timesheets et les ouvriers ?
 function canEdit() { return currentRole !== 'viewer' && currentRole !== 'cfo'; }
-// Liste des tâches COMET : ajout / suppression réservés au CFO et à l'Admin
-function canManageComet() { return currentRole === 'cfo' || currentRole === 'admin'; }
+// Liste des tâches COMET : visible par tous ; ajout / suppression réservés au CFO, à l'Admin
+// et aux profils créés avec ce droit
+function canManageComet() {
+  const c = appProfiles.custom.find(x => x.id === currentProfile);
+  return c ? !!c.comet : (currentRole === 'cfo' || currentRole === 'admin');
+}
 // Nom de tâche COMET nettoyé (espaces en trop retirés)
 function cleanCometName(s) { return String(s ?? '').replace(/\s+/g, ' ').trim(); }
 
@@ -1327,8 +1332,6 @@ function applyRolePermissions() {
   show('btn-menu-companies', isAdmin);
   show('btn-menu-restore', isAdmin);
   show('btn-menu-profiles', isAdmin);
-  // Liste des tâches COMET : CFO et Admin
-  show('btn-comet', isCFO || isAdmin);
   // Clôture de semaine : Timekeeper et Admin
   show('btn-close-week', isTK || isAdmin);
 
@@ -1347,10 +1350,8 @@ function applyRolePermissions() {
     el.style.display = readOnly ? 'none' : 'inline-block';
   });
 
-  document.querySelectorAll('.ts-checkbox, .ts-btn-config').forEach(el => {
-    el.disabled = readOnly;
-    if (el.classList.contains('ts-btn-config')) el.style.display = readOnly ? 'none' : 'inline-block';
-  });
+  // ⚙️ TS reste ouvrable par tous : les colonnes s'affichent en lecture seule si le profil ne peut pas modifier
+  document.querySelectorAll('.ts-checkbox').forEach(el => { el.disabled = readOnly; });
 
   sortableInstances.forEach(s => s.option("disabled", readOnly));
   workerSortables.forEach(s => s.option("disabled", readOnly));
@@ -1467,7 +1468,7 @@ function startFirebase() {
 
 // --- 3. FONCTIONS CLÉS & SYNCHRONISATION ---
 function syncToFirebase() {
-  if (currentRole === 'viewer' && !canEditPlanning()) return; // Le CFO doit pouvoir enregistrer le Payroll
+  if (currentRole === 'viewer' && !canEditPlanning() && !canManageComet()) return; // Le CFO doit pouvoir enregistrer le Payroll
   if (_syncTimer) { clearTimeout(_syncTimer); _syncTimer = null; }
   try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, cometTasks, planning: workerPlanning, planningScopes, planningRoster, planningScopeNames})); } catch(e){}
   if (!docRef) return;
@@ -2324,14 +2325,19 @@ function printColumnsOf(card) {
 }
 
 function openTsTasksModal(cardId) {
-  if (!canEdit()) return;
   const card = cardById(cardId);
   if (!card) return;
   currentTsCardId = card.id;
   document.querySelector('#ts-tasks-modal .modal-title').innerText =
     `⚙️ Colonnes de pointage — ${card.name || 'Timesheet'}${card.timesheetNo ? ' (TS ' + card.timesheetNo + ')' : ''}`;
   renderTsTasksList(printColumnsOf(card));
-  document.getElementById('ts-tasks-modal').style.display = 'flex';
+  // Profil sans droit de modification : consultation seule
+  const ro = !canEdit();
+  const modal = document.getElementById('ts-tasks-modal');
+  modal.querySelectorAll('#ts-tasks-list select, #ts-tasks-list input').forEach(el => { el.disabled = ro; });
+  modal.querySelectorAll('#ts-tasks-list .btn, #btn-ts-add-col, #btn-ts-save').forEach(el => { el.style.display = ro ? 'none' : ''; });
+  document.getElementById('btn-ts-cancel').innerText = ro ? 'Fermer' : 'Annuler';
+  modal.style.display = 'flex';
 }
 
 // Une ligne de la fenêtre ⚙️ TS : tâche COMET (liste) + tâche du chef (texte)
@@ -2940,7 +2946,9 @@ function cometUsage(name) {
 }
 
 function openCometModal() {
-  if (!canManageComet()) return;
+  const manage = canManageComet();
+  document.getElementById('comet-new-input').style.display = manage ? '' : 'none';
+  document.getElementById('btn-comet-add').style.display = manage ? '' : 'none';
   document.getElementById('comet-search').value = '';
   document.getElementById('comet-new-input').value = '';
   renderCometList();
@@ -2959,7 +2967,7 @@ function renderCometList() {
       <span style="font-size:12px; font-weight:700;">${escapeHtml(n)}</span>
       <span style="display:flex; align-items:center; gap:8px;">
         ${used ? `<span style="font-size:10px; color:#64748b;">${used} colonne(s)</span>` : ''}
-        <button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5; padding:2px 6px;" onclick="removeCometTask(${jsArg(n)})" title="Supprimer">&times;</button>
+        ${canManageComet() ? `<button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5; padding:2px 6px;" onclick="removeCometTask(${jsArg(n)})" title="Supprimer">&times;</button>` : ''}
       </span>
     </div>`;
   }).join('') || `<div style="font-size:12px; color:#94a3b8;">Aucune tâche trouvée.</div>`;
@@ -5096,7 +5104,7 @@ window.openProfilesModal = function() {
     div.innerHTML = `
       <div class="modal-box" style="max-width:720px;">
         <div class="modal-title">👤 Profils & mots de passe</div>
-        <p style="font-size:12px; color:#64748b; margin-top:-8px;">Créez un profil en choisissant ses droits, ou changez le mot de passe d'un profil existant. Les profils apparaissent dans la liste « PROFIL » en haut de l'écran.</p>
+        <p style="font-size:12px; color:#64748b; margin-top:-8px;">Créez un profil en choisissant ses droits, ou changez le mot de passe d'un profil existant. Les profils apparaissent dans la liste « PROFIL » en haut de l'écran.<br>Tout le monde peut consulter les tâches COMET et les colonnes des Timesheets (⚙️ TS) ; les cases ci-dessous donnent le droit de les modifier.</p>
         <div id="profiles-body" style="overflow-y:auto; max-height:60vh;"></div>
         <div class="modal-actions" style="margin-top:16px;">
           <button class="btn btn-outline" onclick="document.getElementById('profiles-modal').style.display='none'">Fermer</button>
@@ -5116,7 +5124,7 @@ function renderProfilesModal() {
 
   const builtIn = ['timekeeper', 'cfo', 'admin'].map(r => `<tr>
       <td ${td}><b>${BASE_ROLES[r]}</b></td>
-      <td ${td}>${r === 'admin' ? 'Tous les droits' : r === 'cfo' ? 'Payroll, tâches COMET (Planning fin : consultation)' : 'Timesheets, impression, Planning fin'}</td>
+      <td ${td}>${r === 'admin' ? 'Tous les droits' : r === 'cfo' ? 'Payroll, gestion des tâches COMET (Planning fin : consultation)' : 'Timesheets, impression, Planning fin'}</td>
       <td ${td}><input type="text" ${inp} id="pf-pwd-${r}" value="${escapeHtml(profilePassword(r))}"></td>
       <td ${td}><button class="btn btn-outline" onclick="setBuiltInPassword('${r}')">💾</button></td>
     </tr>`).join('');
@@ -5128,6 +5136,7 @@ function renderProfilesModal() {
       <td ${td}>
         Timesheets : <select ${inp} id="pf-base-${id}" style="margin:0 0 4px; width:100%;">${baseOpts(c.base)}</select>
         <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pf-plan-${id}" ${c.planning ? 'checked' : ''}> Modifier le Planning fin</label>
+        <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pf-comet-${id}" ${c.comet ? 'checked' : ''}> Gérer les tâches COMET</label>
       </td>
       <td ${td}><input type="text" ${inp} id="pf-pwd-${id}" value="${escapeHtml(c.password)}"></td>
       <td ${td} style="white-space:nowrap;"><button class="btn btn-outline" onclick="saveCustomProfile('${id}')" title="Enregistrer">💾</button>
@@ -5147,6 +5156,7 @@ function renderProfilesModal() {
         <td ${td}>
           Timesheets : <select ${inp} id="pf-base-new" style="margin:0 0 4px; width:100%;">${baseOpts('viewer')}</select>
           <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pf-plan-new" checked> Modifier le Planning fin</label>
+          <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pf-comet-new"> Gérer les tâches COMET</label>
         </td>
         <td ${td}><input type="text" ${inp} id="pf-pwd-new" placeholder="Mot de passe"></td>
         <td ${td}><button class="btn btn-black" onclick="addCustomProfile()">+ Créer</button></td>
@@ -5160,6 +5170,7 @@ function profileFormValues(id) {
     name: String(document.getElementById('pf-name-' + id).value || '').trim().replace(/\s+/g, ' '),
     base: document.getElementById('pf-base-' + id).value,
     planning: document.getElementById('pf-plan-' + id).checked,
+    comet: document.getElementById('pf-comet-' + id).checked,
     password: document.getElementById('pf-pwd-' + id).value
   };
 }
