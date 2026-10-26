@@ -690,6 +690,26 @@
   </div>
 </div>
 
+<!-- MODAL GESTION DOMAINES (Admin) -->
+<div id="categories-modal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">🗂️ Gérer les Domaines</div>
+    <p style="font-size:12px; color:#64748b; margin-top:-8px;">Ajoutez de nouveaux domaines (lots de travaux) pour y classer les Timesheets.</p>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+       <input type="text" id="new-cat-name-input" class="modal-select" placeholder="Nom du domaine (ex: ELECTRICAL WORKS)...">
+       <div style="display:flex; gap:8px; align-items:center;">
+         <input type="text" id="new-cat-short-input" class="modal-select" placeholder="Nom court pour les cartes (ex: Electrical)...">
+         <input type="color" id="new-cat-color-input" value="#0d9488" title="Couleur du domaine" style="width:42px; height:34px; padding:2px; border:1px solid #cbd5e1; border-radius:6px; cursor:pointer;">
+         <button class="btn btn-black" onclick="addCategory()">Ajouter</button>
+       </div>
+    </div>
+    <div id="categories-list" style="margin-top:12px; display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto;"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-outline" onclick="closeCategoriesModal()">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <!-- DRAWER: Base Ouvriers -->
 <div id="workers-drawer" class="drawer">
   <div class="drawer-header">
@@ -752,6 +772,7 @@
     <div id="admin-dropdown">
       <span style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase;">Configuration</span>
       <button class="btn btn-outline" id="btn-menu-companies" style="width:100%; justify-content:left;" onclick="openCompaniesModal()">🏢 Gérer Entreprises</button>
+      <button class="btn btn-outline" id="btn-menu-categories" style="width:100%; justify-content:left; margin-top:4px;" onclick="openCategoriesModal()">🗂️ Gérer Domaines</button>
       <button class="btn btn-outline" style="width:100%; justify-content:left; margin-top:4px;" onclick="openSupervisorsModal()">🧑‍💼 Gérer Superviseurs</button>
       <button class="btn btn-outline" id="btn-menu-profiles" style="width:100%; justify-content:left; margin-top:4px;" onclick="openProfilesModal()">👤 Profils & mots de passe</button>
       <hr style="border:0; border-top:1px solid #e2e8f0; margin:4px 0;">
@@ -972,9 +993,10 @@ const DEFAULT_COMET_TASKS = [
 // --- ENTREPRISES PAR DÉFAUT (non supprimables) ---
 const DEFAULT_COMPANIES = ['SKYBUILDING BRANCH', 'SKYBUILDING GREECE', 'DSS', 'EUROASIA', 'BIK', 'OTHER'];
 
-// Domaines (lots de travaux) des Timesheets. Pour en ajouter un : une ligne ici suffit
-// (filtres, sections, menu des cartes, pastilles du tableau de bord et couleurs en découlent).
-const CATEGORY_INFO = [
+// Domaines (lots de travaux) des Timesheets. Domaines par défaut (non supprimables) ;
+// l'Admin peut en ajouter d'autres (fenêtre « 🗂️ Gérer Domaines », enregistrés dans Firebase).
+// Filtres, sections, menu des cartes, pastilles du tableau de bord et couleurs en découlent.
+const DEFAULT_CATEGORIES = [
   { id: 'civil', name: 'CIVIL WORKS', short: 'Civil', color: '#ea580c' },
   { id: 'trades', name: 'TRADES & FINISHES', short: 'Trades', color: '#2563eb' },
   { id: 'mep', name: 'MEP', short: 'MEP', color: '#ca8a04' },
@@ -987,9 +1009,25 @@ const CATEGORY_INFO = [
   { id: 'indirect', name: 'INDIRECT & SERVICES', short: 'Indirect', color: '#475569' },
   { id: 'plant', name: 'PLANT & EQUIPMENT', short: 'Plant & Eq', color: '#dc2626' }
 ];
-// Couleur du haut des cartes, une classe par domaine
-document.head.insertAdjacentHTML('beforeend', '<style>' +
-  CATEGORY_INFO.map(c => `.cat-${c.id} { border-top-color: ${c.color} !important; }`).join(' ') + '</style>');
+let customCategories = []; // domaines ajoutés par l'Admin : [{ id, name, short, color }]
+let CATEGORY_INFO = [...DEFAULT_CATEGORIES];
+
+// Liste complète = défauts + domaines Admin (entrées invalides ou en double ignorées)
+function rebuildCategoryInfo() {
+  const seen = new Set(DEFAULT_CATEGORIES.map(c => c.id));
+  const extra = (Array.isArray(customCategories) ? customCategories : []).filter(c =>
+    c && /^[a-z0-9_]+$/.test(String(c.id)) && c.name && !seen.has(c.id) && seen.add(c.id));
+  extra.forEach(c => {
+    c.short = String(c.short || c.name);
+    c.color = /^#[0-9a-fA-F]{6}$/.test(c.color) ? c.color : '#64748b';
+  });
+  CATEGORY_INFO = DEFAULT_CATEGORIES.concat(extra);
+  // Couleur du haut des cartes, une classe par domaine
+  let st = document.getElementById('category-styles');
+  if (!st) { st = document.createElement('style'); st.id = 'category-styles'; document.head.appendChild(st); }
+  st.textContent = CATEGORY_INFO.map(c => `.cat-${c.id} { border-top-color: ${c.color} !important; }`).join(' ');
+}
+rebuildCategoryInfo();
 
 const DEFAULT_DATA = [
   { name: "NEW TIMESHEET", manager: "", supervisorRole: "SUPERVISOR", category: "civil", timesheetNo: "", timesheetName: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "Task description", foreman: "", source: "SKYBUILDING BRANCH", workers: "", workerList: [] }] }
@@ -1265,6 +1303,7 @@ try {
       if (parsed.supervisors) siteSupervisors = parsed.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
       if (parsed.rawImportedDB) window.rawImportedDB = parsed.rawImportedDB;
       if (Array.isArray(parsed.cometTasks)) cometTasks = parsed.cometTasks;
+      if (Array.isArray(parsed.customCategories)) { customCategories = parsed.customCategories; rebuildCategoryInfo(); }
       if (parsed.planning && typeof parsed.planning === 'object') workerPlanning = parsed.planning;
       if (parsed.planningScopes && typeof parsed.planningScopes === 'object') planningScopes = parsed.planningScopes;
       if (Array.isArray(parsed.planningRoster)) planningRoster = parsed.planningRoster;
@@ -1349,6 +1388,7 @@ function applyRolePermissions() {
   show('fab-drawer', !readOnly, 'flex');
   // Menu ⚙️ : entreprises et restauration réservées à l'Admin
   show('btn-menu-companies', isAdmin);
+  show('btn-menu-categories', isAdmin);
   show('btn-menu-restore', isAdmin);
   show('btn-menu-profiles', isAdmin);
   // Clôture de semaine : Timekeeper et Admin
@@ -1449,6 +1489,7 @@ function startFirebase() {
         let cometSeed = false;
         if (Array.isArray(data.cometTasks)) cometTasks = data.cometTasks;
         else cometSeed = true;
+        if (Array.isArray(data.customCategories)) setCustomCategories(data.customCategories);
 
         let supsAdded = false;
         cardsData.forEach(c => {
@@ -1490,13 +1531,13 @@ function startFirebase() {
 function syncToFirebase() {
   if (currentRole === 'viewer' && !canEditPlanning() && !canManageComet()) return; // Le CFO doit pouvoir enregistrer le Payroll
   if (_syncTimer) { clearTimeout(_syncTimer); _syncTimer = null; }
-  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, cometTasks, planning: workerPlanning, planningScopes, planningRoster, planningScopeNames})); } catch(e){}
+  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, cometTasks, customCategories, planning: workerPlanning, planningScopes, planningRoster, planningScopeNames})); } catch(e){}
   if (!docRef) return;
   isSaving = true;
   document.getElementById("sync-text").innerText = "Enregistrement...";
 
   const payload = {
-    cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, cometTasks,
+    cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, cometTasks, customCategories,
     planning: workerPlanning, planningScopes, planningScopeNames,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
@@ -1531,7 +1572,7 @@ function exportBackup() {
     companies: siteCompanies,
     supervisors: siteSupervisors,
     rawImportedDB: window.rawImportedDB,
-    cometTasks,
+    cometTasks, customCategories,
     planning: workerPlanning, planningScopes, planningRoster, planningScopeNames
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -1574,6 +1615,7 @@ function importBackup(event) {
       window.rawImportedDB = Array.isArray(data.rawImportedDB) ? data.rawImportedDB : [];
       if (Array.isArray(data.companies) && data.companies.length) siteCompanies = data.companies;
       if (Array.isArray(data.cometTasks)) cometTasks = data.cometTasks;
+      if (Array.isArray(data.customCategories)) setCustomCategories(data.customCategories);
       if (data.planning && typeof data.planning === 'object') workerPlanning = data.planning;
       if (data.planningScopes && typeof data.planningScopes === 'object') planningScopes = data.planningScopes;
       if (Array.isArray(data.planningRoster)) planningRoster = data.planningRoster;
@@ -1835,17 +1877,53 @@ function toggleDrawer() { document.getElementById('workers-drawer').classList.to
 // --- 1. INITIALISATION DE L'INTERFACE ---
 function initLayout() {
   renderRoleSelector();
+  renderCategoryLayout();
+}
+
+// Tout ce qui dépend de la liste des domaines (rappelé quand l'Admin en ajoute / supprime)
+function renderCategoryLayout() {
+  if (!document.getElementById('filter-cat-buttons')) renderFilterBar();
+  document.getElementById('filter-cat-buttons').innerHTML = `
+      <button class="filter-btn" id="filter-all" onclick="setFilter('all')">TOUT AFFICHER</button>
+      <button class="filter-btn" id="filter-alpha" onclick="setFilter('alpha')" style="border-left: 4px solid #2563eb; font-weight:800;">🔤 ALPHABÉTIQUE (A-Z)</button>
+      ${CATEGORY_INFO.map(cat => `<button class="filter-btn" id="filter-${cat.id}" onclick="setFilter('${cat.id}')" style="border-left: 4px solid ${cat.color};">${escapeHtml(cat.name)}</button>`).join('')}`;
 
   document.getElementById('category-pills').innerHTML = CATEGORY_INFO.map(cat =>
     `<div class="stat-pill"><span class="tag-color" style="background:${cat.color};"></span><span>${escapeHtml(cat.short.toUpperCase())}:</span><span class="count" id="cat-${cat.id}">0</span></div>`).join('');
 
+  const board = document.getElementById('categories-board');
+  board.innerHTML = `
+    <div class="category-section" id="section-alpha" style="display:none;">
+      <h2 class="category-title" style="color: #2563eb; border-bottom: 2px solid #2563eb;">TOUTES LES TIMESHEETS (PAR N° DE TIMESHEET A-Z)</h2>
+      <div class="cards-grid" id="grid-alpha" data-category="alpha"></div>
+    </div>
+  ` + CATEGORY_INFO.map(cat => `
+    <div class="category-section" id="section-${cat.id}">
+      <h2 class="category-title" style="color: ${cat.color}; border-bottom: 2px solid ${cat.color};">${escapeHtml(cat.name)}</h2>
+      <div class="cards-grid" id="grid-${cat.id}" data-category="${cat.id}"></div>
+    </div>
+  `).join('');
+
+  sortableInstances.forEach(s => s.destroy());
+  sortableInstances = [];
+  CATEGORY_INFO.forEach(cat => {
+    const s = new Sortable(document.getElementById(`grid-${cat.id}`), {
+      group: 'supervisors', handle: '.drag-handle', animation: 150, ghostClass: 'sortable-ghost',
+      disabled: (currentRole === 'viewer' || currentRole === 'cfo'),
+      onEnd: function (evt) { reorderCardsBasedOnDOM(); }
+    });
+    sortableInstances.push(s);
+  });
+
+  // Filtre actif : on le garde s'il existe encore (affiche / masque les sections)
+  if (currentFilter !== 'all' && currentFilter !== 'alpha' && !CATEGORY_INFO.some(c => c.id === currentFilter)) currentFilter = 'all';
+  setFilter(currentFilter);
+}
+
+function renderFilterBar() {
   const filterBar = document.getElementById('filter-bar');
   filterBar.innerHTML = `
-    <div style="display:flex; flex-wrap:wrap; gap:8px; width:100%; align-items:center;">
-      <button class="filter-btn active" id="filter-all" onclick="setFilter('all')">TOUT AFFICHER</button>
-      <button class="filter-btn" id="filter-alpha" onclick="setFilter('alpha')" style="border-left: 4px solid #2563eb; font-weight:800;">🔤 ALPHABÉTIQUE (A-Z)</button>
-      ${CATEGORY_INFO.map(cat => `<button class="filter-btn" id="filter-${cat.id}" onclick="setFilter('${cat.id}')" style="border-left: 4px solid ${cat.color};">${cat.name}</button>`).join('')}
-    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:8px; width:100%; align-items:center;" id="filter-cat-buttons"></div>
     <div style="display:flex; gap:16px; width:100%; margin-top:8px;" id="multi-filters-container">
       <div style="display:flex; flex-direction:column; gap:4px; flex:1;">
         <label style="font-size:11px; font-weight:bold; color:#64748b;">🧑‍💼 FILTRE MANAGERS</label>
@@ -1863,28 +1941,6 @@ function initLayout() {
       </div>
     </div>
   `;
-
-  const board = document.getElementById('categories-board');
-  board.innerHTML = `
-    <div class="category-section" id="section-alpha" style="display:none;">
-      <h2 class="category-title" style="color: #2563eb; border-bottom: 2px solid #2563eb;">TOUTES LES TIMESHEETS (PAR N° DE TIMESHEET A-Z)</h2>
-      <div class="cards-grid" id="grid-alpha" data-category="alpha"></div>
-    </div>
-  ` + CATEGORY_INFO.map(cat => `
-    <div class="category-section" id="section-${cat.id}">
-      <h2 class="category-title" style="color: ${cat.color}; border-bottom: 2px solid ${cat.color};">${cat.name}</h2>
-      <div class="cards-grid" id="grid-${cat.id}" data-category="${cat.id}"></div>
-    </div>
-  `).join('');
-
-  CATEGORY_INFO.forEach(cat => {
-    const s = new Sortable(document.getElementById(`grid-${cat.id}`), {
-      group: 'supervisors', handle: '.drag-handle', animation: 150, ghostClass: 'sortable-ghost',
-      disabled: (currentRole === 'viewer' || currentRole === 'cfo'),
-      onEnd: function (evt) { reorderCardsBasedOnDOM(); }
-    });
-    sortableInstances.push(s);
-  });
 }
 
 window.toggleMultiSelect = function(menuId) {
@@ -2933,6 +2989,73 @@ function removeCompany(comp) {
      renderCards();
      syncToFirebase();
   }
+}
+
+// --- DOMAINES : ajout / suppression réservés à l'Admin (les domaines par défaut restent) ---
+// Remplace les domaines Admin (Firebase, restauration) et reconstruit l'écran si la liste a changé
+function setCustomCategories(list) {
+  if (JSON.stringify(list) === JSON.stringify(customCategories)) return;
+  customCategories = list;
+  rebuildCategoryInfo();
+  if (document.getElementById('filter-bar').innerHTML) renderCategoryLayout();
+  if (document.getElementById('categories-modal').style.display === 'flex') renderCategoriesList();
+}
+
+function openCategoriesModal() {
+  if (currentRole !== 'admin') return;
+  renderCategoriesList();
+  document.getElementById('categories-modal').style.display = 'flex';
+}
+function closeCategoriesModal() { document.getElementById('categories-modal').style.display = 'none'; }
+
+function renderCategoriesList() {
+  const isDefault = id => DEFAULT_CATEGORIES.some(c => c.id === id);
+  document.getElementById('categories-list').innerHTML = CATEGORY_INFO.map(c => {
+    const used = cardsData.filter(card => cardCategory(card) === c.id).length;
+    return `
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; background:#f8fafc; padding:8px; border:1px solid #cbd5e1; border-left:5px solid ${c.color}; border-radius:6px;">
+      <span style="font-size:12px; font-weight:700; flex:1;">${escapeHtml(c.name)} <span style="font-weight:500; color:#64748b;">(${escapeHtml(c.short)})</span></span>
+      <span style="font-size:10px; color:#64748b;">${used} TS</span>
+      ${!isDefault(c.id)
+        ? `<button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5; padding:2px 6px;" onclick="removeCategory(${jsArg(c.id)})">&times;</button>`
+        : '<span style="font-size:10px; color:#94a3b8;">Défaut</span>'}
+    </div>`;
+  }).join('');
+}
+
+function addCategory() {
+  if (currentRole !== 'admin') return;
+  const name = document.getElementById('new-cat-name-input').value.trim().toUpperCase();
+  const short = document.getElementById('new-cat-short-input').value.trim() || name;
+  const color = document.getElementById('new-cat-color-input').value;
+  if (!name) return;
+  if (CATEGORY_INFO.some(c => c.name.toUpperCase() === name)) { alert(`Le domaine ${name} existe déjà.`); return; }
+  // Identifiant technique tiré du nom (lettres / chiffres), rendu unique
+  const base = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'domaine';
+  let id = base, n = 2;
+  while (CATEGORY_INFO.some(c => c.id === id) || ['all', 'alpha'].includes(id)) id = `${base}_${n++}`;
+  setCustomCategories(customCategories.concat([{ id, name, short, color }]));
+  document.getElementById('new-cat-name-input').value = '';
+  document.getElementById('new-cat-short-input').value = '';
+  renderCategoriesList();
+  renderCards();
+  syncToFirebase();
+}
+
+function removeCategory(id) {
+  if (currentRole !== 'admin') return;
+  const cat = customCategories.find(c => c.id === id);
+  if (!cat) return;
+  const used = cardsData.filter(card => card.category === id).length;
+  if (used > 0) {
+    alert(`Impossible de supprimer ${cat.name} : ${used} Timesheet(s) y sont encore classées.\n\nDéplacez-les d'abord dans un autre domaine.`);
+    return;
+  }
+  if (!confirm(`Supprimer définitivement le domaine ${cat.name} ?`)) return;
+  setCustomCategories(customCategories.filter(c => c.id !== id));
+  renderCategoriesList();
+  renderCards();
+  syncToFirebase();
 }
 
 /* ----------------------------------------------------------
