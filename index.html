@@ -178,6 +178,26 @@
   .task-worker-dropzone { min-height: 30px; border: 2px dashed #bae6fd; border-radius: 6px; padding: 4px; background: #ffffff; margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; transition: background 0.2s; }
   .task-worker-dropzone:empty::before { content: "📥 Drop workers here"; font-size: 9px; color: #94a3b8; font-weight: 600; width: 100%; text-align: center; margin-top: 4px; }
 
+  /* COMPARER IMPORT (fichier Excel ↔ base de l'application) */
+  #compare-view { display: none; padding: 12px 16px; }
+  .cmp-box { background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+  .cmp-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .cmp-row label { font-size: 11px; font-weight: 700; color: #64748b; display: flex; flex-direction: column; gap: 3px; }
+  .cmp-row select, .cmp-row input[type=text] { padding: 6px 8px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; }
+  .cmp-chip { border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 16px; padding: 5px 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .cmp-chip.active { background: #1e293b; color: #fff; border-color: #1e293b; }
+  .cmp-wrap { overflow: auto; max-height: calc(100vh - 330px); border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
+  .cmp-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .cmp-table th { position: sticky; top: 0; background: #f1f5f9; z-index: 1; text-align: left; padding: 6px 8px; font-size: 11px; border-bottom: 1px solid #cbd5e1; }
+  .cmp-table td { padding: 5px 8px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+  .cmp-table tr.st-present td:first-child { border-left: 4px solid #16a34a; }
+  .cmp-table tr.st-check td:first-child { border-left: 4px solid #f59e0b; }
+  .cmp-table tr.st-absent td:first-child { border-left: 4px solid #dc2626; }
+  .cmp-table tr.st-extra td:first-child { border-left: 4px solid #6366f1; }
+  .cmp-table select { padding: 3px 4px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px; }
+  .cmp-ended { color: #94a3b8; }
+  .cmp-sub { font-size: 10px; color: #64748b; }
+
   /* PLANNING (estimation des dates de fin) */
   #planning-view { display: none; padding: 12px 16px; }
   .plan-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
@@ -394,7 +414,7 @@
     body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .org-manager-col { break-inside: avoid; border: 1px solid #94a3b8; }
     
     /* PRINT TS */
-    body.print-mode-ts .top-bar, body.print-mode-ts #error-banner, body.print-mode-ts #planning-view, body.print-mode-ts .dashboard-container, body.print-mode-ts #orgchart-view, body.print-mode-ts #tree-view, body.print-mode-ts #workers-drawer, body.print-mode-ts .modal-overlay, body.print-mode-ts #fab-move, body.print-mode-ts #fab-drawer { display: none !important; }
+    body.print-mode-ts .top-bar, body.print-mode-ts #error-banner, body.print-mode-ts #planning-view, body.print-mode-ts #compare-view, body.print-mode-ts .dashboard-container, body.print-mode-ts #orgchart-view, body.print-mode-ts #tree-view, body.print-mode-ts #workers-drawer, body.print-mode-ts .modal-overlay, body.print-mode-ts #fab-move, body.print-mode-ts #fab-drawer { display: none !important; }
     body.print-mode-ts #timesheet-print-zone { display: block !important; width: 100%; }
 
     /* Mise en page compacte : 20 ouvriers + signatures sur une page A4 paysage */
@@ -418,14 +438,14 @@
     .ts-sign-box { border-top: 1px solid #000; width: 30%; text-align: center; padding-top: 4px; }
 
     /* PRINT DB */
-    body.print-mode-db .top-bar, body.print-mode-db #planning-view, body.print-mode-db .dashboard-container, body.print-mode-db #orgchart-view, body.print-mode-db #tree-view, body.print-mode-db #workers-drawer, body.print-mode-db .modal-overlay, body.print-mode-db #fab-move, body.print-mode-db #fab-drawer { display: none !important; }
+    body.print-mode-db .top-bar, body.print-mode-db #planning-view, body.print-mode-db #compare-view, body.print-mode-db .dashboard-container, body.print-mode-db #orgchart-view, body.print-mode-db #tree-view, body.print-mode-db #workers-drawer, body.print-mode-db .modal-overlay, body.print-mode-db #fab-move, body.print-mode-db #fab-drawer { display: none !important; }
     body.print-mode-db #db-print-zone { display: block !important; width: 100%; }
     .db-print-table { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 12px; }
     .db-print-table th, .db-print-table td { border: 1px solid #000; padding: 6px; text-align: left; }
     .db-print-table th { background-color: #f1f5f9; font-weight: bold; }
 
     /* PRINT TREE */
-    body.print-mode-tree .top-bar, body.print-mode-tree #planning-view, body.print-mode-tree .dashboard-container, body.print-mode-tree #orgchart-view, body.print-mode-tree #workers-drawer, body.print-mode-tree .modal-overlay, body.print-mode-tree #fab-move, body.print-mode-tree #fab-drawer { display: none !important; }
+    body.print-mode-tree .top-bar, body.print-mode-tree #planning-view, body.print-mode-tree #compare-view, body.print-mode-tree .dashboard-container, body.print-mode-tree #orgchart-view, body.print-mode-tree #workers-drawer, body.print-mode-tree .modal-overlay, body.print-mode-tree #fab-move, body.print-mode-tree #fab-drawer { display: none !important; }
     body.print-mode-tree #tree-view { display: block !important; width: 100%; overflow: visible !important; background: white; }
     body.print-mode-tree .btn-print-tree { display: none !important; }
   }
@@ -721,6 +741,7 @@
     <button id="btn-toggle-view" class="btn btn-outline" onclick="setView('orgchart')">🗺️ Vue Équipes</button>
     <button id="btn-toggle-tree" class="btn btn-outline" onclick="setView('tree')">🌳 Arbre Hiérarchique</button>
     <button id="btn-toggle-plan" class="btn btn-outline" onclick="setView('planning')" title="Liste des ouvriers des Timesheets et estimation de leur date de fin">📅 Planning fin</button>
+    <button id="btn-toggle-cmp" class="btn btn-outline" onclick="setView('compare')" title="Comparer un fichier Excel d'ouvriers avec la base de l'application et ajouter les manquants">🔍 Comparer Import</button>
     <button id="btn-toggle-dash" class="btn btn-black" onclick="setView('dashboard')" style="display:none;">📊 Tableau de bord</button>
     <div class="divider"></div>
 
@@ -806,6 +827,9 @@
 
 <!-- VUE PLANNING (dates de fin estimées) -->
 <div id="planning-view"></div>
+
+<!-- VUE COMPARAISON IMPORT / BASE -->
+<div id="compare-view"></div>
 
 <!-- ZONES D'IMPRESSION CACHÉES -->
 <div id="timesheet-print-zone"></div>
@@ -1381,6 +1405,7 @@ function refreshAllViews() {
   if (currentView === 'orgchart') renderOrgChart();
   if (currentView === 'tree') renderTreeOrgChart();
   if (currentView === 'planning' && !window.planPainting) renderPlanning();
+  if (currentView === 'compare') renderCompare();
   renderDrawer();
   if (document.getElementById('db-modal').style.display === 'flex') renderDBTable();
   updateFab();
@@ -1795,7 +1820,9 @@ window.setView = function(viewMode) {
   document.getElementById('orgchart-view').style.display = viewMode === 'orgchart' ? 'block' : 'none';
   document.getElementById('tree-view').style.display = viewMode === 'tree' ? 'block' : 'none';
   document.getElementById('planning-view').style.display = viewMode === 'planning' ? 'block' : 'none';
+  document.getElementById('compare-view').style.display = viewMode === 'compare' ? 'block' : 'none';
   document.getElementById('btn-toggle-plan').style.display = viewMode === 'planning' ? 'none' : 'inline-flex';
+  document.getElementById('btn-toggle-cmp').style.display = viewMode === 'compare' ? 'none' : 'inline-flex';
   
   document.getElementById('btn-toggle-view').style.display = viewMode === 'orgchart' ? 'none' : 'inline-flex';
   document.getElementById('btn-toggle-tree').style.display = viewMode === 'tree' ? 'none' : 'inline-flex';
@@ -1804,6 +1831,7 @@ window.setView = function(viewMode) {
   if (viewMode === 'orgchart') renderOrgChart();
   if (viewMode === 'tree') renderTreeOrgChart();
   if (viewMode === 'planning') renderPlanning();
+  if (viewMode === 'compare') renderCompare();
 };
 
 function toggleDrawer() { document.getElementById('workers-drawer').classList.toggle('open'); }
@@ -5218,6 +5246,462 @@ window.setBuiltInPassword = function(role) {
   appProfiles.passwords = { ...appProfiles.passwords, [role]: pwd };
   saveProfiles();
   alert(`Mot de passe du profil ${BASE_ROLES[role]} enregistré.`);
+};
+</script>
+<script>
+/* ===== compare.js ===== */
+/* ==========================================================
+   compare.js — COMPARER IMPORT (fichier Excel ↔ base de l'application)
+   - Lit un fichier Excel d'ouvriers (colonnes détectées, modifiables)
+   - Compare avec tous les ouvriers de l'application (affectés + non assignés)
+     1) même ID COMET + nom proche → ✅ présent
+     2) même nom (ordre des mots / accents ignorés) → ✅ présent
+     3) même ID mais nom différent → ⚠️ à vérifier
+     sinon → ❌ absent de l'application
+   - L'ID est comparé sur son numéro : « RT-BIK 469 » = « 469 » = « 0469 »
+   - Ajout des absents dans « Non assignés », un par un ou par sélection
+   - Rien n'est modifié tant qu'on ne clique pas sur « Ajouter »
+   ========================================================== */
+
+let cmpFile = null;          // { fileName, sheets: [{ name, rows }], sheetIdx, headerIdx, map }
+let cmpResult = null;        // résultat de la dernière comparaison
+let cmpFilter = 'absent';
+let cmpSearch = '';
+let cmpCompany = '';
+let cmpHideEnded = false;
+const cmpSelected = new Set();      // index de lignes du fichier cochées
+const cmpCompanyChoice = {};        // index de ligne → entreprise choisie pour l'ajout
+
+const CMP_STATUS = {
+  present: { label: '✅ Présents', cls: 'st-present' },
+  check:   { label: '⚠️ À vérifier', cls: 'st-check' },
+  absent:  { label: '❌ Absents de l\'appli', cls: 'st-absent' },
+  extra:   { label: '🔷 Dans l\'appli, pas dans le fichier', cls: 'st-extra' }
+};
+
+// Clé d'ID : le dernier nombre de l'ID (« RT-BIK 469 » → « 469 »). ID provisoire « W-… » : pas de clé.
+function cmpIdKey(id) {
+  const s = String(id ?? '').trim().toUpperCase();
+  if (!s || s.startsWith('W-')) return '';
+  const nums = s.match(/\d+/g);
+  return nums ? String(parseInt(nums[nums.length - 1], 10)) : s;
+}
+
+function cmpTokens(name) {
+  const out = [];
+  normalizeName(name).split(' ').forEach(t => { if (t && t !== 'JR' && t !== 'SR' && !out.includes(t)) out.push(t); });
+  return out;
+}
+
+function cmpLevRatio(a, b) {
+  if (a === b) return 1;
+  const m = a.length, n = b.length;
+  if (!m || !n) return 0;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return 1 - prev[n] / Math.max(m, n);
+}
+
+// Noms proches (fautes d'orthographe tolérées) : au moins 2/3 des mots du nom le plus court se retrouvent
+function cmpNameClose(a, b) {
+  const A = cmpTokens(a), B = cmpTokens(b);
+  if (!A.length || !B.length) return false;
+  const hits = A.filter(x => B.some(y => cmpLevRatio(x, y) >= 0.75)).length;
+  return hits >= Math.ceil(Math.min(A.length, B.length) * 0.66);
+}
+
+// Date Excel (Date, nombre de série, ou texte) → { txt, ended }
+function cmpDate(v) {
+  if (v === null || v === undefined || v === '') return { txt: '', ended: false };
+  let d = null;
+  if (v instanceof Date) d = v;
+  else if (typeof v === 'number' && v > 20000 && v < 80000) d = new Date(Math.round((v - 25569) * 86400000));
+  else {
+    const m = String(v).trim().match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
+    if (m) d = new Date(+(m[3].length === 2 ? '20' + m[3] : m[3]), +m[2] - 1, +m[1]);
+  }
+  if (d && !isNaN(d)) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const txt = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+    return { txt, ended: d < today };
+  }
+  const txt = String(v).trim();
+  return { txt, ended: txt.toUpperCase() === 'X' };
+}
+
+// --- Lecture du fichier ---
+window.cmpLoadFile = function(event) {
+  const input = event.target;
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellDates: true });
+      const sheets = wb.SheetNames.map(n => ({ name: n, rows: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: '', raw: true }) }))
+        .filter(sh => sh.rows.length);
+      if (!sheets.length) { alert("Ce fichier ne contient aucune donnée."); return; }
+      cmpFile = { fileName: file.name, sheets, sheetIdx: 0 };
+      cmpDetectColumns();
+      cmpSelected.clear();
+      Object.keys(cmpCompanyChoice).forEach(k => delete cmpCompanyChoice[k]);
+      cmpFilter = 'absent';
+      renderCompare(true);
+    } catch (err) { alert("Erreur de lecture du fichier : " + err.message); }
+    input.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+// Ligne d'en-têtes et colonnes devinées d'après leurs titres
+function cmpDetectColumns() {
+  const rows = cmpFile.sheets[cmpFile.sheetIdx].rows;
+  let h = 0;
+  for (let r = 0; r < Math.min(rows.length, 40); r++) {
+    const line = (rows[r] || []).map(c => String(c || '').toUpperCase()).join(' | ');
+    if (/SURNAME|NAME|NOM/.test(line)) { h = r; break; }
+  }
+  cmpFile.headerIdx = h;
+  const head = (rows[h] || []).map(c => String(c || '').trim().toUpperCase());
+  const find = (test) => head.findIndex(test);
+  const notOther = c => !/FATHER|SUBCON|HOTEL|MANAGER|COMPANY/.test(c);
+  const surname = find(c => c.includes('SURNAME') || c === 'NOM');
+  const name = find((c, i) => i !== surname && notOther(c) && (c === 'NAME' || c.includes('FIRST NAME') || c.includes('PRENOM') || c.includes('PRÉNOM') || c === 'NAME ' || /^NAME\b/.test(c)));
+  const anyName = find(c => notOther(c) && (c.includes('NAME') || c.includes('NOM')));
+  let id = find(c => c.includes('COMET') || c.includes('NEOAXESS'));
+  if (id < 0) id = find(c => c === 'ID' || c === 'NO.' || c === 'N°' || c.includes('EMPLOYEE ID'));
+  // Fin de contrat : la colonne la plus à jour d'abord ; « END DATE » seul seulement si rien d'autre
+  const ends = [];
+  const addEnds = keys => keys.forEach(k => head.forEach((c, i) => { if (c.includes(k) && !ends.includes(i) && !c.includes('SCOPE')) ends.push(i); }));
+  addEnds(['ESTIMATED END DATE CONTRACT', 'NEW CONTRACT END', 'CONTRACT END', 'DATE FIN', 'FIN CONTRAT', 'FIN DE CONTRAT']);
+  if (!ends.length) addEnds(['END DATE']);
+  cmpFile.map = {
+    id,
+    name1: surname >= 0 ? surname : anyName,
+    name2: surname >= 0 ? name : -1,
+    company: find(c => c === 'COMPANY' || c.includes('ENTREPRISE') || c === 'CO.' || c.includes('SOCIETE')),
+    nationality: find(c => c.includes('NATIONAL')),
+    specialty: find(c => c.includes('SPECIAL') || c.includes('POSITION') || c.includes('TRADE')),
+    end: ends.length ? ends[0] : -1,
+    endFallback: ends.slice(1) // si la colonne principale est vide, on prend la suivante
+  };
+}
+
+// Lignes du fichier → [{ idx, id, name, fileCompany, nationality, specialty, end }]
+function cmpFileRows() {
+  if (!cmpFile) return [];
+  const rows = cmpFile.sheets[cmpFile.sheetIdx].rows, m = cmpFile.map, out = [];
+  const cell = (row, i) => (i >= 0 && row[i] !== undefined && row[i] !== null) ? row[i] : '';
+  const txt = (row, i) => String(cell(row, i)).replace(/\s+/g, ' ').trim();
+  for (let r = cmpFile.headerIdx + 1; r < rows.length; r++) {
+    const row = rows[r];
+    if (!Array.isArray(row)) continue;
+    const name = [txt(row, m.name1), txt(row, m.name2)].filter(Boolean).join(' ');
+    if (!name || !/[A-Za-zͰ-ϿЀ-ӿ]/.test(name)) continue;
+    let endRaw = cell(row, m.end);
+    for (const i of m.endFallback || []) { if (endRaw !== '') break; endRaw = cell(row, i); }
+    out.push({ idx: r, line: r + 1, id: txt(row, m.id), name, fileCompany: txt(row, m.company),
+      nationality: txt(row, m.nationality), specialty: txt(row, m.specialty), end: cmpDate(endRaw) });
+  }
+  return out;
+}
+
+// Entreprise proposée pour un nouvel ouvrier (même règle que l'import « Foreign » pour BIK)
+function cmpGuessCompany(r) {
+  const c = String(r.fileCompany || '').toUpperCase().trim();
+  const exact = siteCompanies.find(x => String(x).toUpperCase() === c);
+  if (exact) return exact;
+  if (c.includes('BRANCH')) return 'SKYBUILDING BRANCH';
+  if (c.includes('GREECE')) return 'SKYBUILDING GREECE';
+  if (c.includes('EUROASIA')) return 'EUROASIA';
+  if (c.includes('DSS')) return 'DSS';
+  if (c.includes('BIK')) {
+    const n = String(r.nationality || '').toUpperCase();
+    if (n.includes('PHILIPPINE') || n.includes('FILIPINO')) return 'EUROASIA';
+    if (n.includes('GHAN') || n.includes('INDIA')) return 'DSS';
+    return 'BIK';
+  }
+  return siteCompanies.includes('OTHER') ? 'OTHER' : (siteCompanies[0] || 'OTHER');
+}
+
+// Tous les ouvriers de l'application, avec leur emplacement
+function cmpAppWorkers() {
+  const list = [];
+  cardsData.forEach(card => (card.tasks || []).forEach(t => (t.workerList || []).forEach(w => {
+    if (!w.isDeleted) list.push({ w, place: (card.name || 'Sans nom') + (card.timesheetNo ? ` (TS ${card.timesheetNo})` : '') });
+  })));
+  unassignedWorkers.forEach(w => list.push({ w, place: 'Base non assignée' }));
+  return list;
+}
+
+// Comparaison (ne modifie RIEN). Chaque ouvrier de l'appli n'est rapproché qu'une fois.
+function cmpCompute() {
+  const rows = cmpFileRows();
+  const app = cmpAppWorkers();
+  const byId = new Map(), byName = new Map();
+  app.forEach((a, i) => {
+    const k = cmpIdKey(a.w.id);
+    if (k) { if (!byId.has(k)) byId.set(k, []); byId.get(k).push(i); }
+    const n = cmpTokens(a.w.name).sort().join(' ');
+    if (n) { if (!byName.has(n)) byName.set(n, []); byName.get(n).push(i); }
+  });
+  const taken = new Array(app.length).fill(false);
+  const res = rows.map(r => ({ r, status: 'absent', a: null }));
+  const take = (x, i, status) => { taken[i] = true; x.a = app[i]; x.status = status; };
+
+  // 1) même ID + nom proche
+  res.forEach(x => {
+    const i = (byId.get(cmpIdKey(x.r.id)) || []).find(i => !taken[i] && cmpNameClose(x.r.name, app[i].w.name));
+    if (i !== undefined) take(x, i, 'present');
+  });
+  // 2) même nom
+  res.forEach(x => {
+    if (x.a) return;
+    const i = (byName.get(cmpTokens(x.r.name).sort().join(' ')) || []).find(i => !taken[i]);
+    if (i !== undefined) take(x, i, 'present');
+  });
+  // 3) même ID seulement → à vérifier
+  res.forEach(x => {
+    if (x.a) return;
+    const i = (byId.get(cmpIdKey(x.r.id)) || []).find(i => !taken[i]);
+    if (i !== undefined) take(x, i, 'check');
+  });
+  const extra = app.filter((a, i) => !taken[i]);
+  return { res, extra };
+}
+
+// --- Affichage ---
+function renderCompare(rebuild) {
+  const view = document.getElementById('compare-view');
+  if (!view) return;
+  const ae = document.activeElement;
+  // Choix ou saisie en cours dans l'onglet : pas de rafraîchissement (sinon le champ perd le focus)
+  if (!rebuild && ae && ae.closest && ae.closest('#compare-view') && (ae.tagName === 'SELECT' || ae.type === 'text')) return;
+
+  if (rebuild || !document.getElementById('cmp-table-wrap')) {
+    const colOpts = (sel) => {
+      if (!cmpFile) return '';
+      const head = cmpFile.sheets[cmpFile.sheetIdx].rows[cmpFile.headerIdx] || [];
+      const n = Math.max(head.length, ...cmpFile.sheets[cmpFile.sheetIdx].rows.slice(cmpFile.headerIdx, cmpFile.headerIdx + 20).map(r => (r || []).length));
+      let o = `<option value="-1" ${sel < 0 ? 'selected' : ''}>— aucune —</option>`;
+      for (let i = 0; i < n; i++) {
+        const letter = XLSX.utils.encode_col(i);
+        o += `<option value="${i}" ${sel === i ? 'selected' : ''}>${letter} · ${escapeHtml(String(head[i] || '').slice(0, 30))}</option>`;
+      }
+      return o;
+    };
+    const m = cmpFile ? cmpFile.map : {};
+    const mapSel = (key, label) => `<label>${label}<select onchange="cmpSetMap('${key}', this.value)">${colOpts(m[key])}</select></label>`;
+    view.innerHTML = `
+      <div class="cmp-box">
+        <div class="cmp-row">
+          <input type="file" id="cmp-file-input" accept=".xlsx, .xls" style="display:none" onchange="cmpLoadFile(event)">
+          <button class="btn btn-black" onclick="document.getElementById('cmp-file-input').click()">📂 Choisir un fichier Excel</button>
+          <b>${cmpFile ? '📄 ' + escapeHtml(cmpFile.fileName) : 'Aucun fichier chargé'}</b>
+          ${cmpFile && cmpFile.sheets.length > 1 ? `<label>Feuille<select onchange="cmpSetSheet(this.value)">${cmpFile.sheets.map((sh, i) => `<option value="${i}" ${i === cmpFile.sheetIdx ? 'selected' : ''}>${escapeHtml(sh.name)}</option>`).join('')}</select></label>` : ''}
+          ${cmpFile ? `<button class="btn btn-outline" onclick="cmpExport()">💾 Exporter la comparaison (Excel)</button>` : ''}
+        </div>
+        <div class="plan-help" style="margin:8px 0 0;">Compare un fichier d'ouvriers avec la base de l'application (ouvriers affectés + non assignés).
+          Rapprochement par <b>ID COMET</b> (« RT-BIK 469 » = « 469 ») avec un nom proche, sinon par le <b>nom</b> (ordre des mots et accents ignorés).
+          <b>Rien n'est modifié</b> tant que vous ne cliquez pas sur « Ajouter » : les ouvriers ajoutés vont dans « Non assignés ».</div>
+        ${cmpFile ? `<div class="cmp-row" style="margin-top:8px;">
+          ${mapSel('id', 'ID (COMET)')}${mapSel('name1', 'Nom')}${mapSel('name2', 'Prénom')}${mapSel('company', 'Entreprise (fichier)')}${mapSel('nationality', 'Nationalité')}${mapSel('specialty', 'Spécialité')}${mapSel('end', 'Fin de contrat')}
+        </div>` : ''}
+      </div>
+      <div id="cmp-stats"></div>
+      <div id="cmp-actions"></div>
+      <div class="cmp-wrap" id="cmp-table-wrap"></div>`;
+  }
+
+  if (!cmpFile) {
+    document.getElementById('cmp-table-wrap').innerHTML = `<div style="padding:30px; text-align:center; color:#64748b;">Choisissez un fichier Excel d'ouvriers (ex. WORKERS OVERVIEW, fichier RH…) pour le comparer à la base.</div>`;
+    return;
+  }
+
+  cmpResult = cmpCompute();
+  const { res, extra } = cmpResult;
+  const editable = canEdit();
+  const absentIdx = new Set(res.filter(x => x.status === 'absent').map(x => x.r.idx));
+  [...cmpSelected].forEach(i => { if (!absentIdx.has(i)) cmpSelected.delete(i); });
+
+  const counts = { present: 0, check: 0, absent: 0, extra: extra.length };
+  res.forEach(x => counts[x.status]++);
+  const absentActive = res.filter(x => x.status === 'absent' && !x.r.end.ended).length;
+  const companies = [...new Set(res.map(x => x.r.fileCompany).filter(Boolean))].sort();
+  if (cmpCompany && !companies.includes(cmpCompany)) cmpCompany = '';
+
+  const chip = (k) => `<button class="cmp-chip ${cmpFilter === k ? 'active' : ''}" onclick="cmpSetFilter('${k}')">${CMP_STATUS[k].label} : ${counts[k]}</button>`;
+  document.getElementById('cmp-stats').innerHTML = `
+    <div class="cmp-box">
+      <div class="cmp-row">
+        <span style="font-weight:800;">📋 ${res.length} ouvriers dans le fichier</span>
+        <button class="cmp-chip ${cmpFilter === 'all' ? 'active' : ''}" onclick="cmpSetFilter('all')">Tout le fichier : ${res.length}</button>
+        ${chip('present')}${chip('check')}${chip('absent')}${chip('extra')}
+        <span class="cmp-sub">dont ${absentActive} absent(s) avec un contrat encore actif</span>
+      </div>
+      <div class="cmp-row" style="margin-top:8px;">
+        <input type="text" id="cmp-search" placeholder="🔎 Rechercher un nom ou un ID…" value="${escapeHtml(cmpSearch)}" oninput="cmpSearch = this.value; cmpRenderTable();" style="min-width:240px;">
+        <select onchange="cmpCompany = this.value; cmpRenderTable();"><option value="">Toutes les entreprises du fichier</option>${companies.map(c => `<option ${c === cmpCompany ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('')}</select>
+        <label style="flex-direction:row; align-items:center; gap:5px; font-size:12px; color:#334155;"><input type="checkbox" ${cmpHideEnded ? 'checked' : ''} onchange="cmpHideEnded = this.checked; cmpRenderTable();"> Masquer les contrats terminés</label>
+      </div>
+    </div>`;
+  cmpRenderTable();
+}
+
+function cmpVisible() {
+  if (!cmpResult) return [];
+  const q = normalizeName(cmpSearch);
+  const qid = String(cmpSearch || '').trim().toUpperCase();
+  if (cmpFilter === 'extra') {
+    return cmpResult.extra.filter(a => {
+      if (!qid) return true;
+      const hay = normalizeName(a.w.name);
+      return q.split(' ').every(p => hay.includes(p)) || String(a.w.id || '').toUpperCase().includes(qid);
+    });
+  }
+  return cmpResult.res.filter(x => {
+    if (cmpFilter !== 'all' && x.status !== cmpFilter) return false;
+    if (cmpCompany && x.r.fileCompany !== cmpCompany) return false;
+    if (cmpHideEnded && x.r.end.ended) return false;
+    if (!qid) return true;
+    const hay = normalizeName(x.r.name + ' ' + (x.a ? x.a.w.name : ''));
+    return q.split(' ').every(p => hay.includes(p)) || String(x.r.id).toUpperCase().includes(qid) || (x.a && String(x.a.w.id).toUpperCase().includes(qid));
+  });
+}
+
+function cmpRenderTable() {
+  const wrap = document.getElementById('cmp-table-wrap');
+  if (!wrap || !cmpResult) return;
+  const editable = canEdit();
+  const list = cmpVisible();
+  const compOpts = (sel) => siteCompanies.map(c => `<option ${c === sel ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('');
+
+  // Barre d'ajout (seulement sur les absents)
+  const actions = document.getElementById('cmp-actions');
+  const showAdd = editable && (cmpFilter === 'absent' || cmpFilter === 'all');
+  actions.innerHTML = showAdd ? `
+    <div class="cmp-box" style="background:#f0fdf4; border-color:#86efac;">
+      <div class="cmp-row">
+        <b>☑️ ${cmpSelected.size} ouvrier(s) sélectionné(s)</b>
+        <button class="btn btn-outline" onclick="cmpSelectVisible(true)">Tout cocher (absents affichés)</button>
+        <button class="btn btn-outline" onclick="cmpSelectVisible(false)">Tout décocher</button>
+        <label style="flex-direction:row; align-items:center; gap:5px;">Entreprise :
+          <select id="cmp-bulk-company"><option value="">Proposée pour chaque ligne</option>${compOpts('')}</select></label>
+        <button class="btn btn-success" ${cmpSelected.size ? '' : 'disabled'} onclick="cmpAddSelected()">➕ Ajouter la sélection dans « Non assignés »</button>
+      </div>
+    </div>` : (!editable ? `<div class="plan-help">🔒 Lecture seule : changez de profil (Timekeeper / Admin) pour ajouter des ouvriers.</div>` : '');
+
+  if (cmpFilter === 'extra') {
+    wrap.innerHTML = `<table class="cmp-table"><thead><tr><th>ID appli</th><th>Nom dans l'appli</th><th>Entreprise</th><th>Emplacement</th></tr></thead><tbody>
+      ${list.map(a => `<tr class="st-extra"><td>${escapeHtml(a.w.id)}</td><td><b>${escapeHtml(a.w.name)}</b></td><td>${escapeHtml(a.w.company)}</td><td>${escapeHtml(a.place)}</td></tr>`).join('')
+        || `<tr><td colspan="4" style="text-align:center; padding:20px; color:#64748b;">Aucun ouvrier.</td></tr>`}
+      </tbody></table>`;
+    return;
+  }
+
+  wrap.innerHTML = `<table class="cmp-table"><thead><tr>
+      ${showAdd ? '<th style="width:28px;"></th>' : ''}<th>Statut</th><th>Ligne</th><th>ID fichier</th><th>Nom dans le fichier</th><th>Entreprise (fichier)</th><th>Spécialité</th><th>Fin contrat</th><th>Dans l'appli</th>${showAdd ? '<th>Ajouter</th>' : ''}
+    </tr></thead><tbody>
+    ${list.map(x => {
+      const r = x.r;
+      const absent = x.status === 'absent';
+      const appCell = x.a
+        ? `${escapeHtml(x.a.w.id)} - <b>${escapeHtml(x.a.w.name)}</b> <span class="cmp-sub">(${escapeHtml(x.a.w.company)})</span><div class="cmp-sub">📍 ${escapeHtml(x.a.place)}</div>`
+        : '<span style="color:#dc2626; font-weight:700;">— absent —</span>';
+      const comp = cmpCompanyChoice[r.idx] || cmpGuessCompany(r);
+      return `<tr class="${CMP_STATUS[x.status].cls}">
+        ${showAdd ? `<td>${absent ? `<input type="checkbox" ${cmpSelected.has(r.idx) ? 'checked' : ''} onchange="cmpToggle(${r.idx}, this.checked)">` : ''}</td>` : ''}
+        <td style="white-space:nowrap;">${CMP_STATUS[x.status].label.split(' ')[0]}${x.status === 'check' ? '<div class="cmp-sub">même ID, nom différent</div>' : ''}</td>
+        <td class="cmp-sub">${r.line}</td>
+        <td>${escapeHtml(r.id)}</td>
+        <td><b>${escapeHtml(r.name)}</b></td>
+        <td>${escapeHtml(r.fileCompany)}</td>
+        <td class="cmp-sub">${escapeHtml(r.specialty)}</td>
+        <td class="${r.end.ended ? 'cmp-ended' : ''}" style="white-space:nowrap;">${escapeHtml(r.end.txt)}${r.end.ended ? ' <span class="cmp-sub">(terminé)</span>' : ''}</td>
+        <td>${appCell}</td>
+        ${showAdd ? `<td style="white-space:nowrap;">${absent ? `<select onchange="cmpCompanyChoice[${r.idx}] = this.value">${compOpts(comp)}</select>
+          <button class="btn btn-success" style="padding:3px 8px; font-size:11px;" onclick="cmpAddRows([${r.idx}])" title="Ajouter cet ouvrier dans « Non assignés »">Ajouter</button>` : ''}</td>` : ''}
+      </tr>`;
+    }).join('') || `<tr><td colspan="10" style="text-align:center; padding:20px; color:#64748b;">Aucun ouvrier pour ce filtre.</td></tr>`}
+    </tbody></table>`;
+}
+
+window.renderCompare = renderCompare;
+window.cmpRenderTable = cmpRenderTable;
+window.cmpSetFilter = function(f) { cmpFilter = f; renderCompare(); };
+window.cmpSetSheet = function(i) { cmpFile.sheetIdx = +i; cmpDetectColumns(); cmpSelected.clear(); renderCompare(true); };
+window.cmpSetMap = function(key, v) { cmpFile.map[key] = +v; if (key === 'end') cmpFile.map.endFallback = []; cmpSelected.clear(); renderCompare(true); };
+window.cmpToggle = function(idx, on) { if (on) cmpSelected.add(idx); else cmpSelected.delete(idx); cmpRenderTable(); };
+window.cmpSelectVisible = function(on) {
+  if (!on) cmpSelected.clear();
+  else cmpVisible().forEach(x => { if (x.status === 'absent') cmpSelected.add(x.r.idx); });
+  cmpRenderTable();
+};
+
+window.cmpAddSelected = function() {
+  const idxs = [...cmpSelected];
+  if (!idxs.length) return;
+  const bulk = document.getElementById('cmp-bulk-company')?.value || '';
+  if (!confirm(`Ajouter ${idxs.length} ouvrier(s) dans « Non assignés » ?${bulk ? `\n\nEntreprise : ${bulk}` : ''}`)) return;
+  cmpAddRows(idxs, bulk);
+};
+
+// Ajout dans « Non assignés ». Refusé si l'ID (même numéro) ou le nom existe déjà dans l'appli.
+window.cmpAddRows = function(idxs, forcedCompany) {
+  if (!canEdit() || !cmpResult) return;
+  const byIdx = new Map(cmpResult.res.map(x => [x.r.idx, x]));
+  const app = cmpAppWorkers();
+  const ids = new Map(), names = new Map();
+  app.forEach(a => {
+    const k = cmpIdKey(a.w.id); if (k) ids.set(k, a);
+    names.set(cmpTokens(a.w.name).sort().join(' '), a);
+  });
+  const added = [], skipped = [];
+  idxs.forEach(i => {
+    const x = byIdx.get(i);
+    if (!x || x.status !== 'absent') return;
+    const r = x.r;
+    const k = cmpIdKey(r.id), n = cmpTokens(r.name).sort().join(' ');
+    const dup = (k && ids.get(k)) || names.get(n);
+    if (dup) { skipped.push(`${r.id} - ${r.name} → déjà présent : ${dup.w.id} - ${dup.w.name} (${dup.place})`); return; }
+    const w = { id: k ? r.id : uid('W'), name: r.name.toUpperCase(), company: forcedCompany || cmpCompanyChoice[i] || cmpGuessCompany(r) };
+    unassignedWorkers.push(w);
+    const a = { w, place: 'Base non assignée' };
+    if (k) ids.set(k, a);
+    names.set(n, a);
+    added.push(w);
+    cmpSelected.delete(i);
+  });
+  if (added.length) {
+    added.forEach(w => { if (!siteCompanies.includes(w.company)) siteCompanies.push(w.company); });
+    refreshAllViews();
+    recalculateTotals();
+    syncToFirebase();
+  } else renderCompare();
+  if (skipped.length || added.length > 1) {
+    alert(`✅ ${added.length} ouvrier(s) ajouté(s) dans « Non assignés ».` +
+      (skipped.length ? `\n\n⚠️ ${skipped.length} non ajouté(s) (doublon) :\n` + skipped.slice(0, 15).join('\n') + (skipped.length > 15 ? '\n…' : '') : ''));
+  }
+};
+
+window.cmpExport = function() {
+  if (!cmpResult) return;
+  const lbl = { present: 'Présent', check: 'À vérifier (même ID, nom différent)', absent: 'Absent de l\'appli' };
+  const rows = cmpResult.res.map(x => ({
+    'Statut': lbl[x.status], 'Ligne fichier': x.r.line, 'ID fichier': x.r.id, 'Nom fichier': x.r.name,
+    'Entreprise fichier': x.r.fileCompany, 'Spécialité': x.r.specialty, 'Fin contrat': x.r.end.txt,
+    'Contrat terminé': x.r.end.ended ? 'Oui' : '', 'ID appli': x.a ? x.a.w.id : '', 'Nom appli': x.a ? x.a.w.name : '',
+    'Entreprise appli': x.a ? x.a.w.company : '', 'Emplacement appli': x.a ? x.a.place : ''
+  }));
+  const extra = cmpResult.extra.map(a => ({ 'ID appli': a.w.id, 'Nom appli': a.w.name, 'Entreprise appli': a.w.company, 'Emplacement appli': a.place }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Fichier vs appli');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(extra.length ? extra : [{ 'ID appli': '' }]), 'Appli pas dans fichier');
+  XLSX.writeFile(wb, `Comparaison_${String(cmpFile.fileName).replace(/\.[^.]+$/, '')}_${new Date().toISOString().split('T')[0]}.xlsx`);
 };
 </script>
 </body>
