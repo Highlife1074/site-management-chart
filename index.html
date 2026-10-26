@@ -111,13 +111,7 @@
   .card { background: white; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; border-top: 4px solid #94a3b8; transition: transform 0.15s, box-shadow 0.15s; position: relative; }
   .card:hover { box-shadow: 0 6px 12px rgba(0,0,0,0.08); }
   
-  .cat-civil { border-top-color: #ea580c !important; }
-  .cat-trades { border-top-color: #2563eb !important; }
-  .cat-facade { border-top-color: #0891b2 !important; }
-  .cat-logistic { border-top-color: #8b5cf6 !important; }
-  .cat-external { border-top-color: #059669 !important; }
-  .cat-indirect { border-top-color: #475569 !important; }
-  .cat-plant { border-top-color: #dc2626 !important; }
+  /* couleur par domaine (.cat-civil, .cat-mep…) : générée depuis CATEGORY_INFO */
 
   .card-header { padding: 8px 12px; background: #fafafa; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; cursor: grab; }
   .card-header:active { cursor: grabbing; }
@@ -801,15 +795,7 @@
 
       <div class="summary-box">
         <div class="summary-title">Effectifs par Lot de Travaux</div>
-        <div class="pill-group">
-          <div class="stat-pill"><span class="tag-color" style="background:#ea580c;"></span><span>CIVIL:</span><span class="count" id="cat-civil">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#2563eb;"></span><span>TRADES:</span><span class="count" id="cat-trades">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#0891b2;"></span><span>FAÇADE:</span><span class="count" id="cat-facade">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#8b5cf6;"></span><span>LOGISTIC:</span><span class="count" id="cat-logistic">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#059669;"></span><span>EXTERNAL:</span><span class="count" id="cat-external">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#475569;"></span><span>INDIRECT:</span><span class="count" id="cat-indirect">0</span></div>
-          <div class="stat-pill"><span class="tag-color" style="background:#dc2626;"></span><span>PLANT:</span><span class="count" id="cat-plant">0</span></div>
-        </div>
+        <div class="pill-group" id="category-pills"><!-- généré depuis CATEGORY_INFO --></div>
       </div>
     </div>
   </div>
@@ -986,15 +972,24 @@ const DEFAULT_COMET_TASKS = [
 // --- ENTREPRISES PAR DÉFAUT (non supprimables) ---
 const DEFAULT_COMPANIES = ['SKYBUILDING BRANCH', 'SKYBUILDING GREECE', 'DSS', 'EUROASIA', 'BIK', 'OTHER'];
 
+// Domaines (lots de travaux) des Timesheets. Pour en ajouter un : une ligne ici suffit
+// (filtres, sections, menu des cartes, pastilles du tableau de bord et couleurs en découlent).
 const CATEGORY_INFO = [
-  { id: 'civil', name: 'CIVIL WORKS', color: '#ea580c' },
-  { id: 'trades', name: 'TRADES & FINISHES', color: '#2563eb' },
-  { id: 'facade', name: 'FAÇADE', color: '#0891b2' },
-  { id: 'logistic', name: 'LOGISTICS', color: '#8b5cf6' },
-  { id: 'external', name: 'EXTERNAL WORKS', color: '#059669' },
-  { id: 'indirect', name: 'INDIRECT & SERVICES', color: '#475569' },
-  { id: 'plant', name: 'PLANT & EQUIPMENT', color: '#dc2626' }
+  { id: 'civil', name: 'CIVIL WORKS', short: 'Civil', color: '#ea580c' },
+  { id: 'trades', name: 'TRADES & FINISHES', short: 'Trades', color: '#2563eb' },
+  { id: 'mep', name: 'MEP', short: 'MEP', color: '#ca8a04' },
+  { id: 'facade', name: 'FAÇADE', short: 'Façade', color: '#0891b2' },
+  { id: 'logistic', name: 'LOGISTICS', short: 'Logistic', color: '#8b5cf6' },
+  { id: 'lifting', name: 'LIFTING', short: 'Lifting', color: '#a16207' },
+  { id: 'external', name: 'EXTERNAL WORKS', short: 'External', color: '#059669' },
+  { id: 'hs', name: 'H&S', short: 'H&S', color: '#db2777' },
+  { id: 'supervision', name: 'SUPERVISION', short: 'Supervision', color: '#1e293b' },
+  { id: 'indirect', name: 'INDIRECT & SERVICES', short: 'Indirect', color: '#475569' },
+  { id: 'plant', name: 'PLANT & EQUIPMENT', short: 'Plant & Eq', color: '#dc2626' }
 ];
+// Couleur du haut des cartes, une classe par domaine
+document.head.insertAdjacentHTML('beforeend', '<style>' +
+  CATEGORY_INFO.map(c => `.cat-${c.id} { border-top-color: ${c.color} !important; }`).join(' ') + '</style>');
 
 const DEFAULT_DATA = [
   { name: "NEW TIMESHEET", manager: "", supervisorRole: "SUPERVISOR", category: "civil", timesheetNo: "", timesheetName: "", shiftType: "Shift 1", shiftHours: "07:00 - 15:00", printTasks: [], tasks: [{ desc: "Task description", foreman: "", source: "SKYBUILDING BRANCH", workers: "", workerList: [] }] }
@@ -1841,6 +1836,9 @@ function toggleDrawer() { document.getElementById('workers-drawer').classList.to
 function initLayout() {
   renderRoleSelector();
 
+  document.getElementById('category-pills').innerHTML = CATEGORY_INFO.map(cat =>
+    `<div class="stat-pill"><span class="tag-color" style="background:${cat.color};"></span><span>${escapeHtml(cat.short.toUpperCase())}:</span><span class="count" id="cat-${cat.id}">0</span></div>`).join('');
+
   const filterBar = document.getElementById('filter-bar');
   filterBar.innerHTML = `
     <div style="display:flex; flex-wrap:wrap; gap:8px; width:100%; align-items:center;">
@@ -2084,13 +2082,7 @@ function renderCards() {
           <div style="display:flex; align-items:center; gap:8px;">
             <input type="checkbox" class="ts-checkbox" title="Sélectionner pour impression TS" onchange="handleCheck(${cIdx}, this.checked)" ${isChecked}>
             <select class="cat-select" onchange="changeCategory(${cIdx}, this.value)">
-              <option value="civil" ${catId==='civil'?'selected':''}>Civil</option>
-              <option value="trades" ${catId==='trades'?'selected':''}>Trades</option>
-              <option value="facade" ${catId==='facade'?'selected':''}>Façade</option>
-              <option value="logistic" ${catId==='logistic'?'selected':''}>Logistic</option>
-              <option value="external" ${catId==='external'?'selected':''}>External</option>
-              <option value="indirect" ${catId==='indirect'?'selected':''}>Indirect</option>
-              <option value="plant" ${catId==='plant'?'selected':''}>Plant & Eq</option>
+              ${CATEGORY_INFO.map(c => `<option value="${c.id}" ${catId === c.id ? 'selected' : ''}>${escapeHtml(c.short)}</option>`).join('')}
             </select>
           </div>
           <span class="card-total-badge ${cc.mismatch ? 'error' : ''}" id="card-total-${cIdx}">${cardBadgeHtml(cc)}</span>
