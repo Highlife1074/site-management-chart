@@ -239,6 +239,11 @@
   .plan-mcell { min-width: 64px; height: 24px; font-weight: 700; cursor: pointer; }
   .plan-mcell.full { background: #16a34a; color: #fff; }
   .plan-mcell.part { background: #bbf7d0; color: #14532d; }
+  .plan-skill { display: inline-block; font-size: 9px; background: #fef3c7; color: #92400e; border-radius: 4px; padding: 0 4px; margin-left: 3px; font-weight: 600; }
+  .plan-filter { font-size: 12px; padding: 5px 6px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; max-width: 190px; }
+  .worker-tip { position: fixed; z-index: 9999; background: #0f172a; color: #fff; font-size: 12px; line-height: 1.45; padding: 8px 10px; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.25); pointer-events: none; max-width: 280px; display: none; }
+  .worker-tip b { color: #fde68a; }
+  .worker-tip .tip-name { font-weight: 800; margin-bottom: 3px; }
   .plan-off { font-size: 9px; background: #e2e8f0; color: #475569; border-radius: 4px; padding: 0 4px; margin-left: 4px; }
   .plan-del { float: right; border: 0; background: transparent; color: #94a3b8; cursor: pointer; font-size: 11px; padding: 0 2px; }
   .plan-del:hover { color: #dc2626; }
@@ -512,7 +517,7 @@
     
     <!-- BARRE DE RECHERCHE -->
     <div style="margin-bottom: 10px;">
-        <input type="text" id="db-search-input" class="modal-select" placeholder="🔍 Rechercher un nom, ID ou entreprise..." oninput="filterDBTable(this.value)">
+        <input type="text" id="db-search-input" class="modal-select" placeholder="🔍 Rechercher un nom, ID, entreprise, profession ou compétence..." oninput="filterDBTable(this.value)">
     </div>
 
     <div style="overflow-y:auto; flex-grow:1; border:1px solid #cbd5e1; border-radius:8px;">
@@ -522,6 +527,8 @@
              <th style="padding:8px 12px; border-bottom:2px solid #cbd5e1;">ID</th>
              <th style="padding:8px 12px; border-bottom:2px solid #cbd5e1;">Nom Complet</th>
              <th style="padding:8px 12px; border-bottom:2px solid #cbd5e1;">Entreprise</th>
+             <th style="padding:8px 12px; border-bottom:2px solid #cbd5e1;">Profession</th>
+             <th style="padding:8px 12px; border-bottom:2px solid #cbd5e1;" title="Séparées par des virgules">Compétences</th>
              <th style="padding:8px 12px; border-bottom:2px solid #cbd5e1;">Statut / Assignation</th>
              <th style="padding:8px 12px; border-bottom:2px solid #cbd5e1; width:50px;">Action</th>
            </tr>
@@ -727,6 +734,7 @@
     <input type="text" id="new-w-id" placeholder="ID / N° (ex: W-123)" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;">
     <input type="text" id="new-w-name" placeholder="Nom Complet" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;">
     <select id="new-w-comp" class="dynamic-comp-select" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;"></select>
+    <input type="text" id="new-w-prof" placeholder="Profession (ex: COFFREUR)" style="padding:4px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; outline:none;">
     <button class="btn btn-outline" style="font-size:11px; padding:4px; justify-content:center;" onclick="window.addManualWorker()">+ Ajout Manuel</button>
   </div>
 
@@ -3741,8 +3749,10 @@ window.addManualWorker = function() {
     if (!confirm(`ℹ️ HOMONYME : ${sameName.length} ouvrier(s) porte(nt) déjà ce nom :\n\n${list}\n\nNouveau : ${id} - ${name} (${comp})\n\nCe sont des personnes différentes ? Cliquez OK pour ajouter.`)) return;
   }
 
-  unassignedWorkers.push({ id, name, company: comp });
-  idInput.value = ""; nameInput.value = "";
+  const profInput = document.getElementById('new-w-prof');
+  const profession = String(profInput.value || '').trim().replace(/\s+/g, ' ').toUpperCase();
+  unassignedWorkers.push(profession ? { id, name, company: comp, profession } : { id, name, company: comp });
+  idInput.value = ""; nameInput.value = ""; profInput.value = "";
   renderDrawer();
   recalculateTotals();
   if (document.getElementById('db-modal').style.display === 'flex') renderDBTable();
@@ -3754,6 +3764,57 @@ function isOfficialWorkerId(id) {
   const k = String(id || '').trim().toUpperCase();
   return k !== '' && !k.startsWith('W-');
 }
+
+// Compétences d'un ouvrier : texte libre, séparées par des virgules (ex. « Grutier, Soudeur »)
+function skillList(str) {
+  const seen = new Set();
+  return String(str || '').split(/[,;\n]/).map(x => x.trim().replace(/\s+/g, ' ')).filter(x => {
+    const u = x.toUpperCase();
+    if (!x || seen.has(u)) return false;
+    seen.add(u);
+    return true;
+  });
+}
+function cleanSkills(str) { return skillList(str).join(', '); }
+
+// Infobulle sur le nom d'un ouvrier (Timesheets et Non assignés) : entreprise et profession,
+// affichée après 1 s de souris immobile sur le nom
+let workerTipTimer = null;
+function workerTipEl() {
+  let el = document.getElementById('worker-tip');
+  if (!el) { el = document.createElement('div'); el.id = 'worker-tip'; el.className = 'worker-tip'; document.body.appendChild(el); }
+  return el;
+}
+function hideWorkerTip() {
+  clearTimeout(workerTipTimer);
+  workerTipTimer = null;
+  const el = document.getElementById('worker-tip');
+  if (el) el.style.display = 'none';
+}
+function showWorkerTip(pill, x, y) {
+  const d = pill.dataset;
+  const w = workerListOf(d.cidx === 'unassigned' ? 'unassigned' : 'assigned', +d.cidx, +d.tidx)
+    .find(o => String(o.id) === String(d.wid)) || { id: d.wid, name: d.wname, company: d.wcomp };
+  const el = workerTipEl();
+  el.innerHTML = `<div class="tip-name">${escapeHtml(w.name)}</div>
+    🏢 Entreprise : <b>${escapeHtml(w.company || '—')}</b><br>
+    🛠️ Profession : <b>${escapeHtml(w.profession || 'non renseignée')}</b>` +
+    (w.skills ? `<br>🎓 Compétences : ${escapeHtml(w.skills)}` : '');
+  el.style.display = 'block';
+  // Placée sous la souris, sans sortir de l'écran
+  const r = el.getBoundingClientRect();
+  el.style.left = Math.max(4, Math.min(x + 12, window.innerWidth - r.width - 4)) + 'px';
+  el.style.top = (y + 18 + r.height > window.innerHeight ? y - r.height - 10 : y + 18) + 'px';
+}
+document.addEventListener('mousemove', e => {
+  const pill = e.target.closest && e.target.closest('.worker-pill[data-wid]');
+  hideWorkerTip();
+  if (!pill || e.buttons) return; // pas pendant un glisser-déposer
+  const { clientX: x, clientY: y } = e;
+  workerTipTimer = setTimeout(() => { if (pill.isConnected) showWorkerTip(pill, x, y); }, 1000);
+});
+['mousedown', 'scroll', 'dragstart'].forEach(ev => document.addEventListener(ev, hideWorkerTip, true));
+document.addEventListener('mouseleave', hideWorkerTip);
 
 /* ==========================================================
    2. BASE GLOBALE : édition, doublons, export
@@ -3834,8 +3895,10 @@ function filterDBTable(query) {
      const idText = row.cells[0].querySelector('input').value.toLowerCase();
      const nameText = row.cells[1].querySelector('input').value.toLowerCase();
      const companyText = row.cells[2].querySelector('select').value.toLowerCase();
+     const profText = row.cells[3].querySelector('input').value.toLowerCase();
+     const skillsText = row.cells[4].querySelector('input').value.toLowerCase();
      
-     if (idText.includes(lowerQuery) || nameText.includes(lowerQuery) || companyText.includes(lowerQuery)) {
+     if ([idText, nameText, companyText, profText, skillsText].some(t => t.includes(lowerQuery))) {
         row.style.display = '';
      } else {
         row.style.display = 'none';
@@ -3869,6 +3932,8 @@ function renderDBTable() {
         <td style="${td}"><input type="text" class="db-input" value="${escapeHtml(w.id)}" onchange="editWorker(${loc}, 'id', this.value)"></td>
         <td style="${td} display:flex; align-items:center;">${warningIcon}<input type="text" class="db-input" value="${escapeHtml(w.name)}" onchange="editWorker(${loc}, 'name', this.value)"></td>
         <td style="${td}"><select class="db-input" onchange="editWorker(${loc}, 'company', this.value)">${compOpts}</select></td>
+        <td style="${td}"><input type="text" class="db-input" value="${escapeHtml(w.profession || '')}" placeholder="—" onchange="editWorker(${loc}, 'profession', this.value)"></td>
+        <td style="${td}"><input type="text" class="db-input" value="${escapeHtml(w.skills || '')}" placeholder="—" title="Séparées par des virgules" onchange="editWorker(${loc}, 'skills', this.value)"></td>
         <td style="${td} font-size:11px; color:#64748b;">${status}</td>
         <td style="${td}"><button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5; padding:2px 8px;" onclick="deleteWorkerFromDB(${loc})">&times;</button></td>
      </tr>`;
@@ -3890,7 +3955,17 @@ function editWorker(context, cIdx, tIdx, wIdx, field, newVal) {
   if (!canEdit()) return;
   const w = workerListOf(context, cIdx, tIdx)[wIdx];
   if (!w) return;
-  const val = String(newVal || '').trim().replace(/\s+/g, ' ');
+  let val = String(newVal || '').trim().replace(/\s+/g, ' ');
+
+  // Profession et compétences : facultatives (vide = retirée)
+  if (field === 'profession' || field === 'skills') {
+    val = field === 'skills' ? cleanSkills(val) : val.toUpperCase();
+    if (val) w[field] = val; else delete w[field];
+    if (document.getElementById('db-modal').style.display === 'flex') renderDBTable();
+    if (typeof renderPlanning === 'function' && document.getElementById('plan-table-wrap')) renderPlanning();
+    syncToFirebase();
+    return;
+  }
 
   if (!val) { alert("Ce champ ne peut pas être vide."); renderDBTable(); return; }
 
@@ -3993,11 +4068,11 @@ window.verifyImportCoherence = function() {
 
 function exportWorkersExcel() {
   let exportData = [];
-  unassignedWorkers.forEach(w => exportData.push({ "ID": w.id, "Nom Complet": w.name, "Entreprise": w.company, "Statut": "En attente (Non assigné)" }));
+  unassignedWorkers.forEach(w => exportData.push({ "ID": w.id, "Nom Complet": w.name, "Entreprise": w.company, "Profession": w.profession || '', "Compétences": w.skills || '', "Statut": "En attente (Non assigné)" }));
   cardsData.forEach(c => {
      c.tasks.forEach(t => {
         (t.workerList || []).forEach(w => {
-           exportData.push({ "ID": w.id, "Nom Complet": w.name, "Entreprise": w.company, "Statut": `Assigné à : ${c.name}` });
+           exportData.push({ "ID": w.id, "Nom Complet": w.name, "Entreprise": w.company, "Profession": w.profession || '', "Compétences": w.skills || '', "Statut": `Assigné à : ${c.name}` });
         });
      });
   });
@@ -4082,7 +4157,7 @@ function parseImportRows(sheets, type) {
     if (headerRowIdx === -1) return;
 
     // Colonnes du type « Autre » : repérées une fois par feuille d'après les en-têtes
-    let dynIdCol = -1, dynCompCol = -1, dynWorkerCols = [];
+    let dynIdCol = -1, dynCompCol = -1, dynProfCol = -1, dynWorkerCols = [];
     if (type === 'AUTO') {
       const headerRow = rawRows[headerRowIdx] || [];
       for (let c = 0; c < headerRow.length; c++) {
@@ -4090,6 +4165,7 @@ function parseImportRows(sheets, type) {
         if ((colName.includes("COMET") || colName === "NO." || colName === "ID" || colName.includes("NEOAXESS")) && dynIdCol === -1) dynIdCol = c;
         if (colName.includes("NAME") || colName.includes("SURNAME") || colName.includes("NOM")) dynWorkerCols.push(c);
         if (colName.includes("COMPANY") || colName.includes("SUBCON") || colName === "CO." || colName.includes("ENTREPRISE")) dynCompCol = c;
+        if ((colName.includes("PROFESSION") || colName.includes("SPECIAL") || colName.includes("POSITION") || colName.includes("TRADE") || colName.includes("METIER") || colName.includes("MÉTIER")) && dynProfCol === -1) dynProfCol = c;
       }
     }
 
@@ -4098,7 +4174,7 @@ function parseImportRows(sheets, type) {
       if (!Array.isArray(row) || row.length === 0) continue;
       const cell = i => String(row[i] ?? "").trim();
 
-      let id = "", name = "", company = "OTHER";
+      let id = "", name = "", company = "OTHER", profession = "";
       if (type === 'FOREIGN') {
         id = cell(3);                                   // Col D
         name = (cell(4) + " " + cell(5)).trim();        // Col E + F
@@ -4115,6 +4191,7 @@ function parseImportRows(sheets, type) {
         id = dynIdCol !== -1 ? cell(dynIdCol) : "";
         name = dynWorkerCols.map(cell).filter(v => v).join(" ");
         if (dynCompCol !== -1 && cell(dynCompCol) !== "") company = cell(dynCompCol).toUpperCase();
+        if (dynProfCol !== -1) profession = cell(dynProfCol).replace(/\s+/g, ' ').toUpperCase();
       }
 
       name = name.replace(/\s+/g, ' ').trim();
@@ -4129,7 +4206,7 @@ function parseImportRows(sheets, type) {
         if (seenNoId.has(k)) { ignored++; continue; }
         seenNoId.add(k);
       }
-      rows.push({ id, name, company });
+      rows.push(profession ? { id, name, company, profession } : { id, name, company });
     }
   });
   return { rows, ignored };
@@ -4229,6 +4306,7 @@ function applyImportPlan(plan, acceptedKeys, fileName) {
       if (m.needsValidation) stats.validated++; else stats.auto++;
     }
     if (m.cosmeticName) w.name = m.cosmeticName;
+    if (plan.rows[m.rowIdx].profession) w.profession = plan.rows[m.rowIdx].profession;
     w.isMissing = false;
     rowFinalId[m.rowIdx] = w.id;
   });
@@ -4244,7 +4322,7 @@ function applyImportPlan(plan, acceptedKeys, fileName) {
   [...newRows].sort((a, b) => a - b).forEach(i => {
     const r = plan.rows[i];
     const id = isOfficialId(r.id) ? r.id : uid('W');
-    unassignedWorkers.push({ id, name: r.name, company: r.company });
+    unassignedWorkers.push(r.profession ? { id, name: r.name, company: r.company, profession: r.profession } : { id, name: r.name, company: r.company });
     rowFinalId[i] = id;
     stats.added++;
   });
@@ -4424,6 +4502,9 @@ let planMonth = ymOf(new Date());
 let planMode = 'days';    // 'days' (un mois, jour par jour) ou 'months' (12 mois)
 let planBrush = '1';      // valeur appliquée au clic : '1', 'h', 'q', 'z' ou '-' (effacer)
 let planSearch = '';
+let planCat = '';         // filtre domaine des Timesheets ('' = tous)
+let planTs = '';          // filtre Timesheet (ID de carte, '' = toutes)
+let planSkill = '';       // filtre compétence ('' = toutes)
 window.planPainting = false;
 let planPaintCode = null; // valeur réellement appliquée pendant un glisser
 let planRenderPending = false;
@@ -4703,7 +4784,9 @@ function planLiveMap() {
 function planRosterEntry(live) {
   return {
     id: live.w.id, name: live.w.name || '', company: live.company,
-    cardId: live.card.id || '', tsNo: live.card.timesheetNo || '', tsName: live.card.timesheetName || '', sup: live.card.name || ''
+    profession: live.w.profession || '', skills: live.w.skills || '',
+    cardId: live.card.id || '', tsNo: live.card.timesheetNo || '', tsName: live.card.timesheetName || '', sup: live.card.name || '',
+    cat: live.card.category || ''
   };
 }
 
@@ -4750,14 +4833,24 @@ function planGroups() {
   const live = planLiveMap();
   const roster = Array.isArray(planningRoster) ? planningRoster : [...live.values()].map(planRosterEntry);
   const q = planSearch.trim().toUpperCase();
+  const skillU = planSkill.toUpperCase();
   const groups = new Map();
   const order = sortCardsByTs(cardsData).map(c => c.id);
+  const cats = planWorkerTs();
   roster.forEach(r => {
     const k = planKey(r.id);
     if (!k) return;
     const x = live.get(k);
-    const row = { key: k, id: x ? x.w.id : r.id, name: x ? x.w.name : r.name, company: x ? x.company : r.company, onTs: !!x };
-    if (q && !(String(row.name || '').toUpperCase().includes(q) || k.includes(q))) return;
+    const row = { key: k, id: x ? x.w.id : r.id, name: x ? x.w.name : r.name, company: x ? x.company : r.company, onTs: !!x,
+      profession: (x ? x.w.profession : r.profession) || '', skills: (x ? x.w.skills : r.skills) || '' };
+    if (q && ![row.name, k, row.profession, row.skills].some(v => String(v || '').toUpperCase().includes(q))) return;
+    if (skillU && !skillList(row.skills).some(sk => sk.toUpperCase() === skillU)) return;
+    // Filtres domaine / Timesheet : l'ouvrier doit apparaître sur au moins une Timesheet correspondante
+    // (ouvrier hors Timesheets actuelles : sa Timesheet de l'import)
+    if (planCat || planTs) {
+      const where = cats.get(k) || (r.cardId || r.cat ? [{ id: r.cardId || '', cat: r.cat || (cardsData.find(c => c.id === r.cardId) || {}).category || '' }] : []);
+      if (!where.some(t => (!planCat || t.cat === planCat) && (!planTs || t.id === planTs))) return;
+    }
     const gid = x ? 'c:' + x.card.id : 'o:' + (r.cardId || r.tsNo || r.sup || '');
     if (!groups.has(gid)) {
       const src = x ? { no: x.card.timesheetNo, name: x.card.timesheetName, sup: x.card.name } : { no: r.tsNo, name: r.tsName, sup: r.sup };
@@ -4770,6 +4863,73 @@ function planGroups() {
   list.forEach(g => g.rows.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''))));
   return list.sort((a, b) => a.rank - b.rank || a.tsNo.localeCompare(b.tsNo, undefined, { numeric: true }));
 }
+
+// Toutes les Timesheets où apparaît chaque ouvrier : clé → [{ id, cat }]
+function planWorkerTs() {
+  const map = new Map();
+  cardsData.forEach(card => (card.tasks || []).forEach(t => activeWorkers(t).forEach(w => {
+    const k = planKey(w.id);
+    if (!k) return;
+    if (!map.has(k)) map.set(k, []);
+    map.get(k).push({ id: card.id, cat: card.category || '' });
+  })));
+  return map;
+}
+
+// Compétences connues (tous les ouvriers des Timesheets, Non assignés et du planning), triées
+function planAllSkills() {
+  const set = new Map();
+  const add = str => skillList(str).forEach(sk => { if (!set.has(sk.toUpperCase())) set.set(sk.toUpperCase(), sk); });
+  cardsData.forEach(c => (c.tasks || []).forEach(t => (t.workerList || []).forEach(w => add(w.skills))));
+  unassignedWorkers.forEach(w => add(w.skills));
+  (planningRoster || []).forEach(r => add(r.skills));
+  return [...set.values()].sort((a, b) => a.localeCompare(b));
+}
+
+// Listes déroulantes des filtres (domaine, Timesheet, compétence)
+function planFiltersHtml() {
+  const opt = (v, label, cur) => `<option value="${escapeHtml(v)}" ${v === cur ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+  const cards = sortCardsByTs(cardsData).filter(c => !planCat || c.category === planCat);
+  if (planTs && !cards.some(c => c.id === planTs)) planTs = '';
+  const skills = planAllSkills();
+  if (planSkill && !skills.some(sk => sk.toUpperCase() === planSkill.toUpperCase())) skills.push(planSkill);
+  const tsLabel = c => [c.timesheetNo ? 'TS ' + c.timesheetNo : '', c.timesheetName || '', c.name ? '(' + c.name + ')' : ''].filter(Boolean).join(' ') || 'Sans N° TS';
+  const active = planCat || planTs || planSkill;
+  return `<select class="plan-filter" title="Ne montrer que les ouvriers présents sur les Timesheets de ce domaine" onchange="setPlanFilter('cat', this.value)">
+      ${opt('', '🗂️ Tous les domaines', planCat)}${CATEGORY_INFO.map(c => opt(c.id, c.name, planCat)).join('')}
+    </select>
+    <select class="plan-filter" title="Ne montrer que les ouvriers présents sur cette Timesheet" onchange="setPlanFilter('ts', this.value)">
+      ${opt('', '📋 Toutes les Timesheets', planTs)}${cards.map(c => opt(c.id, tsLabel(c), planTs)).join('')}
+    </select>
+    <select class="plan-filter" title="Ne montrer que les ouvriers ayant cette compétence" onchange="setPlanFilter('skill', this.value)">
+      ${opt('', '🎓 Toutes compétences', planSkill)}${skills.map(sk => opt(sk, sk, planSkill)).join('')}
+    </select>
+    ${active ? `<button class="btn btn-outline" title="Retirer les filtres" onclick="setPlanFilter('clear')">✕ Filtres</button>` : ''}`;
+}
+window.setPlanFilter = function(kind, v) {
+  if (kind === 'cat') { planCat = v; planTs = ''; }
+  else if (kind === 'ts') planTs = v;
+  else if (kind === 'skill') planSkill = v;
+  else { planCat = ''; planTs = ''; planSkill = ''; }
+  renderPlanning(true);
+};
+
+// Compétences d'un ouvrier modifiées depuis le planning (toutes ses fiches + la liste figée)
+window.editPlanSkills = function(key) {
+  if (!canEdit() && !canEditPlanning()) return;
+  const copies = [];
+  cardsData.forEach(c => (c.tasks || []).forEach(t => (t.workerList || []).forEach(w => { if (planKey(w.id) === key) copies.push(w); })));
+  unassignedWorkers.forEach(w => { if (planKey(w.id) === key) copies.push(w); });
+  const r = (planningRoster || []).find(x => planKey(x.id) === key);
+  const cur = (copies[0] || r || {}).skills || '';
+  const name = (copies[0] || r || {}).name || key;
+  const v = prompt(`Compétences de ${name} (séparées par des virgules) :\nEx. : Grutier, Soudeur, Habilitation électrique`, cur);
+  if (v === null) return;
+  const val = cleanSkills(v);
+  [...copies, ...(r ? [r] : [])].forEach(w => { if (val) w.skills = val; else delete w.skills; });
+  syncToFirebase();
+  renderPlanning(true);
+};
 
 // --- Affichage ---
 function renderPlanning(force) {
@@ -4792,7 +4952,8 @@ function renderPlanning(force) {
         <span class="plan-toggle" id="plan-mode"></span>
         <button class="btn btn-outline" id="plan-scopes-btn" onclick="planShowScopes = !planShowScopes; renderPlanning(true);"></button>
         <span id="plan-brushes"></span>
-        <input type="text" class="modal-select" style="width:170px; margin:0;" placeholder="🔍 Nom ou ID..." value="${escapeHtml(planSearch)}" oninput="planSearch = this.value; renderPlanning(true);">
+        <input type="text" class="modal-select" style="width:170px; margin:0;" placeholder="🔍 Nom, ID, compétence..." value="${escapeHtml(planSearch)}" oninput="planSearch = this.value; renderPlanning(true);">
+        <span id="plan-filters" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;"></span>
         <span style="margin-left:auto; display:flex; gap:6px; flex-wrap:wrap;">
           <button class="btn btn-outline" id="plan-import-btn" onclick="importPlanningNames()"></button>
           <button class="btn btn-outline" id="plan-save-btn" onclick="savePlanningVersion()" title="Enregistre une copie figée du planning">💾 Sauvegarder une version</button>
@@ -4812,6 +4973,7 @@ function renderPlanning(force) {
   document.getElementById('plan-month-label').innerText = planMode === 'days'
     ? `${PLAN_MONTHS[m - 1]} ${y}`
     : `${PLAN_MONTHS_SHORT[m - 1]} ${y} → ${PLAN_MONTHS_SHORT[Number(lastMonth.slice(5)) - 1]} ${lastMonth.slice(0, 4)}`;
+  document.getElementById('plan-filters').innerHTML = planFiltersHtml();
   document.getElementById('plan-scopes-btn').innerText = planShowScopes ? '◧ Masquer Scopes' : '◨ Afficher Scopes';
   document.getElementById('plan-clip').innerHTML = planClipboard && edit
     ? `<span class="plan-clip">📋 Planning copié : <b>${escapeHtml(planClipText(planClipboard))}</b> — cliquez 📥 sur un ouvrier ou « Coller à l'équipe » <button title="Vider" onclick="clearPlanClipboard()">✕</button></span>`
@@ -4868,13 +5030,13 @@ function renderPlanning(force) {
       const dateCell = (f) => `<td class="plan-sc sc${f}"><input type="date" value="${escapeHtml(sc['s' + f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${f}', this)"></td>`;
       const nameCell = (f) => `<td class="plan-sc scn sc${f}" title="${escapeHtml(sc['s' + f] || '')}"><input type="text" list="plan-scope-names" maxlength="40" placeholder="${edit ? 'Nom…' : ''}" value="${escapeHtml(sc['s' + f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${f}', this)"></td>`;
       body += `<tr data-k="${k}">
-        <td class="plan-name" title="${escapeHtml(r.name + ' — ' + r.id + ' — ' + r.company)}">${edit && Array.isArray(planningRoster) ? `<button class="plan-del" title="Retirer du planning" onclick="removePlanningWorker('${k}')">✕</button>` : ''}${edit ? `${planClipboard ? `<button class="plan-act" title="Coller le planning copié (Scopes + jours saisis)" onclick="pastePlanScopes('${k}')">📥</button>` : ''}<button class="plan-act" title="Copier le planning de cet ouvrier (Scopes + jours saisis)" onclick="copyPlanScopes('${k}')">📋</button>` : ''}${escapeHtml(r.name)} <span class="plan-sub">${escapeHtml(r.id)} · ${escapeHtml(r.company)}</span>${r.onTs ? '' : '<span class="plan-off">hors TS</span>'}</td>
+        <td class="plan-name" title="${escapeHtml([r.name, r.id, r.company, r.profession, r.skills ? 'Compétences : ' + r.skills : ''].filter(Boolean).join(' — '))}">${edit && Array.isArray(planningRoster) ? `<button class="plan-del" title="Retirer du planning" onclick="removePlanningWorker('${k}')">✕</button>` : ''}${edit ? `${planClipboard ? `<button class="plan-act" title="Coller le planning copié (Scopes + jours saisis)" onclick="pastePlanScopes('${k}')">📥</button>` : ''}<button class="plan-act" title="Copier le planning de cet ouvrier (Scopes + jours saisis)" onclick="copyPlanScopes('${k}')">📋</button>` : ''}${edit || canEdit() ? `<button class="plan-act" title="Modifier les compétences" onclick="editPlanSkills('${k}')">🎓</button>` : ''}${escapeHtml(r.name)}${skillList(r.skills).map(sk => `<span class="plan-skill">${escapeHtml(sk)}</span>`).join('')} <span class="plan-sub">${escapeHtml(r.id)} · ${escapeHtml(r.company)}${r.profession ? ' · ' + escapeHtml(r.profession) : ''}</span>${r.onTs ? '' : '<span class="plan-off">hors TS</span>'}</td>
         ${nameCell('1n')}${dateCell('1a')}${dateCell('1b')}${nameCell('2n')}${dateCell('2a')}${dateCell('2b')}
         ${planRowTail(r, cols)}
       </tr>`;
     });
   });
-  if (!body) body = `<tr><td class="plan-name" colspan="${nameSpan}" style="padding:12px;">${planSearch ? 'Aucun ouvrier ne correspond à la recherche.' : 'Aucun ouvrier dans le planning.'}</td></tr>`;
+  if (!body) body = `<tr><td class="plan-name" colspan="${nameSpan}" style="padding:12px;">${planSearch || planCat || planTs || planSkill ? 'Aucun ouvrier ne correspond à la recherche / aux filtres.' : 'Aucun ouvrier dans le planning.'}</td></tr>`;
 
   const wrap = document.getElementById('plan-table-wrap');
   const scroll = [wrap.scrollLeft, wrap.scrollTop];
@@ -5144,6 +5306,7 @@ function planExcelRows(groups, firstMonth) {
     const end = planEndDate(r.id);
     const row = {
       "Timesheet": g.title, "Superviseur": g.sup, "ID": r.id, "Nom": r.name, "Entreprise": r.company,
+      "Profession": r.profession || '', "Compétences": r.skills || '',
       "Scope 1": sc.s1n || '', "Scope 1 début": planDateFR(sc.s1a), "Scope 1 fin": planDateFR(sc.s1b),
       "Scope 2": sc.s2n || '', "Scope 2 début": planDateFR(sc.s2a), "Scope 2 fin": planDateFR(sc.s2b),
       "Fin estimée": planDateFR(end)
@@ -5178,15 +5341,15 @@ window.exportPlanningExcel = exportPlanningExcel;
 window.exportPlanningVersion = async function(id) {
   try {
     const data = await planLoadVersion(id);
-    const saved = [planningRoster, workerPlanning, planningScopes, planSearch];
+    const saved = [planningRoster, workerPlanning, planningScopes, planSearch, planCat, planTs, planSkill];
     try {
       planningRoster = Array.isArray(data.roster) ? data.roster : [];
       workerPlanning = data.planning || {};
       planningScopes = data.scopes || {};
-      planSearch = '';
+      planSearch = ''; planCat = ''; planTs = ''; planSkill = '';
       planWriteExcel(planExcelRows(planGroups(), planMonth), `Planning_Version_${id.replace('plan_', '')}.xlsx`);
     } finally {
-      [planningRoster, workerPlanning, planningScopes, planSearch] = saved;
+      [planningRoster, workerPlanning, planningScopes, planSearch, planCat, planTs, planSkill] = saved;
     }
   } catch (err) { alert(`❌ Export impossible : ${err.message}`); }
 };
@@ -5784,6 +5947,7 @@ window.cmpAddRows = function(idxs, forcedCompany) {
     const dup = (k && ids.get(k)) || names.get(n);
     if (dup) { skipped.push(`${r.id} - ${r.name} → déjà présent : ${dup.w.id} - ${dup.w.name} (${dup.place})`); return; }
     const w = { id: k ? r.id : uid('W'), name: r.name.toUpperCase(), company: forcedCompany || cmpCompanyChoice[i] || cmpGuessCompany(r) };
+    if (r.specialty) w.profession = r.specialty.toUpperCase();
     unassignedWorkers.push(w);
     const a = { w, place: 'Base non assignée' };
     if (k) ids.set(k, a);
