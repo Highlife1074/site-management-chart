@@ -220,12 +220,16 @@
   .plan-table .plan-total, .plan-table .plan-endcol { min-width: 74px; padding: 0 6px; font-weight: 700; white-space: nowrap; }
   .plan-endcol.past { color: #94a3b8; }
   .plan-table th, .plan-table td { box-sizing: border-box; }
-  .plan-table .plan-name { min-width: 200px; max-width: 200px; border-right: 1px solid #e2e8f0; }
+  /* Colonne Ouvrier : largeur adaptée au plus long nom (les colonnes Scopes figées se décalent d'autant, --nw) */
+  .plan-table .plan-name { min-width: 200px; max-width: none; overflow: visible; border-right: 1px solid #e2e8f0; }
+  .plan-table tbody tr[data-k] .plan-name { line-height: 1.25; padding-top: 2px; padding-bottom: 2px; }
+  .plan-name .plan-sub { display: block; }
   .plan-table .plan-sc { position: sticky; z-index: 1; background: #fff; min-width: 90px; max-width: 90px; }
-  .plan-table .plan-sc.scn { min-width: 110px; max-width: 110px; }
+  .plan-table .plan-sc.scn { min-width: 150px; max-width: 150px; }
   .plan-table thead .plan-sc { z-index: 3; }
-  .plan-table .sc1n { left: 200px; } .plan-table .sc1a { left: 310px; } .plan-table .sc1b { left: 400px; }
-  .plan-table .sc2n { left: 490px; } .plan-table .sc2a { left: 600px; } .plan-table .sc2b { left: 690px; border-right: 2px solid #94a3b8; }
+  .plan-table .sc1n { left: var(--nw, 200px); } .plan-table .sc1a { left: calc(var(--nw, 200px) + 150px); } .plan-table .sc1b { left: calc(var(--nw, 200px) + 240px); }
+  .plan-table .sc2n { left: calc(var(--nw, 200px) + 330px); } .plan-table .sc2a { left: calc(var(--nw, 200px) + 480px); } .plan-table .sc2b { left: calc(var(--nw, 200px) + 570px); border-right: 2px solid #94a3b8; }
+  .plan-table .plan-cell, .plan-table .plan-daysum { min-width: 26px; padding: 0 1px; }
   .plan-table thead .sc1n, .plan-table thead .sc1a, .plan-table thead .sc1b { background: #dbeafe; }
   .plan-table thead .sc2n, .plan-table thead .sc2a, .plan-table thead .sc2b { background: #ede9fe; }
   .plan-table .plan-sc input[type=text] { font-weight: 600; }
@@ -5030,7 +5034,7 @@ function renderPlanning(force) {
       const dateCell = (f) => `<td class="plan-sc sc${f}"><input type="date" value="${escapeHtml(sc['s' + f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${f}', this)"></td>`;
       const nameCell = (f) => `<td class="plan-sc scn sc${f}" title="${escapeHtml(sc['s' + f] || '')}"><input type="text" list="plan-scope-names" maxlength="40" placeholder="${edit ? 'Nom…' : ''}" value="${escapeHtml(sc['s' + f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${f}', this)"></td>`;
       body += `<tr data-k="${k}">
-        <td class="plan-name" title="${escapeHtml([r.name, r.id, r.company, r.profession, r.skills ? 'Compétences : ' + r.skills : ''].filter(Boolean).join(' — '))}">${edit && Array.isArray(planningRoster) ? `<button class="plan-del" title="Retirer du planning" onclick="removePlanningWorker('${k}')">✕</button>` : ''}${edit ? `${planClipboard ? `<button class="plan-act" title="Coller le planning copié (Scopes + jours saisis)" onclick="pastePlanScopes('${k}')">📥</button>` : ''}<button class="plan-act" title="Copier le planning de cet ouvrier (Scopes + jours saisis)" onclick="copyPlanScopes('${k}')">📋</button>` : ''}${edit || canEdit() ? `<button class="plan-act" title="Modifier les compétences" onclick="editPlanSkills('${k}')">🎓</button>` : ''}${escapeHtml(r.name)}${skillList(r.skills).map(sk => `<span class="plan-skill">${escapeHtml(sk)}</span>`).join('')} <span class="plan-sub">${escapeHtml(r.id)} · ${escapeHtml(r.company)}${r.profession ? ' · ' + escapeHtml(r.profession) : ''}</span>${r.onTs ? '' : '<span class="plan-off">hors TS</span>'}</td>
+        <td class="plan-name" title="${escapeHtml([r.name, r.id, r.company, r.profession, r.skills ? 'Compétences : ' + r.skills : ''].filter(Boolean).join(' — '))}">${edit && Array.isArray(planningRoster) ? `<button class="plan-del" title="Retirer du planning" onclick="removePlanningWorker('${k}')">✕</button>` : ''}${edit ? `${planClipboard ? `<button class="plan-act" title="Coller le planning copié (Scopes + jours saisis)" onclick="pastePlanScopes('${k}')">📥</button>` : ''}<button class="plan-act" title="Copier le planning de cet ouvrier (Scopes + jours saisis)" onclick="copyPlanScopes('${k}')">📋</button>` : ''}${edit || canEdit() ? `<button class="plan-act" title="Modifier les compétences" onclick="editPlanSkills('${k}')">🎓</button>` : ''}<b>${escapeHtml(r.name)}</b>${r.onTs ? '' : '<span class="plan-off">hors TS</span>'}<span class="plan-sub">${escapeHtml(r.id)} · ${escapeHtml(r.company)}${r.profession ? ' · ' + escapeHtml(r.profession) : ''}${skillList(r.skills).map(sk => `<span class="plan-skill">${escapeHtml(sk)}</span>`).join('')}</span></td>
         ${nameCell('1n')}${dateCell('1a')}${dateCell('1b')}${nameCell('2n')}${dateCell('2a')}${dateCell('2b')}
         ${planRowTail(r, cols)}
       </tr>`;
@@ -5041,6 +5045,9 @@ function renderPlanning(force) {
   const wrap = document.getElementById('plan-table-wrap');
   const scroll = [wrap.scrollLeft, wrap.scrollTop];
   wrap.innerHTML = `${datalist}<table class="plan-table ${edit && planMode === 'days' ? '' : 'plan-ro'} ${planShowScopes ? '' : 'plan-noscopes'}"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+  // Colonnes Scopes figées juste après la colonne Ouvrier, quelle que soit sa largeur
+  const nameTh = wrap.querySelector('thead th.plan-name');
+  if (nameTh) wrap.querySelector('table').style.setProperty('--nw', nameTh.getBoundingClientRect().width + 'px');
   [wrap.scrollLeft, wrap.scrollTop] = scroll;
 }
 
