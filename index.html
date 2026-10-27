@@ -503,6 +503,7 @@
     
     <div class="modal-actions" style="margin-top:16px;">
       <button class="btn btn-outline" onclick="cancelImport()">Annuler l'import (aucun changement)</button>
+      <button class="btn btn-outline" id="btn-import-spec" onclick="confirmImportSpecialtiesOnly()" title="Met à jour uniquement la spécialité des ouvriers reconnus : aucun ajout, aucun changement d'ID, de nom ou d'entreprise">🛠️ Importer seulement les spécialités</button>
       <button class="btn btn-success" id="btn-import-apply" onclick="confirmImport()">✅ Appliquer</button>
     </div>
   </div>
@@ -4147,10 +4148,26 @@ const importIdKey = id => String(id ?? '').trim().toUpperCase();
 // ID officiel = ID RH (pas vide, pas un ID provisoire « W-… » créé par l'application)
 const isOfficialId = id => { const k = importIdKey(id); return k !== '' && !k.startsWith('W-'); };
 
+// Entreprise d'un ouvrier dans un fichier Excel :
+// - colonne AGENCY remplie → c'est l'entreprise, sinon colonne COMPANY
+// - « BIK » + autre chose → BIK ; « LOAN GREECE MEP / CW » → SKYBUILDING GREECE ; « LOAN BRANCH » → SKYBUILDING BRANCH
+function resolveCompany(company, agency) {
+  const c = (String(agency ?? '').trim() || String(company ?? '').trim()).toUpperCase().replace(/\s+/g, ' ');
+  if (!c) return '';
+  if (c.includes('BIK')) return 'BIK';
+  if (c.includes('GREECE')) return 'SKYBUILDING GREECE';
+  if (c.includes('BRANCH')) return 'SKYBUILDING BRANCH';
+  if (c.includes('EUROASIA')) return 'EUROASIA';
+  if (/\bDSS\b/.test(c)) return 'DSS';
+  return siteCompanies.find(x => String(x).toUpperCase() === c) || c;
+}
+
 // Lecture des lignes du fichier selon son type → [{ id, name, company }]
-function parseImportRows(sheets, type) {
+// profCol : colonne Spécialité choisie à la main (index), -1 = aucune, undefined = repérée d'après les en-têtes
+function parseImportRows(sheets, type, profCol) {
   const rows = [];
   let ignored = 0;
+  let profColUsed = -1;
   const seenIds = new Set();
   const seenNoId = new Set();
 
@@ -4165,7 +4182,7 @@ function parseImportRows(sheets, type) {
     if (headerRowIdx === -1) return;
 
     // Colonnes du type « Autre » : repérées une fois par feuille d'après les en-têtes
-    let dynIdCol = -1, dynCompCol = -1, dynProfCol = -1, dynWorkerCols = [];
+    let dynIdCol = -1, dynCompCol = -1, dynAgencyCol = -1, dynProfCol = -1, dynWorkerCols = [];
     // Spécialité : repérée d'après les en-têtes, quel que soit le type de fichier
     // (SPECIALITY / SPECIALTY d'abord, sinon PROFESSION, MÉTIER, TRADE, JOB TITLE, POSITION…)
     {
@@ -4173,14 +4190,22 @@ function parseImportRows(sheets, type) {
       const tests = [c => c.includes('SPECIAL') || c.includes('SPÉCIAL'), c => c.includes('PROFESSION') || c.includes('METIER') || c.includes('MÉTIER') || c.includes('OCCUPATION'),
         c => c.includes('TRADE') || c.includes('JOB TITLE') || c === 'POSITION' || c.includes('DESIGNATION')];
       for (const t of tests) { dynProfCol = head.findIndex(t); if (dynProfCol !== -1) break; }
+      if (profCol !== undefined && profCol !== null) dynProfCol = profCol;
+      if (profColUsed === -1) profColUsed = dynProfCol;
+    }
+    // Entreprise : colonnes AGENCY et COMPANY (sinon SUBCON / CO. / ENTREPRISE), repérées d'après les en-têtes
+    {
+      const head = (rawRows[headerRowIdx] || []).map(c => String(c || '').trim().toUpperCase());
+      dynAgencyCol = head.findIndex(c => c.includes("AGENCY"));
+      dynCompCol = head.findIndex(c => c.includes("COMPANY"));
+      if (dynCompCol === -1) dynCompCol = head.findIndex(c => c.includes("SUBCON") || c === "CO." || c.includes("ENTREPRISE"));
     }
     if (type === 'AUTO') {
       const headerRow = rawRows[headerRowIdx] || [];
       for (let c = 0; c < headerRow.length; c++) {
         const colName = String(headerRow[c] || "").trim().toUpperCase();
         if ((colName.includes("COMET") || colName === "NO." || colName === "ID" || colName.includes("NEOAXESS")) && dynIdCol === -1) dynIdCol = c;
-        if (colName.includes("NAME") || colName.includes("SURNAME") || colName.includes("NOM")) dynWorkerCols.push(c);
-        if (colName.includes("COMPANY") || colName.includes("SUBCON") || colName === "CO." || colName.includes("ENTREPRISE")) dynCompCol = c;
+        if ((colName.includes("NAME") || colName.includes("SURNAME") || colName.includes("NOM")) && !/COMPANY|AGENCY|ENTREPRISE/.test(colName)) dynWorkerCols.push(c);
       }
     }
 
@@ -4193,10 +4218,14 @@ function parseImportRows(sheets, type) {
       if (type === 'FOREIGN') {
         id = cell(3);                                   // Col D
         name = (cell(4) + " " + cell(5)).trim();        // Col E + F
-        const nationality = cell(6).toUpperCase();      // Col G
-        if (nationality.includes("PHILIPPINE") || nationality.includes("FILIPINO")) company = "EUROASIA";
-        else if (nationality.includes("GHAN") || nationality.includes("INDIA")) company = "DSS";
-        else company = "BIK";
+        // Entreprise : AGENCY (col H) si remplie, sinon COMPANY (col A) ; à défaut, d'après la nationalité (col G)
+        company = resolveCompany(cell(dynCompCol !== -1 ? dynCompCol : 0), cell(dynAgencyCol !== -1 ? dynAgencyCol : 7));
+        if (!company) {
+          const nationality = cell(6).toUpperCase();
+          if (nationality.includes("PHILIPPINE") || nationality.includes("FILIPINO")) company = "EUROASIA";
+          else if (nationality.includes("GHAN") || nationality.includes("INDIA")) company = "DSS";
+          else company = "BIK";
+        }
       } else if (type === 'BRANCH' || type === 'GREECE') {
         id = cell(2);                                   // Col C
         name = (cell(4) + " " + cell(5)).trim();        // Col E + F
@@ -4205,7 +4234,7 @@ function parseImportRows(sheets, type) {
         if (dynWorkerCols.length === 0) continue;
         id = dynIdCol !== -1 ? cell(dynIdCol) : "";
         name = dynWorkerCols.map(cell).filter(v => v).join(" ");
-        if (dynCompCol !== -1 && cell(dynCompCol) !== "") company = cell(dynCompCol).toUpperCase();
+        company = resolveCompany(dynCompCol !== -1 ? cell(dynCompCol) : '', dynAgencyCol !== -1 ? cell(dynAgencyCol) : '') || "OTHER";
       }
       if (dynProfCol !== -1) profession = cell(dynProfCol).replace(/\s+/g, ' ').toUpperCase();
 
@@ -4224,7 +4253,7 @@ function parseImportRows(sheets, type) {
       rows.push(profession ? { id, name, company, profession } : { id, name, company });
     }
   });
-  return { rows, ignored };
+  return { rows, ignored, profColUsed };
 }
 
 // Analyse (ne modifie RIEN) : qui est reconnu, qui est nouveau, qui est absent, quoi mettre à jour
@@ -4374,6 +4403,8 @@ function renderImportPreview() {
       <b>📄 ${escapeHtml(p.fileName)}</b>
       <span>Type de fichier :</span>
       <select class="modal-select" style="width:auto;" onchange="changeImportType(this.value)">${typeOpts}</select>
+      <span>🛠️ Colonne Spécialité :</span>
+      <select class="modal-select" style="width:auto; max-width:280px;" onchange="changeImportProfCol(this.value)">${importProfColOpts(p)}</select>
     </div>`;
 
   if (plan.rows.length === 0) {
@@ -4383,6 +4414,11 @@ function renderImportPreview() {
     html += line(`📋 ${plan.rows.length} ouvrier(s) lus dans le fichier${p.ignored ? ` · ${p.ignored} ligne(s) en double ignorée(s)` : ''}`);
     html += line(`✅ ${plan.matches.length} reconnu(s) dans l'application (${byIdCount} par ID, ${plan.matches.length - byIdCount} par nom)`);
     html += line(`📥 ${plan.newRowIdx.length} nouvel(aux) ouvrier(s) → « Non assignés »`);
+    const nSpec = plan.rows.filter(r => r.profession).length;
+    const specs = [...new Set(plan.rows.map(r => r.profession).filter(Boolean))];
+    html += line(nSpec
+      ? `🛠️ ${nSpec} spécialité(s) lue(s) (${specs.length} différente(s) : <span style="color:#1e40af;">${escapeHtml(specs.slice(0, 8).join(', '))}${specs.length > 8 ? '…' : ''}</span>) → enregistrées sur les ouvriers, y compris ceux déjà présents`
+      : `🛠️ <span style="color:#b45309;">Aucune spécialité lue : choisissez la colonne « Spécialité » ci-dessus.</span>`);
     if (autoCount) html += line(`🔄 ${autoCount} mise(s) à jour automatique(s) d'ouvriers non assignés (ID / entreprise)`);
     if (plan.newCompanies.length) html += line(`🆕 Nouvelle(s) entreprise(s) : <b>${escapeHtml(plan.newCompanies.join(', '))}</b>`);
     if (plan.missing.length) {
@@ -4417,15 +4453,45 @@ function renderImportPreview() {
   if (all) all.checked = toValidate.length > 0 && toValidate.every(m => !m.conflict);
 
   document.getElementById('btn-import-apply').disabled = plan.rows.length === 0;
+  document.getElementById('btn-import-spec').disabled = !plan.rows.some(r => r.profession);
 }
 
 window.toggleAllImportUpdates = function(checked) {
   document.querySelectorAll('.import-update-cb').forEach(cb => cb.checked = checked);
 };
 
+// Colonnes de la ligne d'en-têtes (1re feuille) proposées pour la Spécialité
+function importProfColOpts(p) {
+  const sheet = p.sheets[0] || [];
+  let h = sheet.findIndex(r => Array.isArray(r) && /NAME|SURNAME|NOM/.test(r.map(c => String(c || '').toUpperCase()).join(' ')));
+  if (h < 0) h = 0;
+  const head = sheet[h] || [];
+  const n = Math.max(head.length, ...sheet.slice(h, h + 20).map(r => (r || []).length));
+  const cur = p.profColUsed;
+  let o = `<option value="auto">Automatique (d'après le titre)${p.profCol === undefined && cur >= 0 ? ' → ' + XLSX.utils.encode_col(cur) : ''}</option>`;
+  o += `<option value="-1" ${p.profCol === -1 ? 'selected' : ''}>— aucune —</option>`;
+  for (let i = 0; i < n; i++) o += `<option value="${i}" ${p.profCol === i ? 'selected' : ''}>${XLSX.utils.encode_col(i)} · ${escapeHtml(String(head[i] || '').slice(0, 30))}</option>`;
+  return o;
+}
+function reparseImport() {
+  const p = pendingImport;
+  const parsed = parseImportRows(p.sheets, p.type, p.profCol);
+  p.rows = parsed.rows;
+  p.ignored = parsed.ignored;
+  p.profColUsed = parsed.profColUsed;
+  p.plan = buildImportPlan(parsed.rows, p.type);
+  renderImportPreview();
+}
+window.changeImportProfCol = function(v) {
+  if (!pendingImport) return;
+  pendingImport.profCol = v === 'auto' ? undefined : Number(v);
+  reparseImport();
+};
+
 window.changeImportType = function(type) {
   if (!pendingImport || !IMPORT_TYPES[type]) return;
-  const parsed = parseImportRows(pendingImport.sheets, type);
+  const parsed = parseImportRows(pendingImport.sheets, type, pendingImport.profCol);
+  pendingImport.profColUsed = parsed.profColUsed;
   pendingImport.type = type;
   pendingImport.rows = parsed.rows;
   pendingImport.ignored = parsed.ignored;
@@ -4458,6 +4524,25 @@ window.confirmImport = function() {
     `Les affectations dans les Timesheets sont inchangées.`);
 };
 
+// Import des spécialités seules : uniquement pour les ouvriers reconnus (même ID, ou même nom).
+// Rien d'autre n'est modifié : pas de nouvel ouvrier, pas de changement d'ID / nom / entreprise, pas de ⚠️ absent.
+window.confirmImportSpecialtiesOnly = function() {
+  if (!canEdit() || !pendingImport) return;
+  const plan = buildImportPlan(pendingImport.rows, pendingImport.type);
+  const changes = plan.matches.filter(m => !m.conflict).map(m => ({ w: m.a.w, v: plan.rows[m.rowIdx].profession }))
+    .filter(x => x.v && x.v !== x.w.profession);
+  if (!changes.length) { alert("👌 Aucune spécialité à mettre à jour (déjà à jour, ou aucun ouvrier reconnu avec une spécialité)."); return; }
+  if (!confirm(`Mettre à jour la spécialité de ${changes.length} ouvrier(s) ?\n\n` +
+    changes.slice(0, 15).map(x => `• ${x.w.name} : ${x.w.profession || '—'} → ${x.v}`).join('\n') + (changes.length > 15 ? `\n… et ${changes.length - 15} autre(s)` : '') +
+    `\n\nAucune autre modification (ni ajout, ni ID, ni nom, ni entreprise).`)) return;
+  changes.forEach(x => { x.w.profession = x.v; });
+  pendingImport = null;
+  document.getElementById('import-validation-modal').style.display = 'none';
+  refreshAllViews();
+  syncToFirebase();
+  alert(`✅ ${changes.length} spécialité(s) mise(s) à jour.`);
+};
+
 // --- Lecture du fichier Excel → écran de vérification (aucune modification à ce stade) ---
 function importExcelFile(event) {
   if (!canEdit()) return;
@@ -4479,7 +4564,7 @@ function importExcelFile(event) {
 
       const type = guessImportType(file.name);
       const parsed = parseImportRows(sheets, type);
-      pendingImport = { fileName: file.name, sheets, type, rows: parsed.rows, ignored: parsed.ignored,
+      pendingImport = { fileName: file.name, sheets, type, rows: parsed.rows, ignored: parsed.ignored, profColUsed: parsed.profColUsed,
                         plan: buildImportPlan(parsed.rows, type) };
       renderImportPreview();
       document.getElementById('import-validation-modal').style.display = 'flex';
@@ -5773,6 +5858,7 @@ function cmpDetectColumns() {
     name1: surname >= 0 ? surname : anyName,
     name2: surname >= 0 ? name : -1,
     company: find(c => c === 'COMPANY' || c.includes('ENTREPRISE') || c === 'CO.' || c.includes('SOCIETE')),
+    agency: find(c => c.includes('AGENCY')),
     nationality: find(c => c.includes('NATIONAL')),
     specialty: find(c => c.includes('SPECIAL') || c.includes('POSITION') || c.includes('TRADE')),
     end: ends.length ? ends[0] : -1,
@@ -5793,28 +5879,15 @@ function cmpFileRows() {
     if (!name || !/[A-Za-zͰ-ϿЀ-ӿ]/.test(name)) continue;
     let endRaw = cell(row, m.end);
     for (const i of m.endFallback || []) { if (endRaw !== '') break; endRaw = cell(row, i); }
-    out.push({ idx: r, line: r + 1, id: txt(row, m.id), name, fileCompany: txt(row, m.company),
+    out.push({ idx: r, line: r + 1, id: txt(row, m.id), name, fileCompany: txt(row, m.agency) || txt(row, m.company),
       nationality: txt(row, m.nationality), specialty: txt(row, m.specialty), end: cmpDate(endRaw) });
   }
   return out;
 }
 
-// Entreprise proposée pour un nouvel ouvrier (même règle que l'import « Foreign » pour BIK)
+// Entreprise proposée pour un nouvel ouvrier (AGENCY sinon COMPANY, voir resolveCompany)
 function cmpGuessCompany(r) {
-  const c = String(r.fileCompany || '').toUpperCase().trim();
-  const exact = siteCompanies.find(x => String(x).toUpperCase() === c);
-  if (exact) return exact;
-  if (c.includes('BRANCH')) return 'SKYBUILDING BRANCH';
-  if (c.includes('GREECE')) return 'SKYBUILDING GREECE';
-  if (c.includes('EUROASIA')) return 'EUROASIA';
-  if (c.includes('DSS')) return 'DSS';
-  if (c.includes('BIK')) {
-    const n = String(r.nationality || '').toUpperCase();
-    if (n.includes('PHILIPPINE') || n.includes('FILIPINO')) return 'EUROASIA';
-    if (n.includes('GHAN') || n.includes('INDIA')) return 'DSS';
-    return 'BIK';
-  }
-  return siteCompanies.includes('OTHER') ? 'OTHER' : (siteCompanies[0] || 'OTHER');
+  return resolveCompany(r.fileCompany) || (siteCompanies.includes('OTHER') ? 'OTHER' : (siteCompanies[0] || 'OTHER'));
 }
 
 // Tous les ouvriers de l'application, avec leur emplacement
@@ -5899,7 +5972,7 @@ function renderCompare(rebuild) {
           Rapprochement par <b>ID COMET</b> (« RT-BIK 469 » = « 469 ») avec un nom proche, sinon par le <b>nom</b> (ordre des mots et accents ignorés).
           <b>Rien n'est modifié</b> tant que vous ne cliquez pas sur « Ajouter » : les ouvriers ajoutés vont dans « Non assignés ».</div>
         ${cmpFile ? `<div class="cmp-row" style="margin-top:8px;">
-          ${mapSel('id', 'ID (COMET)')}${mapSel('name1', 'Nom')}${mapSel('name2', 'Prénom')}${mapSel('company', 'Entreprise (fichier)')}${mapSel('nationality', 'Nationalité')}${mapSel('specialty', 'Spécialité')}${mapSel('end', 'Fin de contrat')}
+          ${mapSel('id', 'ID (COMET)')}${mapSel('name1', 'Nom')}${mapSel('name2', 'Prénom')}${mapSel('company', 'Entreprise (fichier)')}${mapSel('agency', 'Agence (prioritaire)')}${mapSel('nationality', 'Nationalité')}${mapSel('specialty', 'Spécialité')}${mapSel('end', 'Fin de contrat')}
         </div>` : ''}
       </div>
       <div id="cmp-stats"></div>
@@ -5968,7 +6041,7 @@ function cmpRenderTable() {
   if (!wrap || !cmpResult) return;
   const editable = canEdit();
   const list = cmpVisible();
-  const compOpts = (sel) => siteCompanies.map(c => `<option ${c === sel ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('');
+  const compOpts = (sel) => (siteCompanies.includes(sel) ? siteCompanies : siteCompanies.concat(sel ? [sel] : [])).map(c => `<option ${c === sel ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('');
 
   // Barre d'ajout (seulement sur les absents)
   const actions = document.getElementById('cmp-actions');
