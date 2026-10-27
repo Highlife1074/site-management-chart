@@ -503,6 +503,7 @@
     
     <div class="modal-actions" style="margin-top:16px;">
       <button class="btn btn-outline" onclick="cancelImport()">Annuler l'import (aucun changement)</button>
+      <button class="btn btn-outline" id="btn-import-spec" onclick="confirmImportSpecialtiesOnly()" title="Met à jour uniquement la spécialité des ouvriers reconnus : aucun ajout, aucun changement d'ID, de nom ou d'entreprise">🛠️ Importer seulement les spécialités</button>
       <button class="btn btn-success" id="btn-import-apply" onclick="confirmImport()">✅ Appliquer</button>
     </div>
   </div>
@@ -4162,9 +4163,11 @@ function resolveCompany(company, agency) {
 }
 
 // Lecture des lignes du fichier selon son type → [{ id, name, company }]
-function parseImportRows(sheets, type) {
+// profCol : colonne Spécialité choisie à la main (index), -1 = aucune, undefined = repérée d'après les en-têtes
+function parseImportRows(sheets, type, profCol) {
   const rows = [];
   let ignored = 0;
+  let profColUsed = -1;
   const seenIds = new Set();
   const seenNoId = new Set();
 
@@ -4187,6 +4190,8 @@ function parseImportRows(sheets, type) {
       const tests = [c => c.includes('SPECIAL') || c.includes('SPÉCIAL'), c => c.includes('PROFESSION') || c.includes('METIER') || c.includes('MÉTIER') || c.includes('OCCUPATION'),
         c => c.includes('TRADE') || c.includes('JOB TITLE') || c === 'POSITION' || c.includes('DESIGNATION')];
       for (const t of tests) { dynProfCol = head.findIndex(t); if (dynProfCol !== -1) break; }
+      if (profCol !== undefined && profCol !== null) dynProfCol = profCol;
+      if (profColUsed === -1) profColUsed = dynProfCol;
     }
     // Entreprise : colonnes AGENCY et COMPANY (sinon SUBCON / CO. / ENTREPRISE), repérées d'après les en-têtes
     {
@@ -4248,7 +4253,7 @@ function parseImportRows(sheets, type) {
       rows.push(profession ? { id, name, company, profession } : { id, name, company });
     }
   });
-  return { rows, ignored };
+  return { rows, ignored, profColUsed };
 }
 
 // Analyse (ne modifie RIEN) : qui est reconnu, qui est nouveau, qui est absent, quoi mettre à jour
@@ -4398,6 +4403,8 @@ function renderImportPreview() {
       <b>📄 ${escapeHtml(p.fileName)}</b>
       <span>Type de fichier :</span>
       <select class="modal-select" style="width:auto;" onchange="changeImportType(this.value)">${typeOpts}</select>
+      <span>🛠️ Colonne Spécialité :</span>
+      <select class="modal-select" style="width:auto; max-width:280px;" onchange="changeImportProfCol(this.value)">${importProfColOpts(p)}</select>
     </div>`;
 
   if (plan.rows.length === 0) {
@@ -4407,6 +4414,11 @@ function renderImportPreview() {
     html += line(`📋 ${plan.rows.length} ouvrier(s) lus dans le fichier${p.ignored ? ` · ${p.ignored} ligne(s) en double ignorée(s)` : ''}`);
     html += line(`✅ ${plan.matches.length} reconnu(s) dans l'application (${byIdCount} par ID, ${plan.matches.length - byIdCount} par nom)`);
     html += line(`📥 ${plan.newRowIdx.length} nouvel(aux) ouvrier(s) → « Non assignés »`);
+    const nSpec = plan.rows.filter(r => r.profession).length;
+    const specs = [...new Set(plan.rows.map(r => r.profession).filter(Boolean))];
+    html += line(nSpec
+      ? `🛠️ ${nSpec} spécialité(s) lue(s) (${specs.length} différente(s) : <span style="color:#1e40af;">${escapeHtml(specs.slice(0, 8).join(', '))}${specs.length > 8 ? '…' : ''}</span>) → enregistrées sur les ouvriers, y compris ceux déjà présents`
+      : `🛠️ <span style="color:#b45309;">Aucune spécialité lue : choisissez la colonne « Spécialité » ci-dessus.</span>`);
     if (autoCount) html += line(`🔄 ${autoCount} mise(s) à jour automatique(s) d'ouvriers non assignés (ID / entreprise)`);
     if (plan.newCompanies.length) html += line(`🆕 Nouvelle(s) entreprise(s) : <b>${escapeHtml(plan.newCompanies.join(', '))}</b>`);
     if (plan.missing.length) {
@@ -4441,15 +4453,45 @@ function renderImportPreview() {
   if (all) all.checked = toValidate.length > 0 && toValidate.every(m => !m.conflict);
 
   document.getElementById('btn-import-apply').disabled = plan.rows.length === 0;
+  document.getElementById('btn-import-spec').disabled = !plan.rows.some(r => r.profession);
 }
 
 window.toggleAllImportUpdates = function(checked) {
   document.querySelectorAll('.import-update-cb').forEach(cb => cb.checked = checked);
 };
 
+// Colonnes de la ligne d'en-têtes (1re feuille) proposées pour la Spécialité
+function importProfColOpts(p) {
+  const sheet = p.sheets[0] || [];
+  let h = sheet.findIndex(r => Array.isArray(r) && /NAME|SURNAME|NOM/.test(r.map(c => String(c || '').toUpperCase()).join(' ')));
+  if (h < 0) h = 0;
+  const head = sheet[h] || [];
+  const n = Math.max(head.length, ...sheet.slice(h, h + 20).map(r => (r || []).length));
+  const cur = p.profColUsed;
+  let o = `<option value="auto">Automatique (d'après le titre)${p.profCol === undefined && cur >= 0 ? ' → ' + XLSX.utils.encode_col(cur) : ''}</option>`;
+  o += `<option value="-1" ${p.profCol === -1 ? 'selected' : ''}>— aucune —</option>`;
+  for (let i = 0; i < n; i++) o += `<option value="${i}" ${p.profCol === i ? 'selected' : ''}>${XLSX.utils.encode_col(i)} · ${escapeHtml(String(head[i] || '').slice(0, 30))}</option>`;
+  return o;
+}
+function reparseImport() {
+  const p = pendingImport;
+  const parsed = parseImportRows(p.sheets, p.type, p.profCol);
+  p.rows = parsed.rows;
+  p.ignored = parsed.ignored;
+  p.profColUsed = parsed.profColUsed;
+  p.plan = buildImportPlan(parsed.rows, p.type);
+  renderImportPreview();
+}
+window.changeImportProfCol = function(v) {
+  if (!pendingImport) return;
+  pendingImport.profCol = v === 'auto' ? undefined : Number(v);
+  reparseImport();
+};
+
 window.changeImportType = function(type) {
   if (!pendingImport || !IMPORT_TYPES[type]) return;
-  const parsed = parseImportRows(pendingImport.sheets, type);
+  const parsed = parseImportRows(pendingImport.sheets, type, pendingImport.profCol);
+  pendingImport.profColUsed = parsed.profColUsed;
   pendingImport.type = type;
   pendingImport.rows = parsed.rows;
   pendingImport.ignored = parsed.ignored;
@@ -4482,6 +4524,25 @@ window.confirmImport = function() {
     `Les affectations dans les Timesheets sont inchangées.`);
 };
 
+// Import des spécialités seules : uniquement pour les ouvriers reconnus (même ID, ou même nom).
+// Rien d'autre n'est modifié : pas de nouvel ouvrier, pas de changement d'ID / nom / entreprise, pas de ⚠️ absent.
+window.confirmImportSpecialtiesOnly = function() {
+  if (!canEdit() || !pendingImport) return;
+  const plan = buildImportPlan(pendingImport.rows, pendingImport.type);
+  const changes = plan.matches.filter(m => !m.conflict).map(m => ({ w: m.a.w, v: plan.rows[m.rowIdx].profession }))
+    .filter(x => x.v && x.v !== x.w.profession);
+  if (!changes.length) { alert("👌 Aucune spécialité à mettre à jour (déjà à jour, ou aucun ouvrier reconnu avec une spécialité)."); return; }
+  if (!confirm(`Mettre à jour la spécialité de ${changes.length} ouvrier(s) ?\n\n` +
+    changes.slice(0, 15).map(x => `• ${x.w.name} : ${x.w.profession || '—'} → ${x.v}`).join('\n') + (changes.length > 15 ? `\n… et ${changes.length - 15} autre(s)` : '') +
+    `\n\nAucune autre modification (ni ajout, ni ID, ni nom, ni entreprise).`)) return;
+  changes.forEach(x => { x.w.profession = x.v; });
+  pendingImport = null;
+  document.getElementById('import-validation-modal').style.display = 'none';
+  refreshAllViews();
+  syncToFirebase();
+  alert(`✅ ${changes.length} spécialité(s) mise(s) à jour.`);
+};
+
 // --- Lecture du fichier Excel → écran de vérification (aucune modification à ce stade) ---
 function importExcelFile(event) {
   if (!canEdit()) return;
@@ -4503,7 +4564,7 @@ function importExcelFile(event) {
 
       const type = guessImportType(file.name);
       const parsed = parseImportRows(sheets, type);
-      pendingImport = { fileName: file.name, sheets, type, rows: parsed.rows, ignored: parsed.ignored,
+      pendingImport = { fileName: file.name, sheets, type, rows: parsed.rows, ignored: parsed.ignored, profColUsed: parsed.profColUsed,
                         plan: buildImportPlan(parsed.rows, type) };
       renderImportPreview();
       document.getElementById('import-validation-modal').style.display = 'flex';
