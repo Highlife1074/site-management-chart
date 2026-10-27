@@ -240,7 +240,10 @@
   .plan-group td.plan-name { min-width: 0; max-width: none; border-right: 2px solid #94a3b8; }
   .plan-cell.auto { background: #bbf7d0; color: #15803d; font-weight: 500; }
   .plan-cell.v-z { background: #fee2e2; color: #b91c1c; }
-  .plan-mcell { min-width: 64px; height: 24px; font-weight: 700; cursor: pointer; }
+  .plan-mcell { min-width: 64px; height: 24px; font-weight: 700; cursor: pointer; user-select: none; touch-action: none; }
+  .plan-ro .plan-mcell { cursor: default; }
+  .plan-table th.plan-phead { cursor: pointer; }
+  .plan-table th.plan-phead:hover { background: #cbd5e1; }
   .plan-mcell.full { background: #16a34a; color: #fff; }
   .plan-mcell.part { background: #bbf7d0; color: #14532d; }
   .plan-skill { display: inline-block; font-size: 9px; background: #fef3c7; color: #92400e; border-radius: 4px; padding: 0 4px; margin-left: 3px; font-weight: 600; }
@@ -4503,7 +4506,8 @@ const PLAN_DAYS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 const PLAN_SCOPE_FIELDS = ['s1n', 's1a', 's1b', 's2n', 's2a', 's2b']; // n = nom du Scope, a = début, b = fin
 
 let planMonth = ymOf(new Date());
-let planMode = 'days';    // 'days' (un mois, jour par jour) ou 'months' (12 mois)
+let planMode = 'days';    // 'days' (un mois, jour par jour), 'weeks' (13 semaines) ou 'months' (12 mois)
+const PLAN_WEEKS = 13;
 let planBrush = '1';      // valeur appliquée au clic : '1', 'h', 'q', 'z' ou '-' (effacer)
 let planSearch = '';
 let planCat = '';         // filtre domaine des Timesheets ('' = tous)
@@ -4709,6 +4713,30 @@ function planDateFR(iso) { return iso ? iso.split('-').reverse().join('/') : '';
 function planIso(month, d) { return month + '-' + String(d).padStart(2, '0'); }
 function planAddMonths(month, n) { const [y, m] = month.split('-').map(Number); return ymOf(new Date(y, m - 1 + n, 1)); }
 function planTodayIso() { const n = new Date(); return planIso(ymOf(n), n.getDate()); }
+
+// --- Périodes (vues Semaines et Mois) : une case = plusieurs jours ---
+// Lundi de la semaine qui contient le 1er du mois affiché
+function planFirstMonday(month) {
+  const [y, m] = month.split('-').map(Number);
+  const d = new Date(y, m - 1, 1);
+  d.setDate(d.getDate() - (d.getDay() + 6) % 7);
+  return d;
+}
+function planIsoWeek(d) {
+  const t = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 3 - (d.getDay() + 6) % 7);
+  const w1 = new Date(t.getFullYear(), 0, 4);
+  return 1 + Math.round(((t - w1) / 864e5 - 3 + (w1.getDay() + 6) % 7) / 7);
+}
+// Jours d'une colonne Semaine ou Mois : [[AAAA-MM, jour], ...]
+function planColDays(c) {
+  if (c.month) { const out = []; for (let d = 1, n = planDaysIn(c.month); d <= n; d++) out.push([c.month, d]); return out; }
+  return c.days;
+}
+// Part de la période travaillée (1 = toute la semaine / tout le mois)
+function planColShare(id, c) {
+  const days = planColDays(c);
+  return days.reduce((t, [mo, d]) => t + planDayValue(id, mo, d), 0) / days.length;
+}
 
 // --- Saisie manuelle par jour ---
 function planGet(id, month, day) {
@@ -4974,8 +5002,11 @@ function renderPlanning(force) {
   const [y, m] = planMonth.split('-').map(Number);
   const edit = canEditPlanning();
   const lastMonth = planAddMonths(planMonth, 11);
+  const fm = planFirstMonday(planMonth), lm = new Date(fm.getFullYear(), fm.getMonth(), fm.getDate() + 7 * (PLAN_WEEKS - 1));
   document.getElementById('plan-month-label').innerText = planMode === 'days'
     ? `${PLAN_MONTHS[m - 1]} ${y}`
+    : planMode === 'weeks'
+    ? `Sem. ${planIsoWeek(fm)} → Sem. ${planIsoWeek(lm)} (${lm.getFullYear()})`
     : `${PLAN_MONTHS_SHORT[m - 1]} ${y} → ${PLAN_MONTHS_SHORT[Number(lastMonth.slice(5)) - 1]} ${lastMonth.slice(0, 4)}`;
   document.getElementById('plan-filters').innerHTML = planFiltersHtml();
   document.getElementById('plan-scopes-btn').innerText = planShowScopes ? '◧ Masquer Scopes' : '◨ Afficher Scopes';
@@ -4984,9 +5015,10 @@ function renderPlanning(force) {
     : '';
   document.getElementById('plan-mode').innerHTML =
     `<button class="btn btn-outline ${planMode === 'days' ? 'active' : ''}" onclick="setPlanMode('days')">Jours</button> ` +
+    `<button class="btn btn-outline ${planMode === 'weeks' ? 'active' : ''}" onclick="setPlanMode('weeks')">Semaines</button> ` +
     `<button class="btn btn-outline ${planMode === 'months' ? 'active' : ''}" onclick="setPlanMode('months')">Mois</button>`;
   const brushBtn = (code, label) => `<button class="btn btn-outline plan-brush ${planBrush === code ? 'active' : ''}" onclick="setPlanBrush('${code}')">${label}</button>`;
-  document.getElementById('plan-brushes').innerHTML = (planMode === 'days' && edit)
+  document.getElementById('plan-brushes').innerHTML = edit
     ? `<span style="font-size:12px; font-weight:700; color:#475569;">Valeur :</span> ` + brushBtn('1', '1') + ' ' + brushBtn('h', '0.5') + ' ' + brushBtn('q', '0.25') + ' ' + brushBtn('z', '0') + ' ' + brushBtn('-', '🧽 Effacer')
     : '';
   const nNew = Array.isArray(planningRoster) ? planNewNames().length : 0;
@@ -4998,12 +5030,20 @@ function renderPlanning(force) {
     ? `👁️ Consultation seule : votre profil ne permet pas de modifier le planning (voir l'Admin : ⚙️ → 👤 Profils & mots de passe).`
     : planMode === 'days'
       ? `Entre les dates de début et de fin d'un <b>Scope</b>, chaque jour vaut 1 (vert clair). Pour corriger un jour, choisissez une valeur puis cliquez ou glissez (0 = absent) ; « Effacer » revient au Scope. Une date se copie-colle d'un ouvrier à l'autre avec <b>Ctrl+C / Ctrl+V</b> ; 📋 / 📥 copie tout le planning d'un ouvrier. <b>Fin estimée</b> = fin de Scope ou dernier jour saisi, le plus tardif (trait rouge).`
-      : `Chaque case = part du mois travaillée (ex. fin le 15/09 → 0.5 en septembre). Cliquez sur un mois pour le détail jour par jour.`;
+      : `Chaque case = part ${planMode === 'weeks' ? 'de la semaine' : 'du mois'} travaillée (ex. ${planMode === 'weeks' ? 'fin le mercredi → 0.43' : 'fin le 15/09 → 0.5 en septembre'}). <b>Saisie rapide</b> : choisissez une valeur puis cliquez ou glissez sur les cases : tous les jours ${planMode === 'weeks' ? 'de la semaine' : 'du mois'} (dimanches compris) prennent cette valeur ; recliquer ou « Effacer » revient au Scope. Cliquez sur l'en-tête d'une colonne pour le détail jour par jour.`;
 
   const todayStr = planTodayIso();
   let cols = [];
   if (planMode === 'days') {
     for (let d = 1, n = planDaysIn(planMonth); d <= n; d++) cols.push({ d, dow: new Date(y, m - 1, d).getDay(), iso: planIso(planMonth, d) });
+  } else if (planMode === 'weeks') {
+    const fm = planFirstMonday(planMonth);
+    for (let i = 0; i < PLAN_WEEKS; i++) {
+      const days = [];
+      for (let j = 0; j < 7; j++) { const d = new Date(fm.getFullYear(), fm.getMonth(), fm.getDate() + 7 * i + j); days.push([ymOf(d), d.getDate()]); }
+      const isos = days.map(([mo, d]) => planIso(mo, d));
+      cols.push({ days, week: planIsoWeek(new Date(fm.getFullYear(), fm.getMonth(), fm.getDate() + 7 * i)), first: isos[0], last: isos[6], now: todayStr >= isos[0] && todayStr <= isos[6] });
+    }
   } else {
     for (let i = 0; i < 12; i++) cols.push({ month: planAddMonths(planMonth, i) });
   }
@@ -5015,7 +5055,9 @@ function renderPlanning(force) {
   const nameSpan = planShowScopes ? 7 : 1;
   const colHead = planMode === 'days'
     ? cols.map(c => `<th class="${c.dow === 0 ? 'sun' : ''} ${c.iso === todayStr ? 'today' : ''}">${PLAN_DAYS[c.dow]}<br>${c.d}</th>`).join('')
-    : cols.map(c => `<th class="${c.month === ymOf(new Date()) ? 'today' : ''}">${PLAN_MONTHS_SHORT[Number(c.month.slice(5)) - 1]}<br>${c.month.slice(0, 4)}</th>`).join('');
+    : planMode === 'weeks'
+    ? cols.map(c => `<th class="plan-phead ${c.now ? 'today' : ''}" title="Du ${planDateFR(c.first)} au ${planDateFR(c.last)} — cliquez pour le détail jour par jour" onclick="openPlanMonth('${c.first.slice(0, 7)}')">S${c.week}<br>${planDateFR(c.first).slice(0, 5)}</th>`).join('')
+    : cols.map(c => `<th class="plan-phead ${c.month === ymOf(new Date()) ? 'today' : ''}" title="Cliquez pour le détail jour par jour" onclick="openPlanMonth('${c.month}')">${PLAN_MONTHS_SHORT[Number(c.month.slice(5)) - 1]}<br>${c.month.slice(0, 4)}</th>`).join('');
   const head = `<tr><th class="plan-name">Ouvrier</th>${scopeHead}${colHead}<th class="plan-total">${planMode === 'days' ? 'Total mois' : 'Total'}</th><th class="plan-endcol">Fin estimée</th></tr>`;
 
   const groups = planGroups();
@@ -5044,7 +5086,7 @@ function renderPlanning(force) {
 
   const wrap = document.getElementById('plan-table-wrap');
   const scroll = [wrap.scrollLeft, wrap.scrollTop];
-  wrap.innerHTML = `${datalist}<table class="plan-table ${edit && planMode === 'days' ? '' : 'plan-ro'} ${planShowScopes ? '' : 'plan-noscopes'}"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+  wrap.innerHTML = `${datalist}<table class="plan-table ${edit ? '' : 'plan-ro'} ${planShowScopes ? '' : 'plan-noscopes'}"><thead>${head}</thead><tbody>${body}</tbody></table>`;
   // Colonnes Scopes figées juste après la colonne Ouvrier, quelle que soit sa largeur
   const nameTh = wrap.querySelector('thead th.plan-name');
   if (nameTh) wrap.querySelector('table').style.setProperty('--nw', nameTh.getBoundingClientRect().width + 'px');
@@ -5065,19 +5107,22 @@ function planRowTail(r, cols) {
       return `<td class="plan-cell ${c.dow === 0 ? 'sun' : ''} ${cls} ${c.d === endDay ? 'end' : ''}" data-k="${k}" data-d="${c.d}">${code !== '-' ? PLAN_LABELS[code] : (auto ? '1' : '')}</td>`;
     }).join('');
   } else {
-    cells = cols.map(c => {
-      const v = planMonthShare(r.id, c.month);
-      return `<td class="plan-mcell ${v >= 0.999 ? 'full' : (v > 0 ? 'part' : '')}" onclick="openPlanMonth('${c.month}')">${planFmt(v)}</td>`;
-    }).join('');
+    cells = cols.map((c, ci) => planPCellHtml(r.id, c, ci, k)).join('');
   }
-  const total = planMode === 'days' ? planMonthTotal(r.id, planMonth) : cols.reduce((t, c) => t + planMonthShare(r.id, c.month), 0);
+  const total = planMode === 'days' ? planMonthTotal(r.id, planMonth) : cols.reduce((t, c) => t + planColShare(r.id, c), 0);
   return `${cells}<td class="plan-total">${planFmt(total)}</td>
     <td class="plan-endcol ${end && end < planTodayIso() ? 'past' : ''}">${end ? planDateFR(end) : '—'}</td>`;
 }
 
+// Case d'une période (semaine ou mois) : part travaillée ; cliquer / glisser remplit tous ses jours
+function planPCellHtml(id, c, ci, k) {
+  const v = planColShare(id, c);
+  return `<td class="plan-mcell plan-pcell ${v >= 0.999 ? 'full' : (v > 0 ? 'part' : '')}" data-k="${k || escapeHtml(planKey(id))}" data-p="${ci}">${planFmt(v)}</td>`;
+}
+
 // Totaux d'une Timesheet (par jour ou par mois) : après la case titre
 function planGroupTail(g, cols) {
-  const val = (r, c) => planMode === 'days' ? planDayValue(r.id, planMonth, c.d) : planMonthShare(r.id, c.month);
+  const val = (r, c) => planMode === 'days' ? planDayValue(r.id, planMonth, c.d) : planColShare(r.id, c);
   const sums = cols.map(c => g.rows.reduce((t, r) => t + val(r, c), 0));
   return `${sums.map(v => `<td class="plan-daysum">${planFmt(v)}</td>`).join('')}
     <td class="plan-total">${planFmt(sums.reduce((a, b) => a + b, 0))}</td><td></td>`;
@@ -5157,7 +5202,19 @@ document.addEventListener('focusout', e => {
 }, true);
 
 // --- Saisie jour par jour : clic ou glisser (souris et tactile) ---
+// Code d'une période : la valeur commune si tous ses jours ont la même saisie, sinon null
+function planPeriodCode(k, c) {
+  const codes = new Set(planColDays(c).map(([mo, d]) => planGet(k, mo, d)));
+  return codes.size === 1 ? [...codes][0] : null;
+}
 function planPaintCell(td) {
+  if (td && td.classList.contains('plan-pcell')) {
+    const c = planLastCols[Number(td.dataset.p)];
+    if (!c || planPeriodCode(td.dataset.k, c) === planPaintCode) return;
+    planColDays(c).forEach(([mo, d]) => planSet(td.dataset.k, mo, d, planPaintCode));
+    td.outerHTML = planPCellHtml(td.dataset.k, c, td.dataset.p, escapeHtml(td.dataset.k));
+    return;
+  }
   if (!td || !td.classList.contains('plan-cell')) return;
   const k = td.dataset.k, d = Number(td.dataset.d);
   if (planGet(k, planMonth, d) === planPaintCode) return;
@@ -5169,11 +5226,14 @@ function planPaintCell(td) {
 }
 
 document.addEventListener('pointerdown', e => {
-  const td = e.target.closest && e.target.closest('#planning-view .plan-cell');
+  const td = e.target.closest && e.target.closest('#planning-view .plan-cell, #planning-view .plan-pcell');
   if (!td || !canEditPlanning()) return;
   e.preventDefault();
   // Recliquer une case qui a déjà la valeur choisie l'efface (et le glisser efface aussi)
-  planPaintCode = planGet(td.dataset.k, planMonth, Number(td.dataset.d)) === planBrush ? '-' : planBrush;
+  const cur = td.classList.contains('plan-pcell')
+    ? planPeriodCode(td.dataset.k, planLastCols[Number(td.dataset.p)] || { days: [] })
+    : planGet(td.dataset.k, planMonth, Number(td.dataset.d));
+  planPaintCode = cur === planBrush ? '-' : planBrush;
   window.planPainting = true;
   planPaintCell(td);
 });
@@ -5181,7 +5241,7 @@ document.addEventListener('pointerdown', e => {
 document.addEventListener('pointermove', e => {
   if (!window.planPainting) return;
   const el = document.elementFromPoint(e.clientX, e.clientY);
-  planPaintCell(el && el.closest && el.closest('#planning-view .plan-cell'));
+  planPaintCell(el && el.closest && el.closest('#planning-view .plan-cell, #planning-view .plan-pcell'));
 });
 
 function planStopPaint() {
