@@ -4757,6 +4757,8 @@ function planGet(id, month, day) {
 function planSet(id, month, day, code) {
   const k = planKey(id);
   if (!k) return;
+  // Un 1 dans un Scope n'est pas enregistré (le Scope donne déjà 1) : il suivra les dates du Scope
+  if (code === '1' && planInScope(k, planIso(month, day))) code = '-';
   if (!workerPlanning[k]) workerPlanning[k] = {};
   const chars = (workerPlanning[k][month] || '').padEnd(planDaysIn(month), '-').split('');
   chars[day - 1] = code;
@@ -4764,6 +4766,28 @@ function planSet(id, month, day, code) {
   if (/^-*$/.test(str)) delete workerPlanning[k][month]; else workerPlanning[k][month] = str;
   if (!Object.keys(workerPlanning[k]).length) delete workerPlanning[k];
 }
+
+// Retire les jours saisis à la main d'un ouvrier (codes donnés, ou tous) ; renvoie le nombre retiré
+function planClearManual(key, codes) {
+  const months = workerPlanning[key];
+  if (!months) return 0;
+  let n = 0;
+  Object.keys(months).forEach(mo => {
+    const str = months[mo].split('').map(ch => (ch !== '-' && (!codes || codes.includes(ch))) ? (n++, '-') : ch).join('');
+    if (/^-*$/.test(str)) delete months[mo]; else months[mo] = str;
+  });
+  if (!Object.keys(months).length) delete workerPlanning[key];
+  return n;
+}
+window.clearPlanManual = function(key) {
+  if (!canEditPlanning()) return;
+  const n = Object.values(workerPlanning[key] || {}).reduce((t, str) => t + str.replace(/-/g, '').length, 0);
+  if (!n) { alert("Aucun jour saisi à la main pour cet ouvrier : seuls ses Scopes comptent."); return; }
+  if (!confirm(`Effacer les ${n} jour(s) saisi(s) à la main pour cet ouvrier (tous les mois) ?\n\nIl ne restera que ses Scopes.`)) return;
+  planClearManual(key);
+  syncDebounced();
+  renderPlanning(true);
+};
 
 // --- Scopes ---
 function planScope(id) { return planningScopes[planKey(id)] || {}; }
@@ -5033,7 +5057,7 @@ function renderPlanning(force) {
     : '';
   document.getElementById('plan-mode').innerHTML =
     `<button class="btn btn-outline ${planMode === 'days' ? 'active' : ''}" onclick="setPlanMode('days')">Jours</button> ` +
-    `<button class="btn btn-outline ${planMode === 'weeks' ? 'active' : ''}" onclick="setPlanMode('weeks')">Semaines</button> ` +
+    `<button class="btn btn-outline ${planMode === 'weeks' ? 'active' : ''}" onclick="setPlanMode('weeks')">📆 Hebdo</button> ` +
     `<button class="btn btn-outline ${planMode === 'months' ? 'active' : ''}" onclick="setPlanMode('months')">Mois</button>`;
   const brushBtn = (code, label) => `<button class="btn btn-outline plan-brush ${planBrush === code ? 'active' : ''}" onclick="setPlanBrush('${code}')">${label}</button>`;
   document.getElementById('plan-brushes').innerHTML = edit
@@ -5047,7 +5071,7 @@ function renderPlanning(force) {
   document.getElementById('plan-help').innerHTML = !edit
     ? `👁️ Consultation seule : votre profil ne permet pas de modifier le planning (voir l'Admin : ⚙️ → 👤 Profils & mots de passe).`
     : planMode === 'days'
-      ? `Entre les dates de début et de fin d'un <b>Scope</b>, chaque jour vaut 1 (vert clair). Pour corriger un jour, choisissez une valeur puis cliquez ou glissez (0 = absent) ; « Effacer » revient au Scope. Une date se copie-colle d'un ouvrier à l'autre avec <b>Ctrl+C / Ctrl+V</b> ; 📋 / 📥 copie tout le planning d'un ouvrier. <b>Fin estimée</b> = fin de Scope ou dernier jour saisi, le plus tardif (trait rouge).`
+      ? `Entre les dates de début et de fin d'un <b>Scope</b>, chaque jour vaut 1 (vert clair). Pour corriger un jour, choisissez une valeur puis cliquez ou glissez (0 = absent) ; « Effacer » revient au Scope. Une date se copie-colle d'un ouvrier à l'autre avec <b>Ctrl+C / Ctrl+V</b> ; 📋 / 📥 copie tout le planning d'un ouvrier. <b>Fin estimée</b> = fin de Scope ou dernier jour saisi, le plus tardif (trait rouge). Modifier une date de Scope efface les 1 saisis à la main pour cet ouvrier (les 0 / 0.5 / 0.25 restent) ; 🧽 efface tous ses jours saisis.`
       : `Chaque case = part ${planMode === 'weeks' ? 'de la semaine' : 'du mois'} travaillée (ex. ${planMode === 'weeks' ? 'fin le mercredi → 0.43' : 'fin le 15/09 → 0.5 en septembre'}). <b>Saisie rapide</b> : choisissez une valeur puis cliquez ou glissez sur les cases : tous les jours ${planMode === 'weeks' ? 'de la semaine' : 'du mois'} (dimanches compris) prennent cette valeur ; recliquer ou « Effacer » revient au Scope. Cliquez sur l'en-tête d'une colonne pour le détail jour par jour.`;
 
   const todayStr = planTodayIso();
@@ -5094,7 +5118,7 @@ function renderPlanning(force) {
       const dateCell = (f) => `<td class="plan-sc sc${f}"><input type="date" value="${escapeHtml(sc['s' + f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${f}', this)"></td>`;
       const nameCell = (f) => `<td class="plan-sc scn sc${f}" title="${escapeHtml(sc['s' + f] || '')}"><input type="text" list="plan-scope-names" maxlength="40" placeholder="${edit ? 'Nom…' : ''}" value="${escapeHtml(sc['s' + f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${f}', this)"></td>`;
       body += `<tr data-k="${k}">
-        <td class="plan-name" title="${escapeHtml([r.name, r.id, r.company, r.profession, r.skills ? 'Compétences : ' + r.skills : ''].filter(Boolean).join(' — '))}">${edit && Array.isArray(planningRoster) ? `<button class="plan-del" title="Retirer du planning" onclick="removePlanningWorker('${k}')">✕</button>` : ''}${edit ? `${planClipboard ? `<button class="plan-act" title="Coller le planning copié (Scopes + jours saisis)" onclick="pastePlanScopes('${k}')">📥</button>` : ''}<button class="plan-act" title="Copier le planning de cet ouvrier (Scopes + jours saisis)" onclick="copyPlanScopes('${k}')">📋</button>` : ''}${edit || canEdit() ? `<button class="plan-act" title="Modifier les compétences" onclick="editPlanSkills('${k}')">🎓</button>` : ''}<b>${escapeHtml(r.name)}</b>${r.onTs ? '' : '<span class="plan-off">hors TS</span>'}<span class="plan-sub">${escapeHtml(r.id)} · ${escapeHtml(r.company)}${r.profession ? `<span class="plan-spec" title="Spécialité">🛠️ ${escapeHtml(r.profession)}</span>` : ''}${skillList(r.skills).map(sk => `<span class="plan-skill">${escapeHtml(sk)}</span>`).join('')}</span></td>
+        <td class="plan-name" title="${escapeHtml([r.name, r.id, r.company, r.profession, r.skills ? 'Compétences : ' + r.skills : ''].filter(Boolean).join(' — '))}">${edit && Array.isArray(planningRoster) ? `<button class="plan-del" title="Retirer du planning" onclick="removePlanningWorker('${k}')">✕</button>` : ''}${edit ? `${planClipboard ? `<button class="plan-act" title="Coller le planning copié (Scopes + jours saisis)" onclick="pastePlanScopes('${k}')">📥</button>` : ''}<button class="plan-act" title="Copier le planning de cet ouvrier (Scopes + jours saisis)" onclick="copyPlanScopes('${k}')">📋</button>${workerPlanning[r.key] ? `<button class="plan-act" title="Effacer tous les jours saisis à la main (il ne reste que les Scopes)" onclick="clearPlanManual('${k}')">🧽</button>` : ''}` : ''}${edit || canEdit() ? `<button class="plan-act" title="Modifier les compétences" onclick="editPlanSkills('${k}')">🎓</button>` : ''}<b>${escapeHtml(r.name)}</b>${r.onTs ? '' : '<span class="plan-off">hors TS</span>'}<span class="plan-sub">${escapeHtml(r.id)} · ${escapeHtml(r.company)}${r.profession ? `<span class="plan-spec" title="Spécialité">🛠️ ${escapeHtml(r.profession)}</span>` : ''}${skillList(r.skills).map(sk => `<span class="plan-skill">${escapeHtml(sk)}</span>`).join('')}</span></td>
         ${nameCell('1n')}${dateCell('1a')}${dateCell('1b')}${nameCell('2n')}${dateCell('2a')}${dateCell('2b')}
         ${planRowTail(r, cols)}
       </tr>`;
@@ -5195,6 +5219,7 @@ window.setPlanScope = function(key, field, input) {
   }
   delete input.dataset.invalid;
   planStoreScopes(key, sc);
+  if (isDate) planClearManual(key, ['1']); // les 1 saisis à la main ne survivent pas à un changement de Scope
   if (!isDate) planAddScopeName(val); // un nouveau nom rejoint la liste des Scopes
   syncDebounced();
   // Grille, total et fin estimée de l'ouvrier mis à jour tout de suite, sans toucher aux cases de saisie
@@ -5222,7 +5247,7 @@ document.addEventListener('focusout', e => {
 // --- Saisie jour par jour : clic ou glisser (souris et tactile) ---
 // Code d'une période : la valeur commune si tous ses jours ont la même saisie, sinon null
 function planPeriodCode(k, c) {
-  const codes = new Set(planColDays(c).map(([mo, d]) => planGet(k, mo, d)));
+  const codes = new Set(planColDays(c).map(([mo, d]) => { const x = planGet(k, mo, d); return x === '-' && planInScope(k, planIso(mo, d)) ? '1' : x; }));
   return codes.size === 1 ? [...codes][0] : null;
 }
 function planPaintCell(td) {
@@ -5237,10 +5262,11 @@ function planPaintCell(td) {
   const k = td.dataset.k, d = Number(td.dataset.d);
   if (planGet(k, planMonth, d) === planPaintCode) return;
   planSet(k, planMonth, d, planPaintCode);
-  const auto = planPaintCode === '-' && planInScope(k, planIso(planMonth, d));
+  const code = planGet(k, planMonth, d);
+  const auto = code === '-' && planInScope(k, planIso(planMonth, d));
   td.classList.remove('v-1', 'v-h', 'v-q', 'v-z', 'auto');
-  if (planPaintCode !== '-') td.classList.add('v-' + planPaintCode); else if (auto) td.classList.add('auto');
-  td.innerText = planPaintCode !== '-' ? PLAN_LABELS[planPaintCode] : (auto ? '1' : '');
+  if (code !== '-') td.classList.add('v-' + code); else if (auto) td.classList.add('auto');
+  td.innerText = code !== '-' ? PLAN_LABELS[code] : (auto ? '1' : '');
 }
 
 document.addEventListener('pointerdown', e => {
