@@ -249,11 +249,14 @@
   .plan-table .plan-sc { position: sticky; z-index: 1; background: #fff; min-width: 90px; max-width: 90px; }
   .plan-table .plan-sc.scn { min-width: 150px; max-width: 150px; }
   .plan-table thead .plan-sc { z-index: 3; }
-  .plan-table .sc1n { left: var(--nw, 200px); } .plan-table .sc1a { left: calc(var(--nw, 200px) + 150px); } .plan-table .sc1b { left: calc(var(--nw, 200px) + 240px); }
-  .plan-table .sc2n { left: calc(var(--nw, 200px) + 330px); } .plan-table .sc2a { left: calc(var(--nw, 200px) + 480px); } .plan-table .sc2b { left: calc(var(--nw, 200px) + 570px); border-right: 2px solid #94a3b8; }
+  .plan-table .plan-sc.scd { min-width: 48px; max-width: 48px; }
+  .plan-table .sc1n { left: var(--nw, 200px); } .plan-table .sc1a { left: calc(var(--nw, 200px) + 150px); } .plan-table .sc1d { left: calc(var(--nw, 200px) + 240px); } .plan-table .sc1b { left: calc(var(--nw, 200px) + 288px); }
+  .plan-table .sc2n { left: calc(var(--nw, 200px) + 378px); } .plan-table .sc2a { left: calc(var(--nw, 200px) + 528px); } .plan-table .sc2d { left: calc(var(--nw, 200px) + 618px); } .plan-table .sc2b { left: calc(var(--nw, 200px) + 666px); border-right: 2px solid #94a3b8; }
   .plan-table .plan-cell, .plan-table .plan-daysum { min-width: 26px; padding: 0 1px; }
-  .plan-table thead .sc1n, .plan-table thead .sc1a, .plan-table thead .sc1b { background: #dbeafe; }
-  .plan-table thead .sc2n, .plan-table thead .sc2a, .plan-table thead .sc2b { background: #ede9fe; }
+  .plan-table thead .sc1n, .plan-table thead .sc1a, .plan-table thead .sc1d, .plan-table thead .sc1b { background: #dbeafe; }
+  .plan-table thead .sc2n, .plan-table thead .sc2a, .plan-table thead .sc2d, .plan-table thead .sc2b { background: #ede9fe; }
+  .plan-table .plan-sc input[type=number] { text-align: center; -moz-appearance: textfield; }
+  .plan-table .plan-sc input[type=number]::-webkit-inner-spin-button { display: none; }
   .plan-table .plan-sc input[type=text] { font-weight: 600; }
   .plan-noscopes .plan-sc { display: none; }
   .plan-noscopes .plan-name { border-right: 2px solid #94a3b8; }
@@ -1346,7 +1349,7 @@ let siteCompanies = [...DEFAULT_COMPANIES];
 let siteSupervisors = []; 
 let siteValidators = []; // liste préremplie des VALIDATORS proposés sur les Timesheets
 let workerPlanning = {}; // Planning fin : { ID ouvrier : { 'AAAA-MM' : un caractère par jour } } (voir planning.js)
-let planningScopes = {};  // Planning fin : { ID ouvrier : { s1a, s1b, s2a, s2b } } dates des Scopes 1 et 2
+let planningScopes = {};  // Planning fin : { ID ouvrier : { s1a, s1b, s1d, s2a, s2b, s2d } } dates (et durées en jours) des Scopes 1 et 2
 let planningRoster = null; // Planning fin : liste figée des ouvriers (null = pas encore créée)
 let planningScopeNames = []; // Planning fin : liste des noms de Scopes (proposés en liste déroulante)
 let db = null, docRef = null, isSaving = false, currentFilter = 'all';
@@ -4847,7 +4850,7 @@ const PLAN_LABELS = { '1': '1', 'h': '0.5', 'q': '0.25', 'z': '0' };
 const PLAN_MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 const PLAN_MONTHS_SHORT = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
 const PLAN_DAYS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
-const PLAN_SCOPE_FIELDS = ['s1n', 's1a', 's1b', 's2n', 's2a', 's2b']; // n = nom du Scope, a = début, b = fin
+const PLAN_SCOPE_FIELDS = ['s1n', 's1a', 's1d', 's1b', 's2n', 's2a', 's2d', 's2b']; // n = nom du Scope, a = début, d = durée (jours), b = fin
 
 let planMonth = ymOf(new Date());
 let planMode = 'days';    // 'days' (un mois, jour par jour), 'weeks' (13 semaines) ou 'months' (12 mois)
@@ -5407,7 +5410,7 @@ function renderPlanning(force) {
   document.getElementById('plan-help').innerHTML = !edit
     ? `👁️ Consultation seule : votre profil ne permet pas de modifier le planning (voir l'Admin : ⚙️ → 👤 Profils & mots de passe).`
     : planMode === 'days'
-      ? `Entre les dates de début et de fin d'un <b>Scope</b>, chaque jour vaut 1 (vert clair). Pour corriger un jour, choisissez une valeur puis cliquez ou glissez (0 = absent) ; « Effacer » revient au Scope. Une date se copie-colle d'un ouvrier à l'autre avec <b>Ctrl+C / Ctrl+V</b> ; 📋 / 📥 copie tout le planning d'un ouvrier. <b>Fin estimée</b> = fin de Scope ou dernier jour saisi, le plus tardif (trait rouge). Modifier une date de Scope efface les 1 saisis à la main pour cet ouvrier (les 0 / 0.5 / 0.25 restent) ; 🧽 efface tous ses jours saisis.`
+      ? `Entre les dates de début et de fin d'un <b>Scope</b>, chaque jour vaut 1 (vert clair). <b>Durée (j)</b> : début + durée → fin calculée, ou fin + durée → début calculé (jours calendaires, début et fin inclus). Pour corriger un jour, choisissez une valeur puis cliquez ou glissez (0 = absent) ; « Effacer » revient au Scope. Une date se copie-colle d'un ouvrier à l'autre avec <b>Ctrl+C / Ctrl+V</b> ; 📋 / 📥 copie tout le planning d'un ouvrier. <b>Fin estimée</b> = fin de Scope ou dernier jour saisi, le plus tardif (trait rouge). Modifier une date de Scope efface les 1 saisis à la main pour cet ouvrier (les 0 / 0.5 / 0.25 restent) ; 🧽 efface tous ses jours saisis.`
       : `Chaque case = part ${planMode === 'weeks' ? 'de la semaine' : 'du mois'} travaillée (ex. ${planMode === 'weeks' ? 'fin le mercredi → 0.43' : 'fin le 15/09 → 0.5 en septembre'}). <b>Saisie rapide</b> : choisissez une valeur puis cliquez ou glissez sur les cases : tous les jours ${planMode === 'weeks' ? 'de la semaine' : 'du mois'} (dimanches compris) prennent cette valeur ; recliquer ou « Effacer » revient au Scope. Cliquez sur l'en-tête d'une colonne pour le détail jour par jour.`;
 
   const todayStr = planTodayIso();
@@ -5426,11 +5429,12 @@ function renderPlanning(force) {
     for (let i = 0; i < 12; i++) cols.push({ month: planAddMonths(planMonth, i) });
   }
 
-  const scopeHead = `<th class="plan-sc scn sc1n">Scope 1<br>nom</th><th class="plan-sc sc1a">Scope 1<br>début</th><th class="plan-sc sc1b">Scope 1<br>fin</th>` +
-    `<th class="plan-sc scn sc2n">Scope 2<br>nom</th><th class="plan-sc sc2a">Scope 2<br>début</th><th class="plan-sc sc2b">Scope 2<br>fin</th>`;
+  const durTitle = 'Durée en jours calendaires (début et fin inclus) : début + durée → fin, ou fin + durée → début';
+  const scopeHead = `<th class="plan-sc scn sc1n">Scope 1<br>nom</th><th class="plan-sc sc1a">Scope 1<br>début</th><th class="plan-sc scd sc1d" title="${durTitle}">Durée<br>(j)</th><th class="plan-sc sc1b">Scope 1<br>fin</th>` +
+    `<th class="plan-sc scn sc2n">Scope 2<br>nom</th><th class="plan-sc sc2a">Scope 2<br>début</th><th class="plan-sc scd sc2d" title="${durTitle}">Durée<br>(j)</th><th class="plan-sc sc2b">Scope 2<br>fin</th>`;
   // Noms de Scopes déjà utilisés : proposés à la saisie
   const datalist = `<datalist id="plan-scope-names">${planningScopeNames.map(n => `<option value="${escapeHtml(n)}">`).join('')}</datalist>`;
-  const nameSpan = planShowScopes ? 7 : 1;
+  const nameSpan = planShowScopes ? 9 : 1;
   const colHead = planMode === 'days'
     ? cols.map(c => `<th class="${c.dow === 0 ? 'sun' : ''} ${c.iso === todayStr ? 'today' : ''}">${PLAN_DAYS[c.dow]}<br>${c.d}</th>`).join('')
     : planMode === 'weeks'
@@ -5451,11 +5455,12 @@ function renderPlanning(force) {
       const sc = planScope(r.id);
       const k = escapeHtml(r.key);
       // f = '1a' → champ 's1a' (Scope 1 début), colonne 'sc1a'
-      const dateCell = (f) => `<td class="plan-sc sc${f}"><input type="date" value="${escapeHtml(sc['s' + f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${f}', this)"></td>`;
+      const durCell = (n) => `<td class="plan-sc scd sc${n}d"><input type="number" min="1" max="3650" data-f="s${n}d" placeholder="${edit ? 'j' : ''}" value="${escapeHtml(planScopeDuration(sc, n))}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${n}d', this)"></td>`;
+      const dateCell = (f) => `<td class="plan-sc sc${f}"><input type="date" data-f="s${f}" value="${escapeHtml(sc['s' + f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${f}', this)"></td>`;
       const nameCell = (f) => `<td class="plan-sc scn sc${f}" title="${escapeHtml(sc['s' + f] || '')}"><input type="text" list="plan-scope-names" maxlength="40" placeholder="${edit ? 'Nom…' : ''}" value="${escapeHtml(sc['s' + f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${f}', this)"></td>`;
       body += `<tr data-k="${k}">
         <td class="plan-name" title="${escapeHtml([r.name, r.id, r.company, r.profession, r.skills ? 'Compétences : ' + r.skills : '', r.contractEnd ? 'Fin de contrat : ' + fmtDateFR(r.contractEnd) : ''].filter(Boolean).join(' — '))}">${edit && Array.isArray(planningRoster) ? `<button class="plan-del" title="Retirer du planning" onclick="removePlanningWorker('${k}')">✕</button>` : ''}${edit ? `${planClipboard ? `<button class="plan-act" title="Coller le planning copié (Scopes + jours saisis)" onclick="pastePlanScopes('${k}')">📥</button>` : ''}<button class="plan-act" title="Copier le planning de cet ouvrier (Scopes + jours saisis)" onclick="copyPlanScopes('${k}')">📋</button>${workerPlanning[r.key] ? `<button class="plan-act" title="Effacer tous les jours saisis à la main (il ne reste que les Scopes)" onclick="clearPlanManual('${k}')">🧽</button>` : ''}` : ''}${edit || canEdit() ? `<button class="plan-act" title="Modifier les compétences" onclick="editPlanSkills('${k}')">🎓</button>` : ''}${contractAlertHtml(r, r.card)}<b>${escapeHtml(r.name)}</b>${r.onTs ? '' : '<span class="plan-off">hors TS</span>'}<span class="plan-sub">${escapeHtml(r.id)} · ${escapeHtml(r.company)}${r.profession ? `<span class="plan-spec" title="Spécialité">🛠️ ${escapeHtml(r.profession)}</span>` : ''}${skillList(r.skills).map(sk => `<span class="plan-skill">${escapeHtml(sk)}</span>`).join('')}</span></td>
-        ${nameCell('1n')}${dateCell('1a')}${dateCell('1b')}${nameCell('2n')}${dateCell('2a')}${dateCell('2b')}
+        ${nameCell('1n')}${dateCell('1a')}${durCell(1)}${dateCell('1b')}${nameCell('2n')}${dateCell('2a')}${durCell(2)}${dateCell('2b')}
         ${planRowTail(r, cols)}
       </tr>`;
     });
@@ -5471,7 +5476,7 @@ function renderPlanning(force) {
   [wrap.scrollLeft, wrap.scrollTop] = scroll;
 }
 
-// Cases calculées d'une ligne (jours ou mois, total, fin estimée) : après les 7 cases nom + Scopes
+// Cases calculées d'une ligne (jours ou mois, total, fin estimée) : après les 9 cases nom + Scopes
 function planRowTail(r, cols) {
   const k = escapeHtml(r.key);
   const end = planEndDate(r.id);
@@ -5516,7 +5521,7 @@ function planRefreshRow(key) {
   const g = planLastGroups[gi];
   const tr = wrap.querySelector(`tr[data-k="${CSS.escape(key)}"]`);
   if (tr) {
-    while (tr.cells.length > 7) tr.deleteCell(7);
+    while (tr.cells.length > 9) tr.deleteCell(9);
     tr.insertAdjacentHTML('beforeend', planRowTail(g.rows.find(r => r.key === key), planLastCols));
   }
   const gtr = wrap.querySelector(`tr[data-g="${gi}"]`);
@@ -5535,9 +5540,28 @@ window.setPlanMode = function(mode) { planMode = mode; renderPlanning(true); };
 window.openPlanMonth = function(month) { planMonth = month; planMode = 'days'; renderPlanning(true); };
 window.shiftPlanMonth = function(delta) { planMonth = planAddMonths(planMonth, delta); renderPlanning(true); };
 
+// Durées des Scopes : jours calendaires, début et fin inclus (comme le remplissage des Scopes)
+function planAddDays(iso, n) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+  return m ? localISODate(new Date(+m[1], +m[2] - 1, +m[3] + n)) : '';
+}
+function planDaysBetween(a, b) {
+  const A = /^(\d{4})-(\d{2})-(\d{2})$/.exec(a || ''), B = /^(\d{4})-(\d{2})-(\d{2})$/.exec(b || '');
+  if (!A || !B) return 0;
+  return Math.round((new Date(+B[1], +B[2] - 1, +B[3]) - new Date(+A[1], +A[2] - 1, +A[3])) / 86400000) + 1;
+}
+// Durée affichée : calculée d'après les dates si les deux sont remplies, sinon celle saisie
+function planScopeDuration(sc, n) {
+  const a = sc['s' + n + 'a'], b = sc['s' + n + 'b'];
+  if (a && b && b >= a) return String(planDaysBetween(a, b));
+  return sc['s' + n + 'd'] || '';
+}
+
 window.setPlanScope = function(key, field, input) {
   if (!canEditPlanning()) return;
-  const isDate = !field.endsWith('n');
+  const kind = field[2]; // n = nom, a = début, b = fin, d = durée
+  if (kind === 'd') return setPlanScopeDuration(key, field, input);
+  const isDate = kind !== 'n';
   const val = isDate ? (input.value || '') : String(input.value || '').trim().replace(/\s+/g, ' ');
   // Pendant la frappe de l'année, le navigateur envoie des dates partielles (0002, 0020, 0202…) :
   // on attend une année complète et plausible avant d'enregistrer
@@ -5548,13 +5572,20 @@ window.setPlanScope = function(key, field, input) {
   const sc = Object.assign({}, planningScopes[key] || {});
   sc[field] = val;
   const n = field[1];
-  if (sc['s' + n + 'a'] && sc['s' + n + 'b'] && sc['s' + n + 'a'] > sc['s' + n + 'b']) {
+  const A = 's' + n + 'a', B = 's' + n + 'b', D = 's' + n + 'd';
+  // Durée connue : début → fin calculée (la durée est gardée, la fin se décale) ; fin sans début → début calculé
+  const dur = Number(sc[D]) || 0;
+  if (val && dur && kind === 'a') sc[B] = planAddDays(val, dur - 1);
+  else if (val && dur && kind === 'b' && !sc[A]) sc[A] = planAddDays(val, -(dur - 1));
+  if (sc[A] && sc[B] && sc[A] <= sc[B]) sc[D] = String(planDaysBetween(sc[A], sc[B]));
+  if (sc[A] && sc[B] && sc[A] > sc[B]) {
     // Vérifié à la sortie de la case, pour ne pas interrompre la saisie
     input.dataset.invalid = '1';
     return;
   }
   delete input.dataset.invalid;
   planStoreScopes(key, sc);
+  if (isDate) planSyncScopeInputs(key, sc, n, input);
   if (isDate) planClearManual(key, ['1']); // les 1 saisis à la main ne survivent pas à un changement de Scope
   if (!isDate) planAddScopeName(val); // un nouveau nom rejoint la liste des Scopes
   syncDebounced();
@@ -5563,6 +5594,38 @@ window.setPlanScope = function(key, field, input) {
   // Un nouveau nom rejoint la liste déroulante : mise à jour à la sortie de la case
   if (!isDate) { if (document.activeElement === input) planRenderPending = true; else renderPlanning(true); }
 };
+
+// Saisie d'une durée (jours) : début + durée → fin ; sinon fin + durée → début
+function setPlanScopeDuration(key, field, input) {
+  const raw = String(input.value || '').trim();
+  const d = raw === '' ? 0 : Math.round(Number(raw));
+  if (raw !== '' && !(d >= 1 && d <= 3650)) {
+    alert("Durée : nombre de jours entre 1 et 3650.");
+    input.value = planScopeDuration(planningScopes[key] || {}, field[1]);
+    return;
+  }
+  const n = field[1];
+  const A = 's' + n + 'a', B = 's' + n + 'b';
+  const sc = Object.assign({}, planningScopes[key] || {});
+  sc[field] = d ? String(d) : '';
+  if (d && sc[A]) sc[B] = planAddDays(sc[A], d - 1);
+  else if (d && sc[B]) sc[A] = planAddDays(sc[B], -(d - 1));
+  planStoreScopes(key, sc);
+  planSyncScopeInputs(key, sc, n, input);
+  planClearManual(key, ['1']); // comme pour un changement de date de Scope
+  syncDebounced();
+  planRefreshRow(key);
+}
+
+// Cases début / durée / fin d'un Scope remises à jour après un calcul (sauf celle en cours de saisie)
+function planSyncScopeInputs(key, sc, n, current) {
+  const tr = document.querySelector(`#plan-table-wrap tr[data-k="${CSS.escape(key)}"]`);
+  if (!tr) return;
+  ['a', 'd', 'b'].forEach(f => {
+    const inp = tr.querySelector(`input[data-f="s${n}${f}"]`);
+    if (inp && inp !== current) inp.value = f === 'd' ? planScopeDuration(sc, n) : (sc['s' + n + f] || '');
+  });
+}
 
 // Sortie d'une case date : date incomplète ou fin avant début → on revient à la valeur enregistrée
 document.addEventListener('focusout', e => {
@@ -5754,8 +5817,8 @@ function planExcelRows(groups, firstMonth) {
     const row = {
       "Timesheet": g.title, "Superviseur": g.sup, "ID": r.id, "Nom": r.name, "Entreprise": r.company,
       "Spécialité": r.profession || '', "Compétences": r.skills || '',
-      "Scope 1": sc.s1n || '', "Scope 1 début": planDateFR(sc.s1a), "Scope 1 fin": planDateFR(sc.s1b),
-      "Scope 2": sc.s2n || '', "Scope 2 début": planDateFR(sc.s2a), "Scope 2 fin": planDateFR(sc.s2b),
+      "Scope 1": sc.s1n || '', "Scope 1 début": planDateFR(sc.s1a), "Scope 1 durée (j)": planScopeDuration(sc, 1), "Scope 1 fin": planDateFR(sc.s1b),
+      "Scope 2": sc.s2n || '', "Scope 2 début": planDateFR(sc.s2a), "Scope 2 durée (j)": planScopeDuration(sc, 2), "Scope 2 fin": planDateFR(sc.s2b),
       "Fin estimée": planDateFR(end)
     };
     let total = 0;
