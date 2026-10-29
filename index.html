@@ -5410,7 +5410,7 @@ function renderPlanning(force) {
   document.getElementById('plan-help').innerHTML = !edit
     ? `👁️ Consultation seule : votre profil ne permet pas de modifier le planning (voir l'Admin : ⚙️ → 👤 Profils & mots de passe).`
     : planMode === 'days'
-      ? `Entre les dates de début et de fin d'un <b>Scope</b>, chaque jour vaut 1 (vert clair). <b>Durée (j)</b> : début + durée → fin calculée, ou fin + durée → début calculé (jours calendaires, début et fin inclus). Pour corriger un jour, choisissez une valeur puis cliquez ou glissez (0 = absent) ; « Effacer » revient au Scope. Une date se copie-colle d'un ouvrier à l'autre avec <b>Ctrl+C / Ctrl+V</b> ; 📋 / 📥 copie tout le planning d'un ouvrier. <b>Fin estimée</b> = fin de Scope ou dernier jour saisi, le plus tardif (trait rouge). Modifier une date de Scope efface les 1 saisis à la main pour cet ouvrier (les 0 / 0.5 / 0.25 restent) ; 🧽 efface tous ses jours saisis.`
+      ? `Entre les dates de début et de fin d'un <b>Scope</b>, chaque jour vaut 1 (vert clair). <b>Durée (j)</b> : début + durée → fin calculée, ou fin + durée → début calculé (jours calendaires, début et fin inclus). Cliquer un <b>1</b> juste avant ou après un Scope l'agrandit (un 1 isolé crée le Scope 2 s'il est libre) ; un <b>0</b> sur son premier ou dernier jour le raccourcit. Pour corriger un jour, choisissez une valeur puis cliquez ou glissez (0 = absent) ; « Effacer » revient au Scope. Une date se copie-colle d'un ouvrier à l'autre avec <b>Ctrl+C / Ctrl+V</b> ; 📋 / 📥 copie tout le planning d'un ouvrier. <b>Fin estimée</b> = fin de Scope ou dernier jour saisi, le plus tardif (trait rouge). Modifier une date de Scope efface les 1 saisis à la main pour cet ouvrier (les 0 / 0.5 / 0.25 restent) ; 🧽 efface tous ses jours saisis.`
       : `Chaque case = part ${planMode === 'weeks' ? 'de la semaine' : 'du mois'} travaillée (ex. ${planMode === 'weeks' ? 'fin le mercredi → 0.43' : 'fin le 15/09 → 0.5 en septembre'}). <b>Saisie rapide</b> : choisissez une valeur puis cliquez ou glissez sur les cases : tous les jours ${planMode === 'weeks' ? 'de la semaine' : 'du mois'} (dimanches compris) prennent cette valeur ; recliquer ou « Effacer » revient au Scope. Cliquez sur l'en-tête d'une colonne pour le détail jour par jour.`;
 
   const todayStr = planTodayIso();
@@ -5649,7 +5649,9 @@ function planPeriodCode(k, c) {
   const codes = new Set(planColDays(c).map(([mo, d]) => { const x = planGet(k, mo, d); return x === '-' && planInScope(k, planIso(mo, d)) ? '1' : x; }));
   return codes.size === 1 ? [...codes][0] : null;
 }
+const planTouched = new Set(); // ouvriers modifiés pendant le clic / glisser en cours
 function planPaintCell(td) {
+  if (td && td.dataset.k) planTouched.add(td.dataset.k);
   if (td && td.classList.contains('plan-pcell')) {
     const c = planLastCols[Number(td.dataset.p)];
     if (!c || planPeriodCode(td.dataset.k, c) === planPaintCode) return;
@@ -5687,10 +5689,61 @@ document.addEventListener('pointermove', e => {
   planPaintCell(el && el.closest && el.closest('#planning-view .plan-cell, #planning-view .plan-pcell'));
 });
 
+// Les dates des Scopes suivent la saisie jour par jour (le total ne change pas) :
+// - un 1 collé au début ou à la fin d'un Scope l'agrandit ;
+// - un 1 isolé crée le Scope 2 (ou le Scope 1) s'il est libre, sinon agrandit le Scope le plus proche
+//   (les jours d'écart sans saisie deviennent 0) ;
+// - un 0 sur le premier ou le dernier jour d'un Scope le raccourcit.
+function planAbsorbManual(k) {
+  const months = workerPlanning[k];
+  if (!months) return;
+  const sc = Object.assign({}, planningScopes[k] || {});
+  const man = new Map();
+  Object.keys(months).forEach(mo => months[mo].split('').forEach((ch, i) => { if (ch in PLAN_CODES) man.set(planIso(mo, i + 1), ch); }));
+  const setMan = (iso, code) => planSet(k, iso.slice(0, 7), Number(iso.slice(8)), code);
+  const has = n => sc['s' + n + 'a'] && sc['s' + n + 'b'] && sc['s' + n + 'a'] <= sc['s' + n + 'b'];
+  const free = n => !sc['s' + n + 'a'] && !sc['s' + n + 'b'];
+  const inAny = iso => [1, 2].some(n => has(n) && iso >= sc['s' + n + 'a'] && iso <= sc['s' + n + 'b']);
+  const fillGap = (from, to) => { for (let d = from; d <= to; d = planAddDays(d, 1)) if (!man.has(d)) { man.set(d, 'z'); setMan(d, 'z'); } };
+  let changed = false;
+
+  [...man.keys()].filter(iso => man.get(iso) === '1').sort().forEach(iso => {
+    if (inAny(iso)) { man.delete(iso); setMan(iso, '-'); changed = true; return; }
+    let n = [1, 2].find(n => has(n) && (planAddDays(iso, 1) === sc['s' + n + 'a'] || planAddDays(iso, -1) === sc['s' + n + 'b']));
+    if (!n) n = !has(1) && !has(2) ? 1 : [1, 2].find(free);
+    if (!n) n = [1, 2].sort((x, y) => planScopeGap(sc, x, iso) - planScopeGap(sc, y, iso))[0];
+    const A = 's' + n + 'a', B = 's' + n + 'b';
+    if (!has(n)) { sc[A] = iso; sc[B] = iso; }
+    else if (iso < sc[A]) { fillGap(planAddDays(iso, 1), planAddDays(sc[A], -1)); sc[A] = iso; }
+    else { fillGap(planAddDays(sc[B], 1), planAddDays(iso, -1)); sc[B] = iso; }
+    man.delete(iso); setMan(iso, '-');
+    changed = true;
+  });
+
+  [1, 2].forEach(n => {
+    const A = 's' + n + 'a', B = 's' + n + 'b';
+    if (!has(n)) return;
+    while (sc[A] <= sc[B] && man.get(sc[A]) === 'z') { man.delete(sc[A]); setMan(sc[A], '-'); sc[A] = planAddDays(sc[A], 1); changed = true; }
+    while (sc[A] <= sc[B] && man.get(sc[B]) === 'z') { man.delete(sc[B]); setMan(sc[B], '-'); sc[B] = planAddDays(sc[B], -1); changed = true; }
+    if (sc[A] > sc[B]) { delete sc[A]; delete sc[B]; delete sc['s' + n + 'd']; }
+  });
+  if (!changed) return;
+  [1, 2].forEach(n => { if (has(n)) sc['s' + n + 'd'] = String(planDaysBetween(sc['s' + n + 'a'], sc['s' + n + 'b'])); });
+  planStoreScopes(k, sc);
+}
+// Nombre de jours entre une date et un Scope (0 = dedans)
+function planScopeGap(sc, n, iso) {
+  const a = sc['s' + n + 'a'], b = sc['s' + n + 'b'];
+  if (!a || !b) return Infinity;
+  return iso < a ? planDaysBetween(iso, a) : iso > b ? planDaysBetween(b, iso) : 0;
+}
+
 function planStopPaint() {
   if (!window.planPainting) return;
   window.planPainting = false;
-  renderPlanning(true);   // totaux et dates de fin
+  planTouched.forEach(k => planAbsorbManual(k));
+  planTouched.clear();
+  renderPlanning(true);   // totaux, dates des Scopes et dates de fin
   syncDebounced();
 }
 document.addEventListener('pointerup', planStopPaint);
