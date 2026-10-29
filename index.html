@@ -276,6 +276,18 @@
   .plan-grp-note { border: none; background: transparent; cursor: pointer; font-size: 11px; margin-left: 6px; padding: 0 2px; }
   .plan-grp-notetxt { font-size: 10px; font-weight: 400; font-style: italic; color: #fde68a; margin-left: 6px; }
   .plan-note { display: block; font-size: 9px; color: #7c2d12; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+  .plan-chart { margin-bottom: 8px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; }
+  .plan-chart > summary { cursor: pointer; padding: 6px 10px; font-size: 12px; font-weight: 800; color: #475569; }
+  .plan-chart-body { padding: 0 10px 10px; overflow-x: auto; }
+  .plan-chart svg { width: 100%; min-width: 640px; height: auto; display: block; }
+  .plan-chart-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; margin: 4px 0 6px; }
+  .plan-chart-legend span { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; user-select: none; }
+  .plan-chart-legend span.off { opacity: 0.35; text-decoration: line-through; }
+  .plan-chart-legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  .plan-chart-table { border-collapse: collapse; font-size: 11px; margin-top: 6px; min-width: 640px; width: 100%; }
+  .plan-chart-table th, .plan-chart-table td { border: 1px solid #e2e8f0; padding: 2px 6px; text-align: right; white-space: nowrap; }
+  .plan-chart-table th:first-child, .plan-chart-table td:first-child { text-align: left; }
+  .plan-chart-table tr.tot td { font-weight: 800; background: #f1f5f9; }
   .plan-notes { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
   .plan-notes label { font-size: 12px; font-weight: 800; color: #475569; white-space: nowrap; padding-top: 6px; }
   .plan-notes textarea { flex: 1; font-family: inherit; font-size: 12px; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; resize: vertical; background: #fffbeb; }
@@ -4894,6 +4906,8 @@ let planRenderPending = false;
 let planVersionsIndex = {};
 let planShowScopes = true; // colonnes Scopes affichées (masquables pour voir plus de jours)
 let planClipboard = null;  // Scopes copiés (📋) prêts à être collés (📥)
+let planChartOpen = true;   // courbe de synthèse dépliée
+const planChartHidden = new Set(); // domaines masqués sur la courbe (clic sur la légende)
 let planLastGroups = [];   // groupes du dernier affichage (pour « Coller à l'équipe »)
 let planLastCols = [];     // colonnes (jours ou mois) du dernier affichage
 
@@ -5322,7 +5336,8 @@ function planGroups() {
     const x = live.get(k);
     const row = { key: k, id: x ? x.w.id : r.id, name: x ? x.w.name : r.name, company: x ? x.company : r.company, onTs: !!x,
       profession: (x ? x.w.profession : r.profession) || '', skills: (x ? x.w.skills : r.skills) || '',
-      contractEnd: (x ? x.w.contractEnd : r.contractEnd) || '', card: x ? x.card : null };
+      contractEnd: (x ? x.w.contractEnd : r.contractEnd) || '', card: x ? x.card : null,
+      cat: x ? x.card.category || '' : r.cat || (cardsData.find(c => c.id === r.cardId) || {}).category || '' };
     if (q && ![row.name, k, row.profession, row.skills].some(v => String(v || '').toUpperCase().includes(q))) return;
     if (skillU && !skillList(row.skills).some(sk => sk.toUpperCase() === skillU)) return;
     if (planSpec && String(row.profession).toUpperCase() !== planSpec) return;
@@ -5486,6 +5501,10 @@ function renderPlanning(force) {
         <label for="plan-notes-input">📝 Hypothèses du planning</label>
         <textarea id="plan-notes-input" rows="2" maxlength="4000" placeholder="Ex. : livraison façade fin mars, 2 équipes en parallèle au R+5, pas de travail pendant le mois d'août…" onchange="setPlanningNotes(this.value)"></textarea>
       </div>
+      <details class="plan-chart" id="plan-chart" ${planChartOpen ? 'open' : ''} ontoggle="planChartOpen = this.open; if (this.open) renderPlanChart();">
+        <summary>📈 Courbe de synthèse : effectif par mois (total et par domaine)</summary>
+        <div class="plan-chart-body" id="plan-chart-body"></div>
+      </details>
       <div id="plan-clip" style="margin-bottom:8px;"></div>
       <div class="plan-wrap" id="plan-table-wrap"></div>`;
   }
@@ -5588,7 +5607,70 @@ function renderPlanning(force) {
   const nameTh = wrap.querySelector('thead th.plan-name');
   if (nameTh) wrap.querySelector('table').style.setProperty('--nw', nameTh.getBoundingClientRect().width + 'px');
   [wrap.scrollLeft, wrap.scrollTop] = scroll;
+  renderPlanChart();
 }
+
+// --- Courbe de synthèse : effectif par mois (ouvriers affichés, filtres compris) ---
+// Valeur d'un mois = somme des parts du mois travaillées (1 = un ouvrier présent tous les jours ouvrés du mois)
+function planChartData() {
+  const months = [];
+  for (let i = 0; i < 12; i++) months.push(planAddMonths(planMonth, i));
+  const byCat = new Map();
+  planLastGroups.forEach(g => g.rows.forEach(r => {
+    if (!byCat.has(r.cat)) byCat.set(r.cat, months.map(() => 0));
+    const vals = byCat.get(r.cat);
+    months.forEach((mo, i) => { vals[i] += planColShare(r.id, { month: mo }); });
+  }));
+  const series = [...CATEGORY_INFO.map(c => ({ id: c.id, name: c.name, color: c.color })), { id: '', name: 'Sans domaine', color: '#94a3b8' }]
+    .filter(c => byCat.has(c.id) && byCat.get(c.id).some(v => v > 0.001))
+    .map(c => ({ ...c, vals: byCat.get(c.id) }));
+  // Domaine inconnu (supprimé) : regroupé avec « Sans domaine »
+  byCat.forEach((vals, id) => {
+    if (id === '' || CATEGORY_INFO.some(c => c.id === id) || !vals.some(v => v > 0.001)) return;
+    let other = series.find(sr => sr.id === '');
+    if (!other) series.push(other = { id: '', name: 'Sans domaine', color: '#94a3b8', vals: months.map(() => 0) });
+    vals.forEach((v, i) => { other.vals[i] += v; });
+  });
+  const total = months.map((_, i) => series.reduce((t, sr) => t + sr.vals[i], 0));
+  return { months, series, total };
+}
+
+function renderPlanChart() {
+  const box = document.getElementById('plan-chart-body');
+  if (!box || !planChartOpen) return;
+  const { months, series, total } = planChartData();
+  const fmt = v => v ? String(Math.round(v * 10) / 10) : '0';
+  const label = mo => `${PLAN_MONTHS_SHORT[Number(mo.slice(5)) - 1]} ${mo.slice(2, 4)}`;
+  if (!total.some(v => v > 0.001)) {
+    box.innerHTML = `<div style="font-size:12px; color:#64748b; padding:6px 0;">Aucun jour planifié sur ${label(months[0])} → ${label(months[11])} pour les ouvriers affichés.</div>`;
+    return;
+  }
+  const shown = series.filter(sr => !planChartHidden.has(sr.id));
+  const W = 960, H = 280, L = 44, R = 16, T = 22, B = 30;
+  const max = Math.max(1, ...total) * 1.1;
+  const step = max > 200 ? 50 : max > 100 ? 20 : max > 40 ? 10 : max > 16 ? 5 : max > 6 ? 2 : 1;
+  const x = i => L + (W - L - R) * (i + 0.5) / months.length;
+  const y = v => T + (H - T - B) * (1 - v / max);
+  let grid = '';
+  for (let v = 0; v <= max; v += step) grid += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#e2e8f0"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="#64748b">${v}</text>`;
+  const xLabels = months.map((mo, i) => `<text x="${x(i)}" y="${H - 10}" text-anchor="middle" font-size="11" fill="${mo === ymOf(new Date()) ? '#0f172a' : '#64748b'}" font-weight="${mo === ymOf(new Date()) ? 700 : 400}">${label(mo)}</text>`).join('');
+  const line = (vals, color, w, name) => `<polyline fill="none" stroke="${color}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round" points="${vals.map((v, i) => `${x(i)},${y(v)}`).join(' ')}"/>`
+    + vals.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="${w > 3 ? 4 : 3}" fill="${color}"><title>${escapeHtml(name)} — ${label(months[i])} : ${fmt(v)}</title></circle>`).join('');
+  const totalLabels = total.map((v, i) => `<text x="${x(i)}" y="${y(v) - 9}" text-anchor="middle" font-size="12" font-weight="800" fill="#0f172a">${fmt(v)}</text>`).join('');
+  const legend = `<span title="Total de tous les domaines"><i style="background:#0f172a; height:4px;"></i><b>TOTAL</b></span>`
+    + series.map(sr => `<span class="${planChartHidden.has(sr.id) ? 'off' : ''}" title="Cliquer pour masquer / afficher" onclick="togglePlanChartCat(${escapeHtml(JSON.stringify(sr.id))})"><i style="background:${sr.color};"></i>${escapeHtml(sr.name)}</span>`).join('');
+  const head = `<tr><th>Domaine</th>${months.map(mo => `<th>${label(mo)}</th>`).join('')}</tr>`;
+  const rows = series.map(sr => `<tr><td><i style="display:inline-block; width:10px; height:10px; border-radius:2px; background:${sr.color}; margin-right:4px;"></i>${escapeHtml(sr.name)}</td>${sr.vals.map(v => `<td>${fmt(v)}</td>`).join('')}</tr>`).join('');
+  box.innerHTML = `<div class="plan-chart-legend">${legend}</div>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Effectif par mois">${grid}${xLabels}
+      ${shown.map(sr => line(sr.vals, sr.color, 2, sr.name)).join('')}${line(total, '#0f172a', 4, 'TOTAL')}${totalLabels}</svg>
+    <table class="plan-chart-table"><thead>${head}</thead><tbody>${rows}<tr class="tot"><td>TOTAL</td>${total.map(v => `<td>${fmt(v)}</td>`).join('')}</tr></tbody></table>
+    <div style="font-size:11px; color:#64748b; margin-top:4px;">Nombre d'ouvriers par mois en équivalent temps plein (1 = présent tous les jours ouvrés du mois), sur 12 mois à partir de ${label(months[0])}. Domaine = celui de la Timesheet de l'ouvrier ; les filtres et la recherche s'appliquent.</div>`;
+}
+window.togglePlanChartCat = function(id) {
+  if (planChartHidden.has(id)) planChartHidden.delete(id); else planChartHidden.add(id);
+  renderPlanChart();
+};
 
 // Cases calculées d'une ligne (jours ou mois, total, fin estimée) : après les 9 cases nom + Scopes
 function planRowTail(r, cols) {
@@ -5643,6 +5725,7 @@ function planRefreshRow(key) {
     while (gtr.cells.length > 1) gtr.deleteCell(1);
     gtr.insertAdjacentHTML('beforeend', planGroupTail(g, planLastCols));
   }
+  renderPlanChart();
 }
 
 document.addEventListener('focusout', e => {
