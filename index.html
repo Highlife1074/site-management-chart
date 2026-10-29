@@ -231,6 +231,7 @@
   .plan-cell { width: 26px; min-width: 26px; height: 24px; cursor: pointer; user-select: none; font-weight: 700; touch-action: none; }
   .plan-ro .plan-cell { cursor: default; }
   .plan-table .sun { background: #e2e8f0; }
+  .plan-table .hol { background: #fecaca; }
   .plan-table th.today { background: #fde68a; }
   .plan-cell.v-1 { background: #16a34a; color: #fff; }
   .plan-cell.v-h { background: #86efac; color: #14532d; font-size: 9px; }
@@ -272,6 +273,11 @@
   .plan-mcell.full { background: #16a34a; color: #fff; }
   .plan-mcell.part { background: #bbf7d0; color: #14532d; }
   .plan-spec { display: inline-block; font-size: 9px; background: #dbeafe; color: #1e40af; border-radius: 4px; padding: 0 4px; margin-left: 4px; font-weight: 700; }
+  .plan-note { display: block; font-size: 9px; color: #7c2d12; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+  .plan-notes { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
+  .plan-notes label { font-size: 12px; font-weight: 800; color: #475569; white-space: nowrap; padding-top: 6px; }
+  .plan-notes textarea { flex: 1; font-family: inherit; font-size: 12px; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; resize: vertical; background: #fffbeb; }
+  .plan-notes textarea:disabled { background: #f8fafc; color: #0f172a; }
   .plan-skill { display: inline-block; font-size: 9px; background: #fef3c7; color: #92400e; border-radius: 4px; padding: 0 4px; margin-left: 3px; font-weight: 600; }
   .plan-filter { font-size: 12px; padding: 5px 6px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; max-width: 190px; }
   .worker-tip { position: fixed; z-index: 9999; background: #0f172a; color: #fff; font-size: 12px; line-height: 1.45; padding: 8px 10px; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.25); pointer-events: none; max-width: 280px; display: none; }
@@ -1352,6 +1358,7 @@ let workerPlanning = {}; // Planning fin : { ID ouvrier : { 'AAAA-MM' : un carac
 let planningScopes = {};  // Planning fin : { ID ouvrier : { s1a, s1b, s1d, s2a, s2b, s2d } } dates (et durées en jours) des Scopes 1 et 2
 let planningRoster = null; // Planning fin : liste figée des ouvriers (null = pas encore créée)
 let planningScopeNames = []; // Planning fin : liste des noms de Scopes (proposés en liste déroulante)
+let planningNotes = ''; // Planning fin : hypothèses générales du planning (texte libre)
 let db = null, docRef = null, isSaving = false, currentFilter = 'all';
 let selectedManagersFilter = [];
 let selectedSupervisorsFilter = [];
@@ -1382,6 +1389,7 @@ try {
       if (parsed.planningScopes && typeof parsed.planningScopes === 'object') planningScopes = parsed.planningScopes;
       if (Array.isArray(parsed.planningRoster)) planningRoster = parsed.planningRoster;
       if (Array.isArray(parsed.planningScopeNames)) planningScopeNames = parsed.planningScopeNames;
+      if (typeof parsed.planningNotes === 'string') planningNotes = parsed.planningNotes;
     } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
   } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 } catch(e) { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
@@ -1553,6 +1561,7 @@ function startFirebase() {
         if (data.planningScopes && typeof data.planningScopes === 'object') planningScopes = data.planningScopes;
         if (Array.isArray(data.planningRoster)) planningRoster = data.planningRoster;
         if (Array.isArray(data.planningScopeNames)) planningScopeNames = data.planningScopeNames;
+        if (typeof data.planningNotes === 'string') planningNotes = data.planningNotes;
         window._planDataReady = true;
         if (data.supervisors) siteSupervisors = data.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
         if (data.companies) {
@@ -1607,14 +1616,14 @@ function startFirebase() {
 function syncToFirebase() {
   if (currentRole === 'viewer' && !canEditPlanning() && !canManageComet() && !canSetValidator()) return; // Le CFO doit pouvoir enregistrer le Payroll
   if (_syncTimer) { clearTimeout(_syncTimer); _syncTimer = null; }
-  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, validators: siteValidators, cometTasks, customCategories, planning: workerPlanning, planningScopes, planningRoster, planningScopeNames})); } catch(e){}
+  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, validators: siteValidators, cometTasks, customCategories, planning: workerPlanning, planningScopes, planningRoster, planningScopeNames, planningNotes})); } catch(e){}
   if (!docRef) return;
   isSaving = true;
   document.getElementById("sync-text").innerText = "Enregistrement...";
 
   const payload = {
     cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, validators: siteValidators, cometTasks, customCategories,
-    planning: workerPlanning, planningScopes, planningScopeNames,
+    planning: workerPlanning, planningScopes, planningScopeNames, planningNotes,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
   if (Array.isArray(planningRoster)) payload.planningRoster = planningRoster;
@@ -1650,7 +1659,7 @@ function exportBackup() {
     validators: siteValidators,
     rawImportedDB: window.rawImportedDB,
     cometTasks, customCategories,
-    planning: workerPlanning, planningScopes, planningRoster, planningScopeNames
+    planning: workerPlanning, planningScopes, planningRoster, planningScopeNames, planningNotes
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -1697,6 +1706,7 @@ function importBackup(event) {
       if (data.planningScopes && typeof data.planningScopes === 'object') planningScopes = data.planningScopes;
       if (Array.isArray(data.planningRoster)) planningRoster = data.planningRoster;
       if (Array.isArray(data.planningScopeNames)) planningScopeNames = data.planningScopeNames;
+      if (typeof data.planningNotes === 'string') planningNotes = data.planningNotes;
       if (Array.isArray(data.supervisors)) siteSupervisors = data.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
       if (Array.isArray(data.validators)) siteValidators = data.validators;
       selectedForPrint.clear();
@@ -4850,7 +4860,7 @@ const PLAN_LABELS = { '1': '1', 'h': '0.5', 'q': '0.25', 'z': '0' };
 const PLAN_MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 const PLAN_MONTHS_SHORT = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
 const PLAN_DAYS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
-const PLAN_SCOPE_FIELDS = ['s1n', 's1a', 's1d', 's1b', 's2n', 's2a', 's2d', 's2b']; // n = nom du Scope, a = début, d = durée (jours), b = fin
+const PLAN_SCOPE_FIELDS = ['s1n', 's1a', 's1d', 's1b', 's2n', 's2a', 's2d', 's2b', 'note']; // n = nom du Scope, a = début, d = durée (jours), b = fin ; note = hypothèses de l'ouvrier
 
 let planMonth = ymOf(new Date());
 let planMode = 'days';    // 'days' (un mois, jour par jour), 'weeks' (13 semaines) ou 'months' (12 mois)
@@ -5062,6 +5072,48 @@ function planIso(month, d) { return month + '-' + String(d).padStart(2, '0'); }
 function planAddMonths(month, n) { const [y, m] = month.split('-').map(Number); return ymOf(new Date(y, m - 1 + n, 1)); }
 function planTodayIso() { const n = new Date(); return planIso(ymOf(n), n.getDate()); }
 
+// --- Jours ouvrés : semaine de 6 jours (lundi → samedi), hors jours fériés grecs ---
+// Pâques orthodoxe (calendrier julien + 13 jours, valable 1900–2099)
+function planOrthodoxEaster(y) {
+  const a = y % 4, b = y % 7, c = y % 19;
+  const d = (19 * c + 15) % 30, e = (2 * a + 4 * b - d + 34) % 7;
+  const month = Math.floor((d + e + 114) / 31), day = ((d + e + 114) % 31) + 1;
+  return new Date(y, month - 1, day + 13);
+}
+const planHolidayCache = {};
+// Jours fériés nationaux grecs d'une année : { AAAA-MM-JJ : nom }
+function planGreekHolidays(y) {
+  if (planHolidayCache[y]) return planHolidayCache[y];
+  const h = {};
+  const fixed = [['01-01', "Jour de l'An"], ['01-06', 'Épiphanie'], ['03-25', "Fête de l'Indépendance"], ['05-01', 'Fête du Travail'],
+    ['08-15', 'Assomption'], ['10-28', 'Jour du Non (Ohi)'], ['12-25', 'Noël'], ['12-26', 'Lendemain de Noël']];
+  fixed.forEach(([md, n]) => { h[y + '-' + md] = n; });
+  const e = planOrthodoxEaster(y);
+  const rel = (n, name) => { h[localISODate(new Date(e.getFullYear(), e.getMonth(), e.getDate() + n))] = name; };
+  rel(-48, 'Lundi pur (Kathara Deftera)'); rel(-2, 'Vendredi saint orthodoxe'); rel(0, 'Pâques orthodoxe');
+  rel(1, 'Lundi de Pâques orthodoxe'); rel(50, 'Lundi de Pentecôte (Agiou Pnevmatos)');
+  return (planHolidayCache[y] = h);
+}
+function planHoliday(iso) { return planGreekHolidays(Number(String(iso).slice(0, 4)))[iso] || ''; }
+function planIsWorkDay(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+  return !!m && new Date(+m[1], +m[2] - 1, +m[3]).getDay() !== 0 && !planHoliday(iso);
+}
+// Jour ouvré suivant / précédent
+function planNextWorkDay(iso, dir) { let d = iso; do { d = planAddDays(d, dir); } while (!planIsWorkDay(d)); return d; }
+// Nombre de jours ouvrés entre deux dates (incluses)
+function planWorkDaysBetween(a, b) {
+  let n = 0;
+  for (let d = a; d && d <= b; d = planAddDays(d, 1)) if (planIsWorkDay(d)) n++;
+  return n;
+}
+// Date atteinte après « dur » jours ouvrés en partant de « iso » (inclus) ; dir = 1 (vers la fin) ou -1 (vers le début)
+function planWorkDaysFrom(iso, dur, dir) {
+  let d = iso, n = planIsWorkDay(iso) ? 1 : 0;
+  while (n < dur) { d = planAddDays(d, dir); if (planIsWorkDay(d)) n++; }
+  return d;
+}
+
 // --- Périodes (vues Semaines et Mois) : une case = plusieurs jours ---
 // Lundi de la semaine qui contient le 1er du mois affiché
 function planFirstMonday(month) {
@@ -5080,10 +5132,11 @@ function planColDays(c) {
   if (c.month) { const out = []; for (let d = 1, n = planDaysIn(c.month); d <= n; d++) out.push([c.month, d]); return out; }
   return c.days;
 }
-// Part de la période travaillée (1 = toute la semaine / tout le mois)
+// Part de la période travaillée (1 = tous les jours ouvrés de la semaine / du mois)
 function planColShare(id, c) {
   const days = planColDays(c);
-  return days.reduce((t, [mo, d]) => t + planDayValue(id, mo, d), 0) / days.length;
+  const work = days.filter(([mo, d]) => planIsWorkDay(planIso(mo, d))).length || days.length;
+  return days.reduce((t, [mo, d]) => t + planDayValue(id, mo, d), 0) / work;
 }
 
 // --- Saisie manuelle par jour ---
@@ -5131,7 +5184,8 @@ window.clearPlanManual = function(key) {
 function planScope(id) { return planningScopes[planKey(id)] || {}; }
 function planInScope(id, iso) {
   const s = planScope(id);
-  return (s.s1a && s.s1b && iso >= s.s1a && iso <= s.s1b) || (s.s2a && s.s2b && iso >= s.s2a && iso <= s.s2b);
+  if (!((s.s1a && s.s1b && iso >= s.s1a && iso <= s.s1b) || (s.s2a && s.s2b && iso >= s.s2a && iso <= s.s2b))) return false;
+  return planIsWorkDay(iso); // dimanches et jours fériés grecs : pas de 1 automatique
 }
 
 // Valeur d'un jour : saisie manuelle si présente, sinon 1 dans un Scope, sinon 0
@@ -5147,8 +5201,12 @@ function planMonthTotal(id, month) {
   return t;
 }
 
-// Part du mois travaillée (ex. fin le 15/09 → 15/30 = 0.5)
-function planMonthShare(id, month) { return planMonthTotal(id, month) / planDaysIn(month); }
+// Part du mois travaillée, en jours ouvrés (ex. 13 jours sur 26 → 0.5)
+function planMonthShare(id, month) {
+  let work = 0;
+  for (let d = 1, n = planDaysIn(month); d <= n; d++) if (planIsWorkDay(planIso(month, d))) work++;
+  return planMonthTotal(id, month) / (work || planDaysIn(month));
+}
 
 // Date de fin estimée = la plus tardive entre la fin des Scopes et le dernier jour saisi (> 0)
 function planEndDate(id) {
@@ -5328,6 +5386,25 @@ window.setPlanFilter = function(kind, v) {
 };
 
 // Compétences d'un ouvrier modifiées depuis le planning (toutes ses fiches + la liste figée)
+// Hypothèses : générales (case en haut du Planning fin) et par ouvrier (💬)
+window.setPlanningNotes = function(val) {
+  if (!canEditPlanning()) return;
+  planningNotes = String(val || '').trim();
+  syncDebounced();
+};
+window.editPlanNote = function(key) {
+  if (!canEditPlanning()) return;
+  const sc = Object.assign({}, planningScopes[key] || {});
+  const r = (planningRoster || []).find(x => planKey(x.id) === key);
+  const v = prompt(`Hypothèses du planning pour ${(r && r.name) || key} :\n(vide = supprimer)`, sc.note || '');
+  if (v === null) return;
+  const val = v.replace(/\s+/g, ' ').trim().slice(0, 500);
+  if (val) sc.note = val; else delete sc.note;
+  planStoreScopes(key, sc);
+  syncDebounced();
+  renderPlanning(true);
+};
+
 window.editPlanSkills = function(key) {
   if (!canEdit() && !canEditPlanning()) return;
   const copies = [];
@@ -5376,6 +5453,10 @@ function renderPlanning(force) {
         </span>
       </div>
       <div class="plan-help" id="plan-help"></div>
+      <div class="plan-notes">
+        <label for="plan-notes-input">📝 Hypothèses du planning</label>
+        <textarea id="plan-notes-input" rows="2" maxlength="4000" placeholder="Ex. : livraison façade fin mars, 2 équipes en parallèle au R+5, pas de travail pendant le mois d'août…" onchange="setPlanningNotes(this.value)"></textarea>
+      </div>
       <div id="plan-clip" style="margin-bottom:8px;"></div>
       <div class="plan-wrap" id="plan-table-wrap"></div>`;
   }
@@ -5390,6 +5471,10 @@ function renderPlanning(force) {
     ? `Sem. ${planIsoWeek(fm)} → Sem. ${planIsoWeek(lm)} (${lm.getFullYear()})`
     : `${PLAN_MONTHS_SHORT[m - 1]} ${y} → ${PLAN_MONTHS_SHORT[Number(lastMonth.slice(5)) - 1]} ${lastMonth.slice(0, 4)}`;
   document.getElementById('plan-filters').innerHTML = planFiltersHtml();
+  const notesEl = document.getElementById('plan-notes-input');
+  if (document.activeElement !== notesEl) notesEl.value = planningNotes;
+  notesEl.disabled = !edit;
+  notesEl.placeholder = edit ? notesEl.placeholder : '';
   document.getElementById('plan-scopes-btn').innerText = planShowScopes ? '◧ Masquer Scopes' : '◨ Afficher Scopes';
   document.getElementById('plan-clip').innerHTML = planClipboard && edit
     ? `<span class="plan-clip">📋 Planning copié : <b>${escapeHtml(planClipText(planClipboard))}</b> — cliquez 📥 sur un ouvrier ou « Coller à l'équipe » <button title="Vider" onclick="clearPlanClipboard()">✕</button></span>`
@@ -5410,8 +5495,8 @@ function renderPlanning(force) {
   document.getElementById('plan-help').innerHTML = !edit
     ? `👁️ Consultation seule : votre profil ne permet pas de modifier le planning (voir l'Admin : ⚙️ → 👤 Profils & mots de passe).`
     : planMode === 'days'
-      ? `Entre les dates de début et de fin d'un <b>Scope</b>, chaque jour vaut 1 (vert clair). <b>Durée (j)</b> : début + durée → fin calculée, ou fin + durée → début calculé (jours calendaires, début et fin inclus). Cliquer un <b>1</b> juste avant ou après un Scope l'agrandit (un 1 isolé crée le Scope 2 s'il est libre) ; un <b>0</b> sur son premier ou dernier jour le raccourcit. Pour corriger un jour, choisissez une valeur puis cliquez ou glissez (0 = absent) ; « Effacer » revient au Scope. Une date se copie-colle d'un ouvrier à l'autre avec <b>Ctrl+C / Ctrl+V</b> ; 📋 / 📥 copie tout le planning d'un ouvrier. <b>Fin estimée</b> = fin de Scope ou dernier jour saisi, le plus tardif (trait rouge). Modifier une date de Scope efface les 1 saisis à la main pour cet ouvrier (les 0 / 0.5 / 0.25 restent) ; 🧽 efface tous ses jours saisis.`
-      : `Chaque case = part ${planMode === 'weeks' ? 'de la semaine' : 'du mois'} travaillée (ex. ${planMode === 'weeks' ? 'fin le mercredi → 0.43' : 'fin le 15/09 → 0.5 en septembre'}). <b>Saisie rapide</b> : choisissez une valeur puis cliquez ou glissez sur les cases : tous les jours ${planMode === 'weeks' ? 'de la semaine' : 'du mois'} (dimanches compris) prennent cette valeur ; recliquer ou « Effacer » revient au Scope. Cliquez sur l'en-tête d'une colonne pour le détail jour par jour.`;
+      ? `Entre les dates de début et de fin d'un <b>Scope</b>, chaque jour vaut 1 (vert clair). <b>Durée (j)</b> : début + durée → fin calculée, ou fin + durée → début calculé (<b>jours ouvrés</b> : 6 par semaine, lundi → samedi, hors jours fériés grecs en rouge ; un Scope ne met pas de 1 ces jours-là). Cliquer un <b>1</b> juste avant ou après un Scope l'agrandit (un 1 isolé crée le Scope 2 s'il est libre) ; un <b>0</b> sur son premier ou dernier jour le raccourcit. Pour corriger un jour, choisissez une valeur puis cliquez ou glissez (0 = absent) ; « Effacer » revient au Scope. Une date se copie-colle d'un ouvrier à l'autre avec <b>Ctrl+C / Ctrl+V</b> ; 📋 / 📥 copie tout le planning d'un ouvrier. <b>Fin estimée</b> = fin de Scope ou dernier jour saisi, le plus tardif (trait rouge). Modifier une date de Scope efface les 1 saisis à la main pour cet ouvrier (les 0 / 0.5 / 0.25 restent) ; 🧽 efface tous ses jours saisis.`
+      : `Chaque case = part ${planMode === 'weeks' ? 'de la semaine' : 'du mois'} travaillée (ex. ${planMode === 'weeks' ? 'fin le mercredi → 0.5' : 'fin le 15/09 → 0.5 en septembre'}). <b>Saisie rapide</b> : choisissez une valeur puis cliquez ou glissez sur les cases : tous les jours ${planMode === 'weeks' ? 'de la semaine' : 'du mois'} (dimanches compris) prennent cette valeur ; recliquer ou « Effacer » revient au Scope. Cliquez sur l'en-tête d'une colonne pour le détail jour par jour.`;
 
   const todayStr = planTodayIso();
   let cols = [];
@@ -5429,14 +5514,14 @@ function renderPlanning(force) {
     for (let i = 0; i < 12; i++) cols.push({ month: planAddMonths(planMonth, i) });
   }
 
-  const durTitle = 'Durée en jours calendaires (début et fin inclus) : début + durée → fin, ou fin + durée → début';
+  const durTitle = 'Durée en jours ouvrés (6 par semaine, lundi → samedi, hors fériés grecs ; début et fin inclus) : début + durée → fin, ou fin + durée → début';
   const scopeHead = `<th class="plan-sc scn sc1n">Scope 1<br>nom</th><th class="plan-sc sc1a">Scope 1<br>début</th><th class="plan-sc scd sc1d" title="${durTitle}">Durée<br>(j)</th><th class="plan-sc sc1b">Scope 1<br>fin</th>` +
     `<th class="plan-sc scn sc2n">Scope 2<br>nom</th><th class="plan-sc sc2a">Scope 2<br>début</th><th class="plan-sc scd sc2d" title="${durTitle}">Durée<br>(j)</th><th class="plan-sc sc2b">Scope 2<br>fin</th>`;
   // Noms de Scopes déjà utilisés : proposés à la saisie
   const datalist = `<datalist id="plan-scope-names">${planningScopeNames.map(n => `<option value="${escapeHtml(n)}">`).join('')}</datalist>`;
   const nameSpan = planShowScopes ? 9 : 1;
   const colHead = planMode === 'days'
-    ? cols.map(c => `<th class="${c.dow === 0 ? 'sun' : ''} ${c.iso === todayStr ? 'today' : ''}">${PLAN_DAYS[c.dow]}<br>${c.d}</th>`).join('')
+    ? cols.map(c => `<th class="${c.dow === 0 ? 'sun' : ''} ${planHoliday(c.iso) ? 'hol' : ''} ${c.iso === todayStr ? 'today' : ''}" ${planHoliday(c.iso) ? `title="Férié : ${escapeHtml(planHoliday(c.iso))}"` : ''}>${PLAN_DAYS[c.dow]}<br>${c.d}</th>`).join('')
     : planMode === 'weeks'
     ? cols.map(c => `<th class="plan-phead ${c.now ? 'today' : ''}" title="Du ${planDateFR(c.first)} au ${planDateFR(c.last)} — cliquez pour le détail jour par jour" onclick="openPlanMonth('${c.first.slice(0, 7)}')">S${c.week}<br>${planDateFR(c.first).slice(0, 5)}</th>`).join('')
     : cols.map(c => `<th class="plan-phead ${c.month === ymOf(new Date()) ? 'today' : ''}" title="Cliquez pour le détail jour par jour" onclick="openPlanMonth('${c.month}')">${PLAN_MONTHS_SHORT[Number(c.month.slice(5)) - 1]}<br>${c.month.slice(0, 4)}</th>`).join('');
@@ -5459,7 +5544,7 @@ function renderPlanning(force) {
       const dateCell = (f) => `<td class="plan-sc sc${f}"><input type="date" data-f="s${f}" value="${escapeHtml(sc['s' + f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${f}', this)"></td>`;
       const nameCell = (f) => `<td class="plan-sc scn sc${f}" title="${escapeHtml(sc['s' + f] || '')}"><input type="text" list="plan-scope-names" maxlength="40" placeholder="${edit ? 'Nom…' : ''}" value="${escapeHtml(sc['s' + f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${f}', this)"></td>`;
       body += `<tr data-k="${k}">
-        <td class="plan-name" title="${escapeHtml([r.name, r.id, r.company, r.profession, r.skills ? 'Compétences : ' + r.skills : '', r.contractEnd ? 'Fin de contrat : ' + fmtDateFR(r.contractEnd) : ''].filter(Boolean).join(' — '))}">${edit && Array.isArray(planningRoster) ? `<button class="plan-del" title="Retirer du planning" onclick="removePlanningWorker('${k}')">✕</button>` : ''}${edit ? `${planClipboard ? `<button class="plan-act" title="Coller le planning copié (Scopes + jours saisis)" onclick="pastePlanScopes('${k}')">📥</button>` : ''}<button class="plan-act" title="Copier le planning de cet ouvrier (Scopes + jours saisis)" onclick="copyPlanScopes('${k}')">📋</button>${workerPlanning[r.key] ? `<button class="plan-act" title="Effacer tous les jours saisis à la main (il ne reste que les Scopes)" onclick="clearPlanManual('${k}')">🧽</button>` : ''}` : ''}${edit || canEdit() ? `<button class="plan-act" title="Modifier les compétences" onclick="editPlanSkills('${k}')">🎓</button>` : ''}${contractAlertHtml(r, r.card)}<b>${escapeHtml(r.name)}</b>${r.onTs ? '' : '<span class="plan-off">hors TS</span>'}<span class="plan-sub">${escapeHtml(r.id)} · ${escapeHtml(r.company)}${r.profession ? `<span class="plan-spec" title="Spécialité">🛠️ ${escapeHtml(r.profession)}</span>` : ''}${skillList(r.skills).map(sk => `<span class="plan-skill">${escapeHtml(sk)}</span>`).join('')}</span></td>
+        <td class="plan-name" title="${escapeHtml([r.name, r.id, r.company, r.profession, r.skills ? 'Compétences : ' + r.skills : '', r.contractEnd ? 'Fin de contrat : ' + fmtDateFR(r.contractEnd) : ''].filter(Boolean).join(' — '))}">${edit && Array.isArray(planningRoster) ? `<button class="plan-del" title="Retirer du planning" onclick="removePlanningWorker('${k}')">✕</button>` : ''}${edit ? `${planClipboard ? `<button class="plan-act" title="Coller le planning copié (Scopes + jours saisis)" onclick="pastePlanScopes('${k}')">📥</button>` : ''}<button class="plan-act" title="Copier le planning de cet ouvrier (Scopes + jours saisis)" onclick="copyPlanScopes('${k}')">📋</button>${workerPlanning[r.key] ? `<button class="plan-act" title="Effacer tous les jours saisis à la main (il ne reste que les Scopes)" onclick="clearPlanManual('${k}')">🧽</button>` : ''}` : ''}${edit ? `<button class="plan-act" title="Hypothèses du planning pour cet ouvrier" onclick="editPlanNote('${k}')">💬</button>` : ''}${edit || canEdit() ? `<button class="plan-act" title="Modifier les compétences" onclick="editPlanSkills('${k}')">🎓</button>` : ''}${contractAlertHtml(r, r.card)}<b>${escapeHtml(r.name)}</b>${r.onTs ? '' : '<span class="plan-off">hors TS</span>'}<span class="plan-sub">${escapeHtml(r.id)} · ${escapeHtml(r.company)}${r.profession ? `<span class="plan-spec" title="Spécialité">🛠️ ${escapeHtml(r.profession)}</span>` : ''}${skillList(r.skills).map(sk => `<span class="plan-skill">${escapeHtml(sk)}</span>`).join('')}</span>${sc.note ? `<span class="plan-note" title="${escapeHtml(sc.note)}">💬 ${escapeHtml(sc.note)}</span>` : ''}</td>
         ${nameCell('1n')}${dateCell('1a')}${durCell(1)}${dateCell('1b')}${nameCell('2n')}${dateCell('2a')}${durCell(2)}${dateCell('2b')}
         ${planRowTail(r, cols)}
       </tr>`;
@@ -5487,7 +5572,7 @@ function planRowTail(r, cols) {
       const code = planGet(r.id, planMonth, c.d);
       const auto = code === '-' && planInScope(r.id, c.iso);
       const cls = code !== '-' ? 'v-' + code : (auto ? 'auto' : '');
-      return `<td class="plan-cell ${c.dow === 0 ? 'sun' : ''} ${cls} ${c.d === endDay ? 'end' : ''}" data-k="${k}" data-d="${c.d}">${code !== '-' ? PLAN_LABELS[code] : (auto ? '1' : '')}</td>`;
+      return `<td class="plan-cell ${c.dow === 0 ? 'sun' : ''} ${planHoliday(c.iso) ? 'hol' : ''} ${cls} ${c.d === endDay ? 'end' : ''}" data-k="${k}" data-d="${c.d}">${code !== '-' ? PLAN_LABELS[code] : (auto ? '1' : '')}</td>`;
     }).join('');
   } else {
     cells = cols.map((c, ci) => planPCellHtml(r.id, c, ci, k)).join('');
@@ -5540,7 +5625,7 @@ window.setPlanMode = function(mode) { planMode = mode; renderPlanning(true); };
 window.openPlanMonth = function(month) { planMonth = month; planMode = 'days'; renderPlanning(true); };
 window.shiftPlanMonth = function(delta) { planMonth = planAddMonths(planMonth, delta); renderPlanning(true); };
 
-// Durées des Scopes : jours calendaires, début et fin inclus (comme le remplissage des Scopes)
+// Durées des Scopes : jours ouvrés (lundi → samedi, hors fériés grecs), début et fin inclus
 function planAddDays(iso, n) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
   return m ? localISODate(new Date(+m[1], +m[2] - 1, +m[3] + n)) : '';
@@ -5553,7 +5638,7 @@ function planDaysBetween(a, b) {
 // Durée affichée : calculée d'après les dates si les deux sont remplies, sinon celle saisie
 function planScopeDuration(sc, n) {
   const a = sc['s' + n + 'a'], b = sc['s' + n + 'b'];
-  if (a && b && b >= a) return String(planDaysBetween(a, b));
+  if (a && b && b >= a) return String(planWorkDaysBetween(a, b));
   return sc['s' + n + 'd'] || '';
 }
 
@@ -5575,9 +5660,9 @@ window.setPlanScope = function(key, field, input) {
   const A = 's' + n + 'a', B = 's' + n + 'b', D = 's' + n + 'd';
   // Durée connue : début → fin calculée (la durée est gardée, la fin se décale) ; fin sans début → début calculé
   const dur = Number(sc[D]) || 0;
-  if (val && dur && kind === 'a') sc[B] = planAddDays(val, dur - 1);
-  else if (val && dur && kind === 'b' && !sc[A]) sc[A] = planAddDays(val, -(dur - 1));
-  if (sc[A] && sc[B] && sc[A] <= sc[B]) sc[D] = String(planDaysBetween(sc[A], sc[B]));
+  if (val && dur && kind === 'a') sc[B] = planWorkDaysFrom(val, dur, 1);
+  else if (val && dur && kind === 'b' && !sc[A]) sc[A] = planWorkDaysFrom(val, dur, -1);
+  if (sc[A] && sc[B] && sc[A] <= sc[B]) sc[D] = String(planWorkDaysBetween(sc[A], sc[B]));
   if (sc[A] && sc[B] && sc[A] > sc[B]) {
     // Vérifié à la sortie de la case, pour ne pas interrompre la saisie
     input.dataset.invalid = '1';
@@ -5608,8 +5693,8 @@ function setPlanScopeDuration(key, field, input) {
   const A = 's' + n + 'a', B = 's' + n + 'b';
   const sc = Object.assign({}, planningScopes[key] || {});
   sc[field] = d ? String(d) : '';
-  if (d && sc[A]) sc[B] = planAddDays(sc[A], d - 1);
-  else if (d && sc[B]) sc[A] = planAddDays(sc[B], -(d - 1));
+  if (d && sc[A]) sc[B] = planWorkDaysFrom(sc[A], d, 1);
+  else if (d && sc[B]) sc[A] = planWorkDaysFrom(sc[B], d, -1);
   planStoreScopes(key, sc);
   planSyncScopeInputs(key, sc, n, input);
   planClearManual(key, ['1']); // comme pour un changement de date de Scope
@@ -5646,7 +5731,8 @@ document.addEventListener('focusout', e => {
 // --- Saisie jour par jour : clic ou glisser (souris et tactile) ---
 // Code d'une période : la valeur commune si tous ses jours ont la même saisie, sinon null
 function planPeriodCode(k, c) {
-  const codes = new Set(planColDays(c).map(([mo, d]) => { const x = planGet(k, mo, d); return x === '-' && planInScope(k, planIso(mo, d)) ? '1' : x; }));
+  const days = planColDays(c).filter(([mo, d]) => planIsWorkDay(planIso(mo, d)));
+  const codes = new Set((days.length ? days : planColDays(c)).map(([mo, d]) => { const x = planGet(k, mo, d); return x === '-' && planInScope(k, planIso(mo, d)) ? '1' : x; }));
   return codes.size === 1 ? [...codes][0] : null;
 }
 const planTouched = new Set(); // ouvriers modifiés pendant le clic / glisser en cours
@@ -5655,7 +5741,9 @@ function planPaintCell(td) {
   if (td && td.classList.contains('plan-pcell')) {
     const c = planLastCols[Number(td.dataset.p)];
     if (!c || planPeriodCode(td.dataset.k, c) === planPaintCode) return;
-    planColDays(c).forEach(([mo, d]) => planSet(td.dataset.k, mo, d, planPaintCode));
+    // 1 / 0.5 / 0.25 / 0 sur les jours ouvrés seulement ; « Effacer » vide toute la période
+    planColDays(c).filter(([mo, d]) => planPaintCode === '-' || planIsWorkDay(planIso(mo, d)))
+      .forEach(([mo, d]) => planSet(td.dataset.k, mo, d, planPaintCode));
     td.outerHTML = planPCellHtml(td.dataset.k, c, td.dataset.p, escapeHtml(td.dataset.k));
     return;
   }
@@ -5704,12 +5792,13 @@ function planAbsorbManual(k) {
   const has = n => sc['s' + n + 'a'] && sc['s' + n + 'b'] && sc['s' + n + 'a'] <= sc['s' + n + 'b'];
   const free = n => !sc['s' + n + 'a'] && !sc['s' + n + 'b'];
   const inAny = iso => [1, 2].some(n => has(n) && iso >= sc['s' + n + 'a'] && iso <= sc['s' + n + 'b']);
-  const fillGap = (from, to) => { for (let d = from; d <= to; d = planAddDays(d, 1)) if (!man.has(d)) { man.set(d, 'z'); setMan(d, 'z'); } };
+  const fillGap = (from, to) => { for (let d = from; d <= to; d = planAddDays(d, 1)) if (planIsWorkDay(d) && !man.has(d)) { man.set(d, 'z'); setMan(d, 'z'); } };
   let changed = false;
 
-  [...man.keys()].filter(iso => man.get(iso) === '1').sort().forEach(iso => {
+  // Un 1 un dimanche ou un jour férié reste une saisie à part (heures en plus) : il ne déplace pas les Scopes
+  [...man.keys()].filter(iso => man.get(iso) === '1' && planIsWorkDay(iso)).sort().forEach(iso => {
     if (inAny(iso)) { man.delete(iso); setMan(iso, '-'); changed = true; return; }
-    let n = [1, 2].find(n => has(n) && (planAddDays(iso, 1) === sc['s' + n + 'a'] || planAddDays(iso, -1) === sc['s' + n + 'b']));
+    let n = [1, 2].find(n => has(n) && (planNextWorkDay(iso, 1) >= sc['s' + n + 'a'] && iso < sc['s' + n + 'a'] || planNextWorkDay(iso, -1) <= sc['s' + n + 'b'] && iso > sc['s' + n + 'b']));
     if (!n) n = !has(1) && !has(2) ? 1 : [1, 2].find(free);
     if (!n) n = [1, 2].sort((x, y) => planScopeGap(sc, x, iso) - planScopeGap(sc, y, iso))[0];
     const A = 's' + n + 'a', B = 's' + n + 'b';
@@ -5723,12 +5812,13 @@ function planAbsorbManual(k) {
   [1, 2].forEach(n => {
     const A = 's' + n + 'a', B = 's' + n + 'b';
     if (!has(n)) return;
-    while (sc[A] <= sc[B] && man.get(sc[A]) === 'z') { man.delete(sc[A]); setMan(sc[A], '-'); sc[A] = planAddDays(sc[A], 1); changed = true; }
-    while (sc[A] <= sc[B] && man.get(sc[B]) === 'z') { man.delete(sc[B]); setMan(sc[B], '-'); sc[B] = planAddDays(sc[B], -1); changed = true; }
+    // (les dimanches / fériés en bord de Scope sont sautés pour que le Scope commence et finisse un jour ouvré)
+    while (sc[A] <= sc[B] && man.get(sc[A]) === 'z') { man.delete(sc[A]); setMan(sc[A], '-'); sc[A] = planNextWorkDay(sc[A], 1); changed = true; }
+    while (sc[A] <= sc[B] && man.get(sc[B]) === 'z') { man.delete(sc[B]); setMan(sc[B], '-'); sc[B] = planNextWorkDay(sc[B], -1); changed = true; }
     if (sc[A] > sc[B]) { delete sc[A]; delete sc[B]; delete sc['s' + n + 'd']; }
   });
   if (!changed) return;
-  [1, 2].forEach(n => { if (has(n)) sc['s' + n + 'd'] = String(planDaysBetween(sc['s' + n + 'a'], sc['s' + n + 'b'])); });
+  [1, 2].forEach(n => { if (has(n)) sc['s' + n + 'd'] = String(planWorkDaysBetween(sc['s' + n + 'a'], sc['s' + n + 'b'])); });
   planStoreScopes(k, sc);
 }
 // Nombre de jours entre une date et un Scope (0 = dedans)
@@ -5754,7 +5844,8 @@ function planVersionPayload() {
   return {
     roster: Array.isArray(planningRoster) ? planningRoster : [...planLiveMap().values()].map(planRosterEntry),
     planning: workerPlanning,
-    scopes: planningScopes
+    scopes: planningScopes,
+    notes: planningNotes
   };
 }
 
@@ -5840,6 +5931,7 @@ window.restorePlanningVersion = async function(id) {
     planningRoster = Array.isArray(data.roster) ? data.roster : [];
     workerPlanning = data.planning || {};
     planningScopes = data.scopes || {};
+    if (typeof data.notes === 'string') planningNotes = data.notes;
     syncToFirebase();
     document.getElementById('plan-versions-modal').style.display = 'none';
     renderPlanning(true);
@@ -5872,7 +5964,8 @@ function planExcelRows(groups, firstMonth) {
       "Spécialité": r.profession || '', "Compétences": r.skills || '',
       "Scope 1": sc.s1n || '', "Scope 1 début": planDateFR(sc.s1a), "Scope 1 durée (j)": planScopeDuration(sc, 1), "Scope 1 fin": planDateFR(sc.s1b),
       "Scope 2": sc.s2n || '', "Scope 2 début": planDateFR(sc.s2a), "Scope 2 durée (j)": planScopeDuration(sc, 2), "Scope 2 fin": planDateFR(sc.s2b),
-      "Fin estimée": planDateFR(end)
+      "Fin estimée": planDateFR(end),
+      "Hypothèses": sc.note || ''
     };
     let total = 0;
     for (let i = 0; i < 12; i++) {
