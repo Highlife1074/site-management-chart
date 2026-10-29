@@ -129,6 +129,11 @@
   .sup-name-select { font-size: 13px; font-weight: 800; color: #0f172a; outline: none; width: 100%; display: block; margin-top: 2px; border: 1px dashed transparent; background: transparent; cursor: pointer; padding-bottom: 2px; border-bottom: 1px dotted #cbd5e1; text-transform: uppercase; }
   .sup-name-select:hover { border-color: #cbd5e1; }
   .sup-name-select:focus { border-style: solid; border-color: #2563eb; background: #eff6ff; }
+  .validator-field { display: flex; align-items: center; gap: 4px; margin-top: 3px; font-size: 10px; font-weight: 800; color: #15803d; }
+  .validator-label { white-space: nowrap; }
+  .validator-select { flex: 1; min-width: 0; font-size: 11px; font-weight: 700; color: #0f172a; text-transform: uppercase; border: none; border-bottom: 1px dotted #86efac; background: transparent; outline: none; cursor: pointer; }
+  .validator-select:disabled { cursor: default; border-bottom: none; appearance: none; -webkit-appearance: none; }
+  .validator-btn { border: none; background: transparent; cursor: pointer; font-size: 11px; padding: 0 2px; }
   .sup-name-select:disabled { cursor: default; border-bottom: none; appearance: none; -webkit-appearance: none; }
   
   .ts-badge-container { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; align-items: center; }
@@ -327,6 +332,9 @@
   .divider { width: 1px; height: 24px; background: #e2e8f0; margin: 0 4px; }
 
   /* WORKER PILLS & SOFT DELETE */
+  .contract-alert { display: inline-flex; align-items: center; justify-content: center; width: 13px; height: 13px; border-radius: 50%; font-size: 10px; font-weight: 900; color: white; margin-right: 4px; flex-shrink: 0; cursor: help; }
+  .contract-alert.red { background: #dc2626; }
+  .contract-alert.orange { background: #f59e0b; }
   .worker-pill { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #334155; transition: transform 0.1s, box-shadow 0.1s; user-select: none; margin: 2px; }
   .worker-pill:hover { transform: scale(1.05); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
   .worker-pill:active { cursor: grabbing; }
@@ -459,7 +467,7 @@
     .ts-comments-col { width: 11%; white-space: normal !important; vertical-align: top; border-left: 2px solid #000 !important; }
     .ts-comet-name { font-size: 8px; font-weight: 800; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 3px; }
     .ts-signatures { display: flex; justify-content: space-between; margin-top: 30px; font-size: 12px; font-weight: bold; break-inside: avoid; }
-    .ts-sign-box { border-top: 1px solid #000; width: 30%; text-align: center; padding-top: 4px; }
+    .ts-sign-box { border-top: 1px solid #000; width: 23%; text-align: center; padding-top: 4px; }
 
     /* PRINT DB */
     body.print-mode-db .top-bar, body.print-mode-db #planning-view, body.print-mode-db #compare-view, body.print-mode-db .dashboard-container, body.print-mode-db #orgchart-view, body.print-mode-db #tree-view, body.print-mode-db #workers-drawer, body.print-mode-db .modal-overlay, body.print-mode-db #fab-move, body.print-mode-db #fab-drawer { display: none !important; }
@@ -558,6 +566,7 @@
              <th style="padding:8px 12px; border-bottom:2px solid #cbd5e1;">Entreprise</th>
              <th style="padding:8px 12px; border-bottom:2px solid #cbd5e1;">Spécialité</th>
              <th style="padding:8px 12px; border-bottom:2px solid #cbd5e1;" title="Séparées par des virgules">Compétences</th>
+             <th style="padding:8px 12px; border-bottom:2px solid #cbd5e1;" title="Lue dans le fichier RH (modifiable)">Fin contrat</th>
              <th style="padding:8px 12px; border-bottom:2px solid #cbd5e1;">Statut / Assignation</th>
              <th style="padding:8px 12px; border-bottom:2px solid #cbd5e1; width:50px;">Action</th>
            </tr>
@@ -710,6 +719,22 @@
   </div>
 </div>
 
+<!-- MODAL LISTE DES VALIDATORS (Timekeeper, Package Manager, Admin) -->
+<div id="validators-modal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">✅ Liste des Validators</div>
+    <p style="font-size:12px; color:#64748b; margin-top:-8px;">Noms proposés dans la case « VALIDATOR » des Timesheets.</p>
+    <div style="display:flex; gap:8px;">
+       <input type="text" id="new-validator-input" class="modal-select" placeholder="Nom du Validator..." onkeydown="if(event.key==='Enter') addValidator()">
+       <button class="btn btn-black" onclick="addValidator()">Ajouter</button>
+    </div>
+    <div id="validators-list" style="margin-top:12px; display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto;"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-outline" onclick="closeValidatorsModal()">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL GESTION ENTREPRISES -->
 <div id="companies-modal" class="modal-overlay">
   <div class="modal-box">
@@ -811,6 +836,7 @@
       <button class="btn btn-outline" id="btn-menu-companies" style="width:100%; justify-content:left;" onclick="openCompaniesModal()">🏢 Gérer Entreprises</button>
       <button class="btn btn-outline" id="btn-menu-categories" style="width:100%; justify-content:left; margin-top:4px;" onclick="openCategoriesModal()">🗂️ Gérer Domaines</button>
       <button class="btn btn-outline" style="width:100%; justify-content:left; margin-top:4px;" onclick="openSupervisorsModal()">🧑‍💼 Gérer Superviseurs</button>
+      <button class="btn btn-outline" id="btn-menu-validators" style="width:100%; justify-content:left; margin-top:4px;" onclick="openValidatorsModal()">✅ Gérer Validators</button>
       <button class="btn btn-outline" id="btn-menu-profiles" style="width:100%; justify-content:left; margin-top:4px;" onclick="openProfilesModal()">👤 Profils & mots de passe</button>
       <hr style="border:0; border-top:1px solid #e2e8f0; margin:4px 0;">
       <span style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase;">Données</span>
@@ -1115,6 +1141,12 @@ function canManageComet() {
   const c = appProfiles.custom.find(x => x.id === currentProfile);
   return c ? !!c.comet : (currentRole === 'cfo' || currentRole === 'admin');
 }
+// VALIDATOR d'une Timesheet : choisi par le Timekeeper, l'Admin et les profils créés avec ce droit
+// (ex. « Package Manager »)
+function canSetValidator() {
+  const c = appProfiles.custom.find(x => x.id === currentProfile);
+  return c ? !!c.validator : (currentRole === 'timekeeper' || currentRole === 'admin');
+}
 // Nom de tâche COMET nettoyé (espaces en trop retirés)
 function cleanCometName(s) { return String(s ?? '').replace(/\s+/g, ' ').trim(); }
 
@@ -1312,6 +1344,7 @@ let payrollCounts = {};
 window.rawImportedDB = []; 
 let siteCompanies = [...DEFAULT_COMPANIES];
 let siteSupervisors = []; 
+let siteValidators = []; // liste préremplie des VALIDATORS proposés sur les Timesheets
 let workerPlanning = {}; // Planning fin : { ID ouvrier : { 'AAAA-MM' : un caractère par jour } } (voir planning.js)
 let planningScopes = {};  // Planning fin : { ID ouvrier : { s1a, s1b, s2a, s2b } } dates des Scopes 1 et 2
 let planningRoster = null; // Planning fin : liste figée des ouvriers (null = pas encore créée)
@@ -1340,6 +1373,7 @@ try {
       if (parsed.supervisors) siteSupervisors = parsed.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
       if (parsed.rawImportedDB) window.rawImportedDB = parsed.rawImportedDB;
       if (Array.isArray(parsed.cometTasks)) cometTasks = parsed.cometTasks;
+      if (Array.isArray(parsed.validators)) siteValidators = parsed.validators;
       if (Array.isArray(parsed.customCategories)) { customCategories = parsed.customCategories; rebuildCategoryInfo(); }
       if (parsed.planning && typeof parsed.planning === 'object') workerPlanning = parsed.planning;
       if (parsed.planningScopes && typeof parsed.planningScopes === 'object') planningScopes = parsed.planningScopes;
@@ -1428,6 +1462,7 @@ function applyRolePermissions() {
   show('btn-menu-categories', isAdmin);
   show('btn-menu-restore', isAdmin);
   show('btn-menu-profiles', isAdmin);
+  show('btn-menu-validators', canSetValidator());
   // Clôture de semaine : Timekeeper et Admin
   show('btn-close-week', isTK || isAdmin);
 
@@ -1527,6 +1562,7 @@ function startFirebase() {
         if (Array.isArray(data.cometTasks)) cometTasks = data.cometTasks;
         else cometSeed = true;
         if (Array.isArray(data.customCategories)) setCustomCategories(data.customCategories);
+        if (Array.isArray(data.validators)) siteValidators = data.validators;
 
         let supsAdded = false;
         cardsData.forEach(c => {
@@ -1566,15 +1602,15 @@ function startFirebase() {
 
 // --- 3. FONCTIONS CLÉS & SYNCHRONISATION ---
 function syncToFirebase() {
-  if (currentRole === 'viewer' && !canEditPlanning() && !canManageComet()) return; // Le CFO doit pouvoir enregistrer le Payroll
+  if (currentRole === 'viewer' && !canEditPlanning() && !canManageComet() && !canSetValidator()) return; // Le CFO doit pouvoir enregistrer le Payroll
   if (_syncTimer) { clearTimeout(_syncTimer); _syncTimer = null; }
-  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, cometTasks, customCategories, planning: workerPlanning, planningScopes, planningRoster, planningScopeNames})); } catch(e){}
+  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, validators: siteValidators, cometTasks, customCategories, planning: workerPlanning, planningScopes, planningRoster, planningScopeNames})); } catch(e){}
   if (!docRef) return;
   isSaving = true;
   document.getElementById("sync-text").innerText = "Enregistrement...";
 
   const payload = {
-    cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, cometTasks, customCategories,
+    cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, validators: siteValidators, cometTasks, customCategories,
     planning: workerPlanning, planningScopes, planningScopeNames,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
@@ -1608,6 +1644,7 @@ function exportBackup() {
     cardsData, payrollCounts, unassignedWorkers,
     companies: siteCompanies,
     supervisors: siteSupervisors,
+    validators: siteValidators,
     rawImportedDB: window.rawImportedDB,
     cometTasks, customCategories,
     planning: workerPlanning, planningScopes, planningRoster, planningScopeNames
@@ -1658,6 +1695,7 @@ function importBackup(event) {
       if (Array.isArray(data.planningRoster)) planningRoster = data.planningRoster;
       if (Array.isArray(data.planningScopeNames)) planningScopeNames = data.planningScopeNames;
       if (Array.isArray(data.supervisors)) siteSupervisors = data.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
+      if (Array.isArray(data.validators)) siteValidators = data.validators;
       selectedForPrint.clear();
 
       renderCompanySelects();
@@ -2156,7 +2194,7 @@ function renderCards() {
                 return `<div class="worker-pill deleted-worker" onclick="confirmSoftDelete(${cIdx}, ${tIdx}, ${jsArg(w.id)})" title="Ouvrier supprimé de la base (non compté). Cliquez pour le retirer de la tâche.">⚠️ ${escapeHtml(w.id)} - ${escapeHtml(w.name)}</div>`;
               }
               const warningIcon = w.isMissing ? `<span title="Absent du fichier Excel RH" style="color:#ef4444; margin-right:4px;">⚠️</span>` : '';
-              return `<div class="worker-pill ${companyClass(w.company)}" data-wid="${escapeHtml(w.id)}" data-wname="${escapeHtml(w.name)}" data-wcomp="${escapeHtml(w.company)}" data-cidx="${cIdx}" data-tidx="${tIdx}">${warningIcon}${escapeHtml(w.id)} - ${escapeHtml(w.name)}</div>`;
+              return `<div class="worker-pill ${companyClass(w.company)}" data-wid="${escapeHtml(w.id)}" data-wname="${escapeHtml(w.name)}" data-wcomp="${escapeHtml(w.company)}" data-cidx="${cIdx}" data-tidx="${tIdx}">${warningIcon}${contractAlertHtml(w, card)}${escapeHtml(w.id)} - ${escapeHtml(w.name)}</div>`;
             }).join('')}
           </div>
         </div>
@@ -2194,6 +2232,17 @@ function renderCards() {
                ${isArchived ? `<option value="${escapeHtml(card.name)}" selected>${escapeHtml(card.name)} (Archivé)</option>` : ''}
             </select>
             <div class="sup-role" style="font-size:10px; font-weight:700; color:#64748b; text-transform:uppercase; margin-top:2px;">${escapeHtml(card.supervisorRole || 'SUPERVISOR')}</div>
+            ${(() => { const v = String(card.validator || ''); const canV = canSetValidator();
+               const known = siteValidators.some(n => n === v);
+               return `<div class="validator-field" title="VALIDATOR (choisi par le Timekeeper ou le Package Manager)">
+                 <span class="validator-label">✅ VALIDATOR :</span>
+                 <select class="validator-select" onchange="updateValidator(${idArg}, this.value)" ${canV ? '' : 'disabled'}>
+                   <option value="">${canV ? '-- Choisir --' : '—'}</option>
+                   ${siteValidators.map(n => `<option value="${escapeHtml(n)}" ${n === v ? 'selected' : ''}>${escapeHtml(n)}</option>`).join('')}
+                   ${v && !known ? `<option value="${escapeHtml(v)}" selected>${escapeHtml(v)} (hors liste)</option>` : ''}
+                 </select>
+                 ${canV ? `<button class="validator-btn" onclick="openValidatorsModal()" title="Gérer la liste des Validators">✏️</button>` : ''}
+               </div>`; })()}
             <div class="ts-badge-container">
               <div class="ts-badge" title="Numéro et Nom de la Timesheet">
                 TS: <span contenteditable="true" data-placeholder="N°..." onblur="updateTimesheetNo(${idArg}, this.innerText)">${escapeHtml(card.timesheetNo || '')}</span>
@@ -2281,6 +2330,62 @@ function updateManager(cardId, val) { if (updateCardField(cardId, 'manager', val
 function updateTimesheetNo(cardId, val) { if (updateCardField(cardId, 'timesheetNo', val)) refreshOrgViews(); }
 window.updateTimesheetName = function(cardId, val) { if (updateCardField(cardId, 'timesheetName', val)) refreshOrgViews(); };
 function updateShiftHours(cardId, val) { updateCardField(cardId, 'shiftHours', val); }
+
+// VALIDATOR d'une Timesheet (choisi dans la liste préremplie)
+function updateValidator(cardId, val) {
+  if (!canSetValidator()) { renderCards(); return; }
+  const card = cardById(cardId);
+  if (!card) return;
+  const v = String(val ?? '').trim();
+  if ((card.validator ?? '') === v) return;
+  card.validator = v;
+  syncToFirebase();
+}
+
+// --- LISTE DES VALIDATORS (Timekeeper, Package Manager, Admin) ---
+function openValidatorsModal() {
+  if (!canSetValidator()) return;
+  renderValidatorsList();
+  document.getElementById('validators-modal').style.display = 'flex';
+  document.getElementById('new-validator-input').focus();
+}
+function closeValidatorsModal() { document.getElementById('validators-modal').style.display = 'none'; }
+
+function renderValidatorsList() {
+  const list = document.getElementById('validators-list');
+  list.innerHTML = siteValidators.map((n, idx) => {
+    const used = cardsData.filter(c => c.validator === n).length;
+    return `<div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px; border:1px solid #cbd5e1; border-radius:6px; gap:8px;">
+      <span style="font-size:12px; font-weight:800; color:#0f172a;">${escapeHtml(n)}</span>
+      <span style="font-size:10px; color:#64748b; margin-left:auto;">${used} Timesheet(s)</span>
+      <button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5; padding:4px 8px;" onclick="removeValidator(${idx})">&times;</button>
+    </div>`;
+  }).join('') || '<i style="font-size:12px; color:#94a3b8;">Aucun Validator pour le moment.</i>';
+}
+
+function addValidator() {
+  if (!canSetValidator()) return;
+  const inp = document.getElementById('new-validator-input');
+  const name = String(inp.value || '').trim().replace(/\s+/g, ' ').toUpperCase();
+  if (!name) return;
+  if (siteValidators.includes(name)) { alert("Ce Validator est déjà dans la liste."); return; }
+  siteValidators.push(name);
+  siteValidators.sort((a, b) => a.localeCompare(b));
+  inp.value = '';
+  renderValidatorsList();
+  renderCards();
+  syncToFirebase();
+}
+
+function removeValidator(idx) {
+  if (!canSetValidator() || siteValidators[idx] === undefined) return;
+  const n = siteValidators[idx];
+  if (!confirm(`Retirer ${n} de la liste des Validators ?\n(Les Timesheets où il est déjà choisi le gardent.)`)) return;
+  siteValidators.splice(idx, 1);
+  renderValidatorsList();
+  renderCards();
+  syncToFirebase();
+}
 
 // Dates de début / fin d'une Timesheet (AAAA-MM-JJ) : information uniquement (non imprimées, aucun calcul)
 function updateCardDate(cardId, field, val) {
@@ -2629,7 +2734,8 @@ function printTimesheetCards(cardsToPrint, dateInput) {
                 <div style="margin-bottom:6px;">PROJECT: <span style="font-weight:normal;">Riviera Tower</span></div>
                 <div style="margin-bottom:6px;">SUPERVISOR: <span style="font-weight:normal;">${escapeHtml(card.name)}</span></div>
                 <div style="margin-bottom:6px;">MANAGER: <span style="font-weight:normal;">${escapeHtml(card.manager || '-')}</span></div>
-                <div>CATEGORY: <span style="font-weight:normal;">${escapeHtml(catName)}</span></div>
+                <div style="margin-bottom:6px;">CATEGORY: <span style="font-weight:normal;">${escapeHtml(catName)}</span></div>
+                <div>VALIDATOR: <span style="font-weight:normal;">${escapeHtml(card.validator || '-')}</span></div>
               </div>
               <div style="text-align:right;">
                 <div style="margin-bottom:6px;">DATE: <span style="font-weight:normal;">${dayStr}</span></div>
@@ -2657,6 +2763,7 @@ function printTimesheetCards(cardsToPrint, dateInput) {
               <div class="ts-sign-box">Team Leader</div>
               <div class="ts-sign-box">Supervisor</div>
               <div class="ts-sign-box">Timekeeper</div>
+              <div class="ts-sign-box">Validator${card.validator ? ' : ' + escapeHtml(card.validator) : ''}</div>
             </div>` : ''}
           </div>
         `;
@@ -3209,7 +3316,8 @@ function exportCometTasksExcel() {
         "N° TS": card.timesheetNo || '',
         "Nom TS": card.timesheetName || '',
         "Superviseur": card.name || '',
-        "Manager": card.manager || ''
+        "Manager": card.manager || '',
+        "Validator": card.validator || ''
       });
     });
   });
@@ -3257,6 +3365,41 @@ function localISODate(d) {
 function fmtDateFR(iso) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
   return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+}
+
+// Date de fin de contrat lue dans une cellule Excel (Date, nombre de série, JJ/MM/AAAA ou AAAA-MM-JJ)
+// → AAAA-MM-JJ, ou '' si la cellule n'est pas une date
+function excelDateISO(v) {
+  if (v === null || v === undefined || v === '') return '';
+  let d = null;
+  if (v instanceof Date) d = v;
+  else if (typeof v === 'number' && v > 20000 && v < 80000) {
+    const u = new Date(Math.round((v - 25569) * 86400000));
+    d = new Date(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate());
+  } else {
+    const t = String(v).trim();
+    let m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (m) d = new Date(+m[1], +m[2] - 1, +m[3]);
+    else if ((m = t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/))) d = new Date(+(m[3].length === 2 ? '20' + m[3] : m[3]), +m[2] - 1, +m[1]);
+  }
+  return d && !isNaN(d) ? localISODate(d) : '';
+}
+
+// Alerte « ! » de fin de contrat d'un ouvrier → null ou { level: 'red' | 'orange', text }
+// Fin prévue = fin estimée du Planning fin, sinon date de fin de la Timesheet
+function contractAlert(w, card) {
+  const ce = w && w.contractEnd;
+  if (!ce) return null;
+  const planned = (typeof planEndDate === 'function' && planEndDate(w.id)) || (card && card.endDate) || '';
+  const src = planned && typeof planEndDate === 'function' && planEndDate(w.id) === planned ? 'Planning fin' : 'Timesheet';
+  if (ce < localISODate(new Date())) return { level: 'red', text: `Contrat terminé le ${fmtDateFR(ce)}` };
+  if (planned && planned > ce) return { level: 'red', text: `Dépasse son contrat : fin prévue le ${fmtDateFR(planned)} (${src}), contrat jusqu'au ${fmtDateFR(ce)}` };
+  if (planned && planned < ce) return { level: 'orange', text: `Termine avant son contrat : fin prévue le ${fmtDateFR(planned)} (${src}), contrat jusqu'au ${fmtDateFR(ce)}` };
+  return null;
+}
+function contractAlertHtml(w, card) {
+  const a = contractAlert(w, card);
+  return a ? `<span class="contract-alert ${a.level}" title="${escapeHtml(a.text)}">!</span>` : '';
 }
 
 // Lundi qui suit une date AAAA-MM-JJ (proposé pour réimprimer une archive)
@@ -3526,6 +3669,7 @@ function exportArchiveExcel() {
   const tsRows = cards.map(card => ({
     "N° TS": card.timesheetNo || '', "Nom TS": card.timesheetName || '',
     "Superviseur": card.name || '', "Rôle": card.supervisorRole || '', "Manager": card.manager || '',
+    "Validator": card.validator || '',
     "Lot": catName(card), "Shift": card.shiftType || '', "Horaires": card.shiftHours || '',
     "Début": fmtDateFR(card.startDate), "Fin": fmtDateFR(card.endDate),
     "Ouvriers": cardCount(card).total
@@ -3737,7 +3881,7 @@ window.renderDrawer = function() {
 
   dz.innerHTML = unassignedWorkers.map(w => `
     <div class="worker-pill ${companyClass(w.company)}" data-wid="${escapeHtml(w.id)}" data-wname="${escapeHtml(w.name)}" data-wcomp="${escapeHtml(w.company)}" data-cidx="unassigned" data-tidx="unassigned">
-      ${escapeHtml(w.id)} - ${escapeHtml(w.name)}
+      ${contractAlertHtml(w, null)}${escapeHtml(w.id)} - ${escapeHtml(w.name)}
     </div>`).join('');
 
   const fabDrawerCount = document.getElementById('fab-drawer-count');
@@ -3828,7 +3972,10 @@ function showWorkerTip(pill, x, y) {
   el.innerHTML = `<div class="tip-name">${escapeHtml(w.name)}</div>
     🏢 Entreprise : <b>${escapeHtml(w.company || '—')}</b><br>
     🛠️ Spécialité : <b>${escapeHtml(w.profession || 'non renseignée')}</b>` +
-    (w.skills ? `<br>🎓 Compétences : ${escapeHtml(w.skills)}` : '');
+    (w.skills ? `<br>🎓 Compétences : ${escapeHtml(w.skills)}` : '') +
+    (w.contractEnd ? `<br>📄 Fin de contrat : <b>${fmtDateFR(w.contractEnd)}</b>` : '') +
+    (() => { const a = contractAlert(w, d.cidx === 'unassigned' ? null : cardsData[+d.cidx]);
+             return a ? `<br><span style="color:${a.level === 'red' ? '#fca5a5' : '#fcd34d'}; font-weight:700;">! ${escapeHtml(a.text)}</span>` : ''; })();
   el.style.display = 'block';
   // Placée sous la souris, sans sortir de l'écran
   const r = el.getBoundingClientRect();
@@ -4004,6 +4151,7 @@ function renderDBTable() {
         <td style="${td}"><select class="db-input" onchange="editWorker(${loc}, 'company', this.value)">${compOpts}</select></td>
         <td style="${td}"><input type="text" class="db-input" value="${escapeHtml(w.profession || '')}" placeholder="—" onchange="editWorker(${loc}, 'profession', this.value)"></td>
         <td style="${td}"><input type="text" class="db-input" value="${escapeHtml(w.skills || '')}" placeholder="—" title="Séparées par des virgules" onchange="editWorker(${loc}, 'skills', this.value)"></td>
+        <td style="${td} white-space:nowrap;">${contractAlertHtml(w, card)}<input type="date" class="db-input" style="width:auto;" value="${escapeHtml(w.contractEnd || '')}" onchange="editWorker(${loc}, 'contractEnd', this.value)"></td>
         <td style="${td} font-size:11px; color:#64748b;">${status}</td>
         <td style="${td}"><button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5; padding:2px 8px;" onclick="deleteWorkerFromDB(${loc})">&times;</button></td>
      </tr>`;
@@ -4027,11 +4175,12 @@ function editWorker(context, cIdx, tIdx, wIdx, field, newVal) {
   if (!w) return;
   let val = String(newVal || '').trim().replace(/\s+/g, ' ');
 
-  // Profession et compétences : facultatives (vide = retirée)
-  if (field === 'profession' || field === 'skills') {
-    val = field === 'skills' ? cleanSkills(val) : val.toUpperCase();
+  // Profession, compétences et fin de contrat : facultatives (vide = retirée)
+  if (field === 'profession' || field === 'skills' || field === 'contractEnd') {
+    val = field === 'skills' ? cleanSkills(val) : field === 'contractEnd' ? excelDateISO(val) : val.toUpperCase();
     if (val) w[field] = val; else delete w[field];
     if (document.getElementById('db-modal').style.display === 'flex') renderDBTable();
+    if (field === 'contractEnd') { renderCards(); renderDrawer(); }
     if (typeof renderPlanning === 'function' && document.getElementById('plan-table-wrap')) renderPlanning();
     syncToFirebase();
     return;
@@ -4138,11 +4287,11 @@ window.verifyImportCoherence = function() {
 
 function exportWorkersExcel() {
   let exportData = [];
-  unassignedWorkers.forEach(w => exportData.push({ "ID": w.id, "Nom Complet": w.name, "Entreprise": w.company, "Spécialité": w.profession || '', "Compétences": w.skills || '', "Statut": "En attente (Non assigné)" }));
+  unassignedWorkers.forEach(w => exportData.push({ "ID": w.id, "Nom Complet": w.name, "Entreprise": w.company, "Spécialité": w.profession || '', "Compétences": w.skills || '', "Fin contrat": fmtDateFR(w.contractEnd), "Statut": "En attente (Non assigné)" }));
   cardsData.forEach(c => {
      c.tasks.forEach(t => {
         (t.workerList || []).forEach(w => {
-           exportData.push({ "ID": w.id, "Nom Complet": w.name, "Entreprise": w.company, "Spécialité": w.profession || '', "Compétences": w.skills || '', "Statut": `Assigné à : ${c.name}` });
+           exportData.push({ "ID": w.id, "Nom Complet": w.name, "Entreprise": w.company, "Spécialité": w.profession || '', "Compétences": w.skills || '', "Fin contrat": fmtDateFR(w.contractEnd), "Statut": `Assigné à : ${c.name}` });
         });
      });
   });
@@ -4261,6 +4410,15 @@ function parseImportRows(sheets, type, profCol) {
 
     // Colonnes du type « Autre » : repérées une fois par feuille d'après les en-têtes
     let dynIdCol = -1, dynCompCol = -1, dynAgencyCol = -1, dynProfCol = -1, dynWorkerCols = [];
+    // Fin de contrat (facultative) : la colonne la plus à jour d'abord, « END DATE » seul en dernier recours
+    // (mêmes en-têtes que « Comparer Import »)
+    const endCols = [];
+    {
+      const head = (rawRows[headerRowIdx] || []).map(c => String(c || '').trim().toUpperCase());
+      const addEnds = keys => keys.forEach(k => head.forEach((c, i) => { if (c.includes(k) && !endCols.includes(i) && !c.includes('SCOPE')) endCols.push(i); }));
+      addEnds(['ESTIMATED END DATE CONTRACT', 'NEW CONTRACT END', 'CONTRACT END', 'DATE FIN', 'FIN CONTRAT', 'FIN DE CONTRAT']);
+      if (!endCols.length) addEnds(['END DATE']);
+    }
     // Spécialité : repérée d'après les en-têtes, quel que soit le type de fichier
     // (SPECIALITY / SPECIALTY d'abord, sinon PROFESSION, MÉTIER, TRADE, JOB TITLE, POSITION…)
     {
@@ -4315,6 +4473,8 @@ function parseImportRows(sheets, type, profCol) {
         company = resolveCompany(dynCompCol !== -1 ? cell(dynCompCol) : '', dynAgencyCol !== -1 ? cell(dynAgencyCol) : '') || "OTHER";
       }
       if (dynProfCol !== -1) profession = cell(dynProfCol).replace(/\s+/g, ' ').toUpperCase();
+      let contractEnd = '';
+      for (const i of endCols) { contractEnd = excelDateISO(row[i]); if (contractEnd) break; }
 
       name = name.replace(/\s+/g, ' ').trim();
       if (!name) continue;
@@ -4328,7 +4488,10 @@ function parseImportRows(sheets, type, profCol) {
         if (seenNoId.has(k)) { ignored++; continue; }
         seenNoId.add(k);
       }
-      rows.push(profession ? { id, name, company, profession } : { id, name, company });
+      const out = { id, name, company };
+      if (profession) out.profession = profession;
+      if (contractEnd) out.contractEnd = contractEnd;
+      rows.push(out);
     }
   });
   return { rows, ignored, profColUsed };
@@ -4419,6 +4582,7 @@ function applyImportPlan(plan, acceptedKeys, fileName) {
       }
       w.isMissing = false;           // présent dans le fichier, on garde simplement ses données actuelles
       if (plan.rows[m.rowIdx].profession) w.profession = plan.rows[m.rowIdx].profession;
+      if (plan.rows[m.rowIdx].contractEnd) w.contractEnd = plan.rows[m.rowIdx].contractEnd;
       rowFinalId[m.rowIdx] = w.id;
       return;
     }
@@ -4430,6 +4594,7 @@ function applyImportPlan(plan, acceptedKeys, fileName) {
     }
     if (m.cosmeticName) w.name = m.cosmeticName;
     if (plan.rows[m.rowIdx].profession) w.profession = plan.rows[m.rowIdx].profession;
+    if (plan.rows[m.rowIdx].contractEnd) w.contractEnd = plan.rows[m.rowIdx].contractEnd;
     w.isMissing = false;
     rowFinalId[m.rowIdx] = w.id;
   });
@@ -4445,7 +4610,10 @@ function applyImportPlan(plan, acceptedKeys, fileName) {
   [...newRows].sort((a, b) => a - b).forEach(i => {
     const r = plan.rows[i];
     const id = isOfficialId(r.id) ? r.id : uid('W');
-    unassignedWorkers.push(r.profession ? { id, name: r.name, company: r.company, profession: r.profession } : { id, name: r.name, company: r.company });
+    const nw = { id, name: r.name, company: r.company };
+    if (r.profession) nw.profession = r.profession;
+    if (r.contractEnd) nw.contractEnd = r.contractEnd;
+    unassignedWorkers.push(nw);
     rowFinalId[i] = id;
     stats.added++;
   });
@@ -4456,7 +4624,7 @@ function applyImportPlan(plan, acceptedKeys, fileName) {
   // Base importée : on ne remplace que les entreprises couvertes par ce fichier
   window.rawImportedDB = window.rawImportedDB
     .filter(w => !covered.has(w.company))
-    .concat(plan.rows.map((r, i) => ({ id: rowFinalId[i] || r.id, name: r.name, company: r.company, ...(r.profession ? { profession: r.profession } : {}), source: fileName })));
+    .concat(plan.rows.map((r, i) => ({ id: rowFinalId[i] || r.id, name: r.name, company: r.company, ...(r.profession ? { profession: r.profession } : {}), ...(r.contractEnd ? { contractEnd: r.contractEnd } : {}), source: fileName })));
 
   return stats;
 }
@@ -4497,6 +4665,10 @@ function renderImportPreview() {
     html += line(nSpec
       ? `🛠️ ${nSpec} spécialité(s) lue(s) (${specs.length} différente(s) : <span style="color:#1e40af;">${escapeHtml(specs.slice(0, 8).join(', '))}${specs.length > 8 ? '…' : ''}</span>) → enregistrées sur les ouvriers, y compris ceux déjà présents`
       : `🛠️ <span style="color:#b45309;">Aucune spécialité lue : choisissez la colonne « Spécialité » ci-dessus.</span>`);
+    const nEnd = plan.rows.filter(r => r.contractEnd).length;
+    html += line(nEnd
+      ? `📄 ${nEnd} date(s) de fin de contrat lue(s) → enregistrées sur les ouvriers (un « ! » signale ceux dont la fin prévue dépasse ou précède leur contrat)`
+      : `📄 <span style="color:#64748b;">Aucune date de fin de contrat dans ce fichier.</span>`);
     if (autoCount) html += line(`🔄 ${autoCount} mise(s) à jour automatique(s) d'ouvriers non assignés (ID / entreprise)`);
     if (plan.newCompanies.length) html += line(`🆕 Nouvelle(s) entreprise(s) : <b>${escapeHtml(plan.newCompanies.join(', '))}</b>`);
     if (plan.missing.length) {
@@ -5013,7 +5185,7 @@ function planLiveMap() {
 function planRosterEntry(live) {
   return {
     id: live.w.id, name: live.w.name || '', company: live.company,
-    profession: live.w.profession || '', skills: live.w.skills || '',
+    profession: live.w.profession || '', skills: live.w.skills || '', contractEnd: live.w.contractEnd || '',
     cardId: live.card.id || '', tsNo: live.card.timesheetNo || '', tsName: live.card.timesheetName || '', sup: live.card.name || '',
     cat: live.card.category || ''
   };
@@ -5071,7 +5243,8 @@ function planGroups() {
     if (!k) return;
     const x = live.get(k);
     const row = { key: k, id: x ? x.w.id : r.id, name: x ? x.w.name : r.name, company: x ? x.company : r.company, onTs: !!x,
-      profession: (x ? x.w.profession : r.profession) || '', skills: (x ? x.w.skills : r.skills) || '' };
+      profession: (x ? x.w.profession : r.profession) || '', skills: (x ? x.w.skills : r.skills) || '',
+      contractEnd: (x ? x.w.contractEnd : r.contractEnd) || '', card: x ? x.card : null };
     if (q && ![row.name, k, row.profession, row.skills].some(v => String(v || '').toUpperCase().includes(q))) return;
     if (skillU && !skillList(row.skills).some(sk => sk.toUpperCase() === skillU)) return;
     if (planSpec && String(row.profession).toUpperCase() !== planSpec) return;
@@ -5281,7 +5454,7 @@ function renderPlanning(force) {
       const dateCell = (f) => `<td class="plan-sc sc${f}"><input type="date" value="${escapeHtml(sc['s' + f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${f}', this)"></td>`;
       const nameCell = (f) => `<td class="plan-sc scn sc${f}" title="${escapeHtml(sc['s' + f] || '')}"><input type="text" list="plan-scope-names" maxlength="40" placeholder="${edit ? 'Nom…' : ''}" value="${escapeHtml(sc['s' + f] || '')}" ${edit ? '' : 'disabled'} onchange="setPlanScope('${k}', 's${f}', this)"></td>`;
       body += `<tr data-k="${k}">
-        <td class="plan-name" title="${escapeHtml([r.name, r.id, r.company, r.profession, r.skills ? 'Compétences : ' + r.skills : ''].filter(Boolean).join(' — '))}">${edit && Array.isArray(planningRoster) ? `<button class="plan-del" title="Retirer du planning" onclick="removePlanningWorker('${k}')">✕</button>` : ''}${edit ? `${planClipboard ? `<button class="plan-act" title="Coller le planning copié (Scopes + jours saisis)" onclick="pastePlanScopes('${k}')">📥</button>` : ''}<button class="plan-act" title="Copier le planning de cet ouvrier (Scopes + jours saisis)" onclick="copyPlanScopes('${k}')">📋</button>${workerPlanning[r.key] ? `<button class="plan-act" title="Effacer tous les jours saisis à la main (il ne reste que les Scopes)" onclick="clearPlanManual('${k}')">🧽</button>` : ''}` : ''}${edit || canEdit() ? `<button class="plan-act" title="Modifier les compétences" onclick="editPlanSkills('${k}')">🎓</button>` : ''}<b>${escapeHtml(r.name)}</b>${r.onTs ? '' : '<span class="plan-off">hors TS</span>'}<span class="plan-sub">${escapeHtml(r.id)} · ${escapeHtml(r.company)}${r.profession ? `<span class="plan-spec" title="Spécialité">🛠️ ${escapeHtml(r.profession)}</span>` : ''}${skillList(r.skills).map(sk => `<span class="plan-skill">${escapeHtml(sk)}</span>`).join('')}</span></td>
+        <td class="plan-name" title="${escapeHtml([r.name, r.id, r.company, r.profession, r.skills ? 'Compétences : ' + r.skills : '', r.contractEnd ? 'Fin de contrat : ' + fmtDateFR(r.contractEnd) : ''].filter(Boolean).join(' — '))}">${edit && Array.isArray(planningRoster) ? `<button class="plan-del" title="Retirer du planning" onclick="removePlanningWorker('${k}')">✕</button>` : ''}${edit ? `${planClipboard ? `<button class="plan-act" title="Coller le planning copié (Scopes + jours saisis)" onclick="pastePlanScopes('${k}')">📥</button>` : ''}<button class="plan-act" title="Copier le planning de cet ouvrier (Scopes + jours saisis)" onclick="copyPlanScopes('${k}')">📋</button>${workerPlanning[r.key] ? `<button class="plan-act" title="Effacer tous les jours saisis à la main (il ne reste que les Scopes)" onclick="clearPlanManual('${k}')">🧽</button>` : ''}` : ''}${edit || canEdit() ? `<button class="plan-act" title="Modifier les compétences" onclick="editPlanSkills('${k}')">🎓</button>` : ''}${contractAlertHtml(r, r.card)}<b>${escapeHtml(r.name)}</b>${r.onTs ? '' : '<span class="plan-off">hors TS</span>'}<span class="plan-sub">${escapeHtml(r.id)} · ${escapeHtml(r.company)}${r.profession ? `<span class="plan-spec" title="Spécialité">🛠️ ${escapeHtml(r.profession)}</span>` : ''}${skillList(r.skills).map(sk => `<span class="plan-skill">${escapeHtml(sk)}</span>`).join('')}</span></td>
         ${nameCell('1n')}${dateCell('1a')}${dateCell('1b')}${nameCell('2n')}${dateCell('2a')}${dateCell('2b')}
         ${planRowTail(r, cols)}
       </tr>`;
@@ -5704,7 +5877,7 @@ function renderProfilesModal() {
 
   const builtIn = ['timekeeper', 'cfo', 'admin'].map(r => `<tr>
       <td ${td}><b>${BASE_ROLES[r]}</b></td>
-      <td ${td}>${r === 'admin' ? 'Tous les droits' : r === 'cfo' ? 'Payroll, gestion des tâches COMET (Planning fin : consultation)' : 'Timesheets, impression, Planning fin'}</td>
+      <td ${td}>${r === 'admin' ? 'Tous les droits' : r === 'cfo' ? 'Payroll, gestion des tâches COMET (Planning fin : consultation)' : 'Timesheets, impression, Planning fin, VALIDATOR'}</td>
       <td ${td}><input type="text" ${inp} id="pf-pwd-${r}" value="${escapeHtml(profilePassword(r))}"></td>
       <td ${td}><button class="btn btn-outline" onclick="setBuiltInPassword('${r}')">💾</button></td>
     </tr>`).join('');
@@ -5717,6 +5890,7 @@ function renderProfilesModal() {
         Timesheets : <select ${inp} id="pf-base-${id}" style="margin:0 0 4px; width:100%;">${baseOpts(c.base)}</select>
         <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pf-plan-${id}" ${c.planning ? 'checked' : ''}> Modifier le Planning fin</label>
         <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pf-comet-${id}" ${c.comet ? 'checked' : ''}> Gérer les tâches COMET</label>
+        <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pf-valid-${id}" ${c.validator ? 'checked' : ''}> Choisir le VALIDATOR des Timesheets</label>
       </td>
       <td ${td}><input type="text" ${inp} id="pf-pwd-${id}" value="${escapeHtml(c.password)}"></td>
       <td ${td} style="white-space:nowrap;"><button class="btn btn-outline" onclick="saveCustomProfile('${id}')" title="Enregistrer">💾</button>
@@ -5737,6 +5911,7 @@ function renderProfilesModal() {
           Timesheets : <select ${inp} id="pf-base-new" style="margin:0 0 4px; width:100%;">${baseOpts('viewer')}</select>
           <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pf-plan-new" checked> Modifier le Planning fin</label>
           <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pf-comet-new"> Gérer les tâches COMET</label>
+          <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pf-valid-new"> Choisir le VALIDATOR des Timesheets (ex. Package Manager)</label>
         </td>
         <td ${td}><input type="text" ${inp} id="pf-pwd-new" placeholder="Mot de passe"></td>
         <td ${td}><button class="btn btn-black" onclick="addCustomProfile()">+ Créer</button></td>
@@ -5751,6 +5926,7 @@ function profileFormValues(id) {
     base: document.getElementById('pf-base-' + id).value,
     planning: document.getElementById('pf-plan-' + id).checked,
     comet: document.getElementById('pf-comet-' + id).checked,
+    validator: document.getElementById('pf-valid-' + id).checked,
     password: document.getElementById('pf-pwd-' + id).value
   };
 }
