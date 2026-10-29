@@ -191,6 +191,15 @@
   .cmp-table select { padding: 3px 4px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px; }
   .cmp-ended { color: #94a3b8; }
   .cmp-sub { font-size: 10px; color: #64748b; }
+  /* BASE GLOBALE : totaux */
+  .db-totals { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; font-size: 12px; }
+  .db-tot-chip { border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 16px; padding: 4px 10px; cursor: pointer; white-space: nowrap; }
+  .db-tot-chip b { font-size: 13px; }
+  .db-tot-chip.grand { background: #1e293b; color: #fff; border-color: #1e293b; cursor: default; }
+  .db-tot-chip .sub { font-size: 10px; color: #64748b; margin-left: 4px; }
+  .db-tot-chip.grand .sub { color: #cbd5e1; }
+  .db-totals details { width: 100%; }
+  .db-totals summary { cursor: pointer; font-weight: 700; color: #334155; margin: 2px 0 4px; }
   .cmp-sum { display: flex; flex-wrap: wrap; gap: 12px; padding: 10px; align-items: flex-start; }
   .cmp-sum > div { flex: 1 1 420px; min-width: 0; }
   .cmp-sum h4 { margin: 0 0 6px; font-size: 13px; }
@@ -532,6 +541,9 @@
        </div>
     </div>
     
+    <!-- TOTAUX (par entreprise, par spécialité) -->
+    <div id="db-totals"></div>
+
     <!-- BARRE DE RECHERCHE -->
     <div style="margin-bottom: 10px;">
         <input type="text" id="db-search-input" class="modal-select" placeholder="🔍 Rechercher un nom, ID, entreprise, spécialité ou compétence..." oninput="filterDBTable(this.value)">
@@ -3930,7 +3942,48 @@ function workerListOf(context, cIdx, tIdx) {
   return t ? (t.workerList || []) : [];
 }
 
+// Totaux de la base (ouvriers supprimés non comptés) : général, par entreprise, par spécialité
+function dbTotals() {
+  const t = { total: 0, assigned: 0, waiting: 0, deleted: 0, byCompany: new Map(), bySpec: new Map() };
+  const add = (w, assigned) => {
+    if (w.isDeleted) { t.deleted++; return; }
+    t.total++; if (assigned) t.assigned++; else t.waiting++;
+    const c = String(w.company || '').trim() || '(sans entreprise)';
+    if (!t.byCompany.has(c)) t.byCompany.set(c, { total: 0, assigned: 0, waiting: 0 });
+    const g = t.byCompany.get(c); g.total++; if (assigned) g.assigned++; else g.waiting++;
+    const sp = String(w.profession || '').trim().toUpperCase() || '(non renseignée)';
+    t.bySpec.set(sp, (t.bySpec.get(sp) || 0) + 1);
+  };
+  unassignedWorkers.forEach(w => add(w, false));
+  cardsData.forEach(c => (c.tasks || []).forEach(tk => (tk.workerList || []).forEach(w => add(w, true))));
+  const sortDesc = m => [...m.entries()].sort((a, b) => (b[1].total ?? b[1]) - (a[1].total ?? a[1]) || a[0].localeCompare(b[0]));
+  t.companies = sortDesc(t.byCompany);
+  t.specs = sortDesc(t.bySpec);
+  return t;
+}
+
+function renderDBTotals() {
+  const box = document.getElementById('db-totals');
+  if (!box) return;
+  const t = dbTotals();
+  const q = v => escapeHtml(JSON.stringify(v));
+  box.innerHTML = `<div class="db-totals">
+      <span class="db-tot-chip grand">👷 TOTAL : <b>${t.total}</b><span class="sub">${t.assigned} assignés · ${t.waiting} en attente${t.deleted ? ` · ${t.deleted} supprimé(s) non compté(s)` : ''}</span></span>
+      ${t.companies.map(([c, g]) => `<span class="db-tot-chip" title="Filtrer sur ${escapeHtml(c)}" onclick="dbFilterBy(${q(c)})">🏢 ${escapeHtml(c)} : <b>${g.total}</b><span class="sub">${g.assigned} assignés · ${g.waiting} en attente</span></span>`).join('')}
+      <details><summary>🛠️ Par spécialité (${t.specs.length})</summary>
+        <div class="db-totals">${t.specs.map(([sp, n]) => `<span class="db-tot-chip" title="Filtrer sur ${escapeHtml(sp)}" onclick="dbFilterBy(${q(sp.startsWith('(') ? '' : sp)})">${escapeHtml(sp)} : <b>${n}</b></span>`).join('')}</div>
+      </details>
+    </div>`;
+}
+
+window.dbFilterBy = function(v) {
+  const input = document.getElementById('db-search-input');
+  input.value = input.value === v ? '' : v;
+  filterDBTable(input.value);
+};
+
 function renderDBTable() {
+  renderDBTotals();
   const tbody = document.getElementById('db-table-body');
   let html = '';
   const td = 'padding:6px 12px; border-bottom:1px solid #f1f5f9;';
@@ -4097,6 +4150,12 @@ function exportWorkersExcel() {
   const ws = XLSX.utils.json_to_sheet(exportData);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Base Ouvriers");
+  const t = dbTotals();
+  const totRows = t.companies.map(([c, g]) => ({ "Entreprise": c, "Assignés": g.assigned, "En attente": g.waiting, "Total": g.total }))
+    .concat([{ "Entreprise": "TOTAL", "Assignés": t.assigned, "En attente": t.waiting, "Total": t.total }]);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(totRows), "Total par entreprise");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(t.specs.map(([sp, n]) => ({ "Spécialité": sp, "Total": n }))
+    .concat([{ "Spécialité": "TOTAL", "Total": t.total }])), "Total par spécialité");
   XLSX.writeFile(wb, `Database_Ouvriers_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
@@ -4118,6 +4177,17 @@ function printDB() {
       </tbody>
     </table>
   `;
+  const t = dbTotals();
+  html += `
+    <h2 style="font-family:Arial; margin:24px 0 8px; font-size:15px;">TOTAL PAR ENTREPRISE</h2>
+    <table class="db-print-table">
+      <thead><tr><th>Entreprise</th><th>Assignés</th><th>En attente</th><th>Total</th></tr></thead>
+      <tbody>
+        ${t.companies.map(([c, g]) => `<tr><td>${escapeHtml(c)}</td><td>${g.assigned}</td><td>${g.waiting}</td><td><b>${g.total}</b></td></tr>`).join('')}
+        <tr><td><b>TOTAL</b></td><td><b>${t.assigned}</b></td><td><b>${t.waiting}</b></td><td><b>${t.total}</b></td></tr>
+      </tbody>
+    </table>
+    ${t.deleted ? `<p style="font-family:Arial; font-size:11px;">${t.deleted} ouvrier(s) supprimé(s) non compté(s).</p>` : ''}`;
   document.getElementById('db-print-zone').innerHTML = html;
   document.body.classList.add('print-mode-db');
   window.print();
