@@ -4879,6 +4879,7 @@ let planSkill = '';       // filtre compétence ('' = toutes)
 let planSpec = '';        // filtre spécialité ('' = toutes)
 window.planPainting = false;
 let planPaintCode = null; // valeur réellement appliquée pendant un glisser
+let planPaintUndo = false; // effacement par re-clic : un 1 donné par un Scope devient 0
 let planRenderPending = false;
 let planVersionsIndex = {};
 let planShowScopes = true; // colonnes Scopes affichées (masquables pour voir plus de jours)
@@ -5753,6 +5754,15 @@ function planPeriodCode(k, c) {
   const codes = new Set((days.length ? days : planColDays(c)).map(([mo, d]) => { const x = planGet(k, mo, d); return x === '-' && planInScope(k, planIso(mo, d)) ? '1' : x; }));
   return codes.size === 1 ? [...codes][0] : null;
 }
+// Valeur affichée d'un jour : saisie manuelle, sinon 1 si le Scope le couvre
+function planShownCode(k, mo, d) {
+  const x = planGet(k, mo, d);
+  return x === '-' && planInScope(k, planIso(mo, d)) ? '1' : x;
+}
+// Valeur à écrire : en effacement par re-clic, un 1 venant du Scope passe à 0 (le Scope se raccourcit)
+function planPaintTarget(k, mo, d) {
+  return planPaintUndo && planPaintCode === '-' && planInScope(k, planIso(mo, d)) ? 'z' : planPaintCode;
+}
 const planTouched = new Set(); // ouvriers modifiés pendant le clic / glisser en cours
 function planPaintCell(td) {
   if (td && td.dataset.k) planTouched.add(td.dataset.k);
@@ -5761,14 +5771,15 @@ function planPaintCell(td) {
     if (!c || planPeriodCode(td.dataset.k, c) === planPaintCode) return;
     // 1 / 0.5 / 0.25 / 0 sur les jours ouvrés seulement ; « Effacer » vide toute la période
     planColDays(c).filter(([mo, d]) => planPaintCode === '-' || planIsWorkDay(planIso(mo, d)))
-      .forEach(([mo, d]) => planSet(td.dataset.k, mo, d, planPaintCode));
+      .forEach(([mo, d]) => planSet(td.dataset.k, mo, d, planPaintTarget(td.dataset.k, mo, d)));
     td.outerHTML = planPCellHtml(td.dataset.k, c, td.dataset.p, escapeHtml(td.dataset.k));
     return;
   }
   if (!td || !td.classList.contains('plan-cell')) return;
   const k = td.dataset.k, d = Number(td.dataset.d);
-  if (planGet(k, planMonth, d) === planPaintCode) return;
-  planSet(k, planMonth, d, planPaintCode);
+  const target = planPaintTarget(k, planMonth, d);
+  if (planGet(k, planMonth, d) === target) return;
+  planSet(k, planMonth, d, target);
   const code = planGet(k, planMonth, d);
   const auto = code === '-' && planInScope(k, planIso(planMonth, d));
   td.classList.remove('v-1', 'v-h', 'v-q', 'v-z', 'auto');
@@ -5783,8 +5794,9 @@ document.addEventListener('pointerdown', e => {
   // Recliquer une case qui a déjà la valeur choisie l'efface (et le glisser efface aussi)
   const cur = td.classList.contains('plan-pcell')
     ? planPeriodCode(td.dataset.k, planLastCols[Number(td.dataset.p)] || { days: [] })
-    : planGet(td.dataset.k, planMonth, Number(td.dataset.d));
-  planPaintCode = cur === planBrush ? '-' : planBrush;
+    : planShownCode(td.dataset.k, planMonth, Number(td.dataset.d));
+  planPaintUndo = cur === planBrush;
+  planPaintCode = planPaintUndo ? '-' : planBrush;
   window.planPainting = true;
   planPaintCell(td);
 });
