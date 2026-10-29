@@ -554,7 +554,7 @@
        
        <div style="display:flex; gap:8px;">
           <button class="btn btn-blue" onclick="verifyImportCoherence()" title="Vérifier les écarts entre la base Excel arrière-plan et le chantier">🔍 Vérifier Cohérence Import</button>
-          <button class="btn btn-warning" onclick="cleanDuplicates()" title="Supprime automatiquement les doublons (garde l'ouvrier assigné en priorité)">🧹 Nettoyer Doublons</button>
+          <button class="btn btn-warning" id="btn-db-clean" onclick="cleanDuplicates()" title="Supprime automatiquement les doublons (garde l'ouvrier assigné en priorité)">🧹 Nettoyer Doublons</button>
           <button class="btn btn-outline" onclick="exportWorkersExcel()">💾 Exporter Excel</button>
           <button class="btn btn-outline" onclick="printDB()">🖨️ Imprimer</button>
        </div>
@@ -965,7 +965,7 @@ const FIRESTORE_PROFILES_DOC = 'profiles'; // document dans la collection site_c
 const BASE_ROLES = { viewer: '👁️ Lecteur', timekeeper: '⏱️ Timekeeper', cfo: '💰 CFO', admin: '⚙️ Admin' };
 // Profils enregistrés : { passwords: { timekeeper, cfo, admin }, custom: [{ id, name, base, planning, password }] }
 //   base = droits sur les Timesheets (identiques à un profil de base), planning = peut modifier le Planning fin,
-//   comet = peut ajouter / supprimer des tâches COMET
+//   comet = peut ajouter / supprimer des tâches COMET, db = peut consulter la Base de données Globale
 let appProfiles = { passwords: {}, custom: [] };
 try {
   const p = JSON.parse(localStorage.getItem('app_profiles') || 'null');
@@ -1151,6 +1151,12 @@ function canEdit() { return currentRole !== 'viewer' && currentRole !== 'cfo'; }
 function canManageComet() {
   const c = appProfiles.custom.find(x => x.id === currentProfile);
   return c ? !!c.comet : (currentRole === 'cfo' || currentRole === 'admin');
+}
+// Base de données Globale : ouverte aux profils qui modifient les Timesheets et aux profils créés avec ce droit
+// (modification des ouvriers seulement si le profil peut modifier les Timesheets)
+function canViewDB() {
+  const c = appProfiles.custom.find(x => x.id === currentProfile);
+  return c && c.db !== undefined ? !!c.db : canEdit();
 }
 // VALIDATOR d'une Timesheet : choisi par le Timekeeper, l'Admin et les profils créés avec ce droit
 // (ex. « Package Manager »)
@@ -1470,7 +1476,7 @@ function applyRolePermissions() {
   show('btn-settings-menu', !readOnly);
   show('btn-print-ts', !readOnly);
   show('btn-add-sup', !readOnly);
-  show('btn-db', !readOnly);
+  show('btn-db', canViewDB());
   show('fab-drawer', !readOnly, 'flex');
   // Menu ⚙️ : entreprises et restauration réservées à l'Admin
   show('btn-menu-companies', isAdmin);
@@ -4072,7 +4078,10 @@ window.cleanDuplicates = function(silent = false) {
 
 // --- BASE DE DONNÉES GLOBALE & RECHERCHE ---
 function openDBModal() {
-  if (currentRole === 'viewer' || currentRole === 'cfo') return;
+  if (!canViewDB()) return;
+  const edit = canEdit();
+  document.querySelector('#db-modal .modal-title').innerText = edit ? '🗃️ Base de Données Globale (Éditeur)' : '🗃️ Base de Données Globale (Consultation)';
+  document.getElementById('btn-db-clean').style.display = edit ? '' : 'none';
   document.getElementById('db-search-input').value = "";
   renderDBTable();
   document.getElementById('db-modal').style.display = 'flex';
@@ -4153,6 +4162,7 @@ function renderDBTable() {
   const tbody = document.getElementById('db-table-body');
   let html = '';
   const td = 'padding:6px 12px; border-bottom:1px solid #f1f5f9;';
+  const ro = canEdit() ? '' : 'disabled'; // consultation seule
 
   const addRow = (w, context, cIdx, tIdx, wIdx, card) => {
      const loc = `'${context}', ${cIdx}, ${tIdx}, ${wIdx}`;
@@ -4165,14 +4175,14 @@ function renderDBTable() {
      if (w.isDeleted) status += ' <span style="color:#dc2626; font-weight:700;">— SUPPRIMÉ (non compté)</span>';
 
      html += `<tr>
-        <td style="${td}"><input type="text" class="db-input" value="${escapeHtml(w.id)}" onchange="editWorker(${loc}, 'id', this.value)"></td>
-        <td style="${td} display:flex; align-items:center;">${warningIcon}<input type="text" class="db-input" value="${escapeHtml(w.name)}" onchange="editWorker(${loc}, 'name', this.value)"></td>
-        <td style="${td}"><select class="db-input" onchange="editWorker(${loc}, 'company', this.value)">${compOpts}</select></td>
-        <td style="${td}"><input type="text" class="db-input" value="${escapeHtml(w.profession || '')}" placeholder="—" onchange="editWorker(${loc}, 'profession', this.value)"></td>
-        <td style="${td}"><input type="text" class="db-input" value="${escapeHtml(w.skills || '')}" placeholder="—" title="Séparées par des virgules" onchange="editWorker(${loc}, 'skills', this.value)"></td>
-        <td style="${td} white-space:nowrap;">${contractAlertHtml(w, card)}<input type="date" class="db-input" style="width:auto;" value="${escapeHtml(w.contractEnd || '')}" onchange="editWorker(${loc}, 'contractEnd', this.value)"></td>
+        <td style="${td}"><input type="text" class="db-input" value="${escapeHtml(w.id)}" onchange="editWorker(${loc}, 'id', this.value)" ${ro}></td>
+        <td style="${td} display:flex; align-items:center;">${warningIcon}<input type="text" class="db-input" value="${escapeHtml(w.name)}" onchange="editWorker(${loc}, 'name', this.value)" ${ro}></td>
+        <td style="${td}"><select class="db-input" onchange="editWorker(${loc}, 'company', this.value)" ${ro}>${compOpts}</select></td>
+        <td style="${td}"><input type="text" class="db-input" value="${escapeHtml(w.profession || '')}" placeholder="—" onchange="editWorker(${loc}, 'profession', this.value)" ${ro}></td>
+        <td style="${td}"><input type="text" class="db-input" value="${escapeHtml(w.skills || '')}" placeholder="—" title="Séparées par des virgules" onchange="editWorker(${loc}, 'skills', this.value)" ${ro}></td>
+        <td style="${td} white-space:nowrap;">${contractAlertHtml(w, card)}<input type="date" class="db-input" style="width:auto;" value="${escapeHtml(w.contractEnd || '')}" onchange="editWorker(${loc}, 'contractEnd', this.value)" ${ro}></td>
         <td style="${td} font-size:11px; color:#64748b;">${status}</td>
-        <td style="${td}"><button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5; padding:2px 8px;" onclick="deleteWorkerFromDB(${loc})">&times;</button></td>
+        <td style="${td}">${ro ? '' : `<button class="btn btn-outline" style="color:#dc2626; border-color:#fca5a5; padding:2px 8px;" onclick="deleteWorkerFromDB(${loc})">&times;</button>`}</td>
      </tr>`;
   };
 
@@ -6099,7 +6109,7 @@ window.openProfilesModal = function() {
     div.innerHTML = `
       <div class="modal-box" style="max-width:720px;">
         <div class="modal-title">👤 Profils & mots de passe</div>
-        <p style="font-size:12px; color:#64748b; margin-top:-8px;">Créez un profil en choisissant ses droits, ou changez le mot de passe d'un profil existant. Les profils apparaissent dans la liste « PROFIL » en haut de l'écran.<br>Tout le monde peut consulter les tâches COMET et les colonnes des Timesheets (⚙️ TS) ; les cases ci-dessous donnent le droit de les modifier.</p>
+        <p style="font-size:12px; color:#64748b; margin-top:-8px;">Créez un profil en choisissant ses droits, ou changez le mot de passe d'un profil existant. Les profils apparaissent dans la liste « PROFIL » en haut de l'écran.<br>Tout le monde peut consulter les tâches COMET et les colonnes des Timesheets (⚙️ TS) ; les cases ci-dessous donnent le droit de les modifier.<br>« Voir la Base de données Globale » : un profil qui ne modifie pas les Timesheets (Lecteur, CFO) la consulte sans pouvoir la modifier.</p>
         <div id="profiles-body" style="overflow-y:auto; max-height:60vh;"></div>
         <div class="modal-actions" style="margin-top:16px;">
           <button class="btn btn-outline" onclick="document.getElementById('profiles-modal').style.display='none'">Fermer</button>
@@ -6133,6 +6143,7 @@ function renderProfilesModal() {
         <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pf-plan-${id}" ${c.planning ? 'checked' : ''}> Modifier le Planning fin</label>
         <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pf-comet-${id}" ${c.comet ? 'checked' : ''}> Gérer les tâches COMET</label>
         <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pf-valid-${id}" ${c.validator ? 'checked' : ''}> Choisir le VALIDATOR des Timesheets</label>
+        <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pf-db-${id}" ${(c.db !== undefined ? c.db : !['viewer', 'cfo'].includes(c.base)) ? 'checked' : ''}> Voir la Base de données Globale</label>
       </td>
       <td ${td}><input type="text" ${inp} id="pf-pwd-${id}" value="${escapeHtml(c.password)}"></td>
       <td ${td} style="white-space:nowrap;"><button class="btn btn-outline" onclick="saveCustomProfile('${id}')" title="Enregistrer">💾</button>
@@ -6154,6 +6165,7 @@ function renderProfilesModal() {
           <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pf-plan-new" checked> Modifier le Planning fin</label>
           <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pf-comet-new"> Gérer les tâches COMET</label>
           <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pf-valid-new"> Choisir le VALIDATOR des Timesheets (ex. Package Manager)</label>
+          <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="pf-db-new"> Voir la Base de données Globale</label>
         </td>
         <td ${td}><input type="text" ${inp} id="pf-pwd-new" placeholder="Mot de passe"></td>
         <td ${td}><button class="btn btn-black" onclick="addCustomProfile()">+ Créer</button></td>
@@ -6169,6 +6181,7 @@ function profileFormValues(id) {
     planning: document.getElementById('pf-plan-' + id).checked,
     comet: document.getElementById('pf-comet-' + id).checked,
     validator: document.getElementById('pf-valid-' + id).checked,
+    db: document.getElementById('pf-db-' + id).checked,
     password: document.getElementById('pf-pwd-' + id).value
   };
 }
