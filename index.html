@@ -273,6 +273,8 @@
   .plan-mcell.full { background: #16a34a; color: #fff; }
   .plan-mcell.part { background: #bbf7d0; color: #14532d; }
   .plan-spec { display: inline-block; font-size: 9px; background: #dbeafe; color: #1e40af; border-radius: 4px; padding: 0 4px; margin-left: 4px; font-weight: 700; }
+  .plan-grp-note { border: none; background: transparent; cursor: pointer; font-size: 11px; margin-left: 6px; padding: 0 2px; }
+  .plan-grp-notetxt { font-size: 10px; font-weight: 400; font-style: italic; color: #fde68a; margin-left: 6px; }
   .plan-note { display: block; font-size: 9px; color: #7c2d12; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
   .plan-notes { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
   .plan-notes label { font-size: 12px; font-weight: 800; color: #475569; white-space: nowrap; padding-top: 6px; }
@@ -1359,6 +1361,7 @@ let planningScopes = {};  // Planning fin : { ID ouvrier : { s1a, s1b, s1d, s2a,
 let planningRoster = null; // Planning fin : liste figée des ouvriers (null = pas encore créée)
 let planningScopeNames = []; // Planning fin : liste des noms de Scopes (proposés en liste déroulante)
 let planningNotes = ''; // Planning fin : hypothèses générales du planning (texte libre)
+let planningTsNotes = {}; // Planning fin : hypothèses par Timesheet { ID de Timesheet (ou N° TS) : texte }
 let db = null, docRef = null, isSaving = false, currentFilter = 'all';
 let selectedManagersFilter = [];
 let selectedSupervisorsFilter = [];
@@ -1390,6 +1393,7 @@ try {
       if (Array.isArray(parsed.planningRoster)) planningRoster = parsed.planningRoster;
       if (Array.isArray(parsed.planningScopeNames)) planningScopeNames = parsed.planningScopeNames;
       if (typeof parsed.planningNotes === 'string') planningNotes = parsed.planningNotes;
+      if (parsed.planningTsNotes && typeof parsed.planningTsNotes === 'object') planningTsNotes = parsed.planningTsNotes;
     } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
   } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 } catch(e) { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
@@ -1562,6 +1566,7 @@ function startFirebase() {
         if (Array.isArray(data.planningRoster)) planningRoster = data.planningRoster;
         if (Array.isArray(data.planningScopeNames)) planningScopeNames = data.planningScopeNames;
         if (typeof data.planningNotes === 'string') planningNotes = data.planningNotes;
+        if (data.planningTsNotes && typeof data.planningTsNotes === 'object') planningTsNotes = data.planningTsNotes;
         window._planDataReady = true;
         if (data.supervisors) siteSupervisors = data.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
         if (data.companies) {
@@ -1616,14 +1621,14 @@ function startFirebase() {
 function syncToFirebase() {
   if (currentRole === 'viewer' && !canEditPlanning() && !canManageComet() && !canSetValidator()) return; // Le CFO doit pouvoir enregistrer le Payroll
   if (_syncTimer) { clearTimeout(_syncTimer); _syncTimer = null; }
-  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, validators: siteValidators, cometTasks, customCategories, planning: workerPlanning, planningScopes, planningRoster, planningScopeNames, planningNotes})); } catch(e){}
+  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, validators: siteValidators, cometTasks, customCategories, planning: workerPlanning, planningScopes, planningRoster, planningScopeNames, planningNotes, planningTsNotes})); } catch(e){}
   if (!docRef) return;
   isSaving = true;
   document.getElementById("sync-text").innerText = "Enregistrement...";
 
   const payload = {
     cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, validators: siteValidators, cometTasks, customCategories,
-    planning: workerPlanning, planningScopes, planningScopeNames, planningNotes,
+    planning: workerPlanning, planningScopes, planningScopeNames, planningNotes, planningTsNotes,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
   if (Array.isArray(planningRoster)) payload.planningRoster = planningRoster;
@@ -1659,7 +1664,7 @@ function exportBackup() {
     validators: siteValidators,
     rawImportedDB: window.rawImportedDB,
     cometTasks, customCategories,
-    planning: workerPlanning, planningScopes, planningRoster, planningScopeNames, planningNotes
+    planning: workerPlanning, planningScopes, planningRoster, planningScopeNames, planningNotes, planningTsNotes
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -1707,6 +1712,7 @@ function importBackup(event) {
       if (Array.isArray(data.planningRoster)) planningRoster = data.planningRoster;
       if (Array.isArray(data.planningScopeNames)) planningScopeNames = data.planningScopeNames;
       if (typeof data.planningNotes === 'string') planningNotes = data.planningNotes;
+      if (data.planningTsNotes && typeof data.planningTsNotes === 'object') planningTsNotes = data.planningTsNotes;
       if (Array.isArray(data.supervisors)) siteSupervisors = data.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
       if (Array.isArray(data.validators)) siteValidators = data.validators;
       selectedForPrint.clear();
@@ -5319,7 +5325,7 @@ function planGroups() {
     if (!groups.has(gid)) {
       const src = x ? { no: x.card.timesheetNo, name: x.card.timesheetName, sup: x.card.name } : { no: r.tsNo, name: r.tsName, sup: r.sup };
       const title = [src.no ? 'TS ' + src.no : '', src.name || ''].filter(Boolean).join(' - ') || 'Sans N° TS';
-      groups.set(gid, { gid, title, sup: src.sup || '', live: !!x, rank: x ? order.indexOf(x.card.id) : 1e6, tsNo: String(src.no || ''), rows: [] });
+      groups.set(gid, { gid, noteKey: gid.slice(2), title, sup: src.sup || '', live: !!x, rank: x ? order.indexOf(x.card.id) : 1e6, tsNo: String(src.no || ''), rows: [] });
     }
     groups.get(gid).rows.push(row);
   });
@@ -5391,6 +5397,18 @@ window.setPlanningNotes = function(val) {
   if (!canEditPlanning()) return;
   planningNotes = String(val || '').trim();
   syncDebounced();
+};
+window.editPlanTsNote = function(gi) {
+  if (!canEditPlanning()) return;
+  const g = planLastGroups[gi];
+  if (!g || !g.noteKey) return;
+  const v = prompt(`Hypothèses du planning pour la Timesheet ${g.title} :\n(vide = supprimer)`, planningTsNotes[g.noteKey] || '');
+  if (v === null) return;
+  const val = v.replace(/\s+/g, ' ').trim().slice(0, 1000);
+  planningTsNotes = Object.assign({}, planningTsNotes);
+  if (val) planningTsNotes[g.noteKey] = val; else delete planningTsNotes[g.noteKey];
+  syncDebounced();
+  renderPlanning(true);
 };
 window.editPlanNote = function(key) {
   if (!canEditPlanning()) return;
@@ -5533,7 +5551,7 @@ function renderPlanning(force) {
   let body = '';
   groups.forEach((g, gi) => {
     body += `<tr class="plan-group" data-g="${gi}">
-      <td class="plan-name" colspan="${nameSpan}">${escapeHtml(g.title)} <span class="plan-daysum">— ${escapeHtml(g.sup)} (${g.rows.length})${g.live ? '' : ' · hors Timesheets actuelles'}</span>${edit && planClipboard ? `<button class="plan-grp-paste" onclick="pastePlanScopesGroup(${gi})">📥 Coller à l'équipe</button>` : ''}</td>
+      <td class="plan-name" colspan="${nameSpan}">${escapeHtml(g.title)} <span class="plan-daysum">— ${escapeHtml(g.sup)} (${g.rows.length})${g.live ? '' : ' · hors Timesheets actuelles'}</span>${edit && g.noteKey ? `<button class="plan-grp-note" title="Hypothèses du planning pour cette Timesheet" onclick="editPlanTsNote(${gi})">💬</button>` : ''}${planningTsNotes[g.noteKey] ? `<span class="plan-grp-notetxt" title="${escapeHtml(planningTsNotes[g.noteKey])}">${escapeHtml(planningTsNotes[g.noteKey])}</span>` : ''}${edit && planClipboard ? `<button class="plan-grp-paste" onclick="pastePlanScopesGroup(${gi})">📥 Coller à l'équipe</button>` : ''}</td>
       ${planGroupTail(g, cols)}
     </tr>`;
     g.rows.forEach(r => {
@@ -5845,7 +5863,8 @@ function planVersionPayload() {
     roster: Array.isArray(planningRoster) ? planningRoster : [...planLiveMap().values()].map(planRosterEntry),
     planning: workerPlanning,
     scopes: planningScopes,
-    notes: planningNotes
+    notes: planningNotes,
+    tsNotes: planningTsNotes
   };
 }
 
@@ -5932,6 +5951,7 @@ window.restorePlanningVersion = async function(id) {
     workerPlanning = data.planning || {};
     planningScopes = data.scopes || {};
     if (typeof data.notes === 'string') planningNotes = data.notes;
+    if (data.tsNotes && typeof data.tsNotes === 'object') planningTsNotes = data.tsNotes;
     syncToFirebase();
     document.getElementById('plan-versions-modal').style.display = 'none';
     renderPlanning(true);
@@ -5965,7 +5985,8 @@ function planExcelRows(groups, firstMonth) {
       "Scope 1": sc.s1n || '', "Scope 1 début": planDateFR(sc.s1a), "Scope 1 durée (j)": planScopeDuration(sc, 1), "Scope 1 fin": planDateFR(sc.s1b),
       "Scope 2": sc.s2n || '', "Scope 2 début": planDateFR(sc.s2a), "Scope 2 durée (j)": planScopeDuration(sc, 2), "Scope 2 fin": planDateFR(sc.s2b),
       "Fin estimée": planDateFR(end),
-      "Hypothèses": sc.note || ''
+      "Hypothèses TS": planningTsNotes[g.noteKey] || '',
+      "Hypothèses ouvrier": sc.note || ''
     };
     let total = 0;
     for (let i = 0; i < 12; i++) {
