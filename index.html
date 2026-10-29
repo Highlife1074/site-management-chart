@@ -191,6 +191,14 @@
   .cmp-table select { padding: 3px 4px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px; }
   .cmp-ended { color: #94a3b8; }
   .cmp-sub { font-size: 10px; color: #64748b; }
+  .cmp-sum { display: flex; flex-wrap: wrap; gap: 12px; padding: 10px; align-items: flex-start; }
+  .cmp-sum > div { flex: 1 1 420px; min-width: 0; }
+  .cmp-sum h4 { margin: 0 0 6px; font-size: 13px; }
+  .cmp-sum .cmp-table td.num, .cmp-sum .cmp-table th.num { text-align: right; white-space: nowrap; }
+  .cmp-sum tr.cmp-total td { font-weight: 800; background: #f1f5f9; border-top: 2px solid #cbd5e1; }
+  .cmp-gap-plus { color: #dc2626; font-weight: 800; }
+  .cmp-gap-minus { color: #6366f1; font-weight: 800; }
+  .cmp-gap-zero { color: #16a34a; font-weight: 800; }
 
   /* PLANNING (estimation des dates de fin) */
   #planning-view { display: none; padding: 12px 16px; }
@@ -6004,6 +6012,7 @@ function renderCompare(rebuild) {
         <span style="font-weight:800;">📋 ${res.length} ouvriers dans le fichier</span>
         <button class="cmp-chip ${cmpFilter === 'all' ? 'active' : ''}" onclick="cmpSetFilter('all')">Tout le fichier : ${res.length}</button>
         ${chip('present')}${chip('check')}${chip('absent')}${chip('extra')}
+        <button class="cmp-chip ${cmpFilter === 'summary' ? 'active' : ''}" onclick="cmpSetFilter('summary')" title="Nombre d'ouvriers du fichier et de l'appli par entreprise et par spécialité">📊 Par entreprise / spécialité</button>
         <span class="cmp-sub">dont ${absentActive} absent(s) avec un contrat encore actif</span>
       </div>
       <div class="cmp-row" style="margin-top:8px;">
@@ -6058,6 +6067,12 @@ function cmpRenderTable() {
       </div>
     </div>` : (!editable ? `<div class="plan-help">🔒 Lecture seule : changez de profil (Timekeeper / Admin) pour ajouter des ouvriers.</div>` : '');
 
+  if (cmpFilter === 'summary') {
+    actions.innerHTML = '';
+    wrap.innerHTML = cmpSummaryHtml();
+    return;
+  }
+
   if (cmpFilter === 'extra') {
     wrap.innerHTML = `<table class="cmp-table"><thead><tr><th>ID appli</th><th>Nom dans l'appli</th><th>Entreprise</th><th>Emplacement</th></tr></thead><tbody>
       ${list.map(a => `<tr class="st-extra"><td>${escapeHtml(a.w.id)}</td><td><b>${escapeHtml(a.w.name)}</b></td><td>${escapeHtml(a.w.company)}</td><td>${escapeHtml(a.place)}</td></tr>`).join('')
@@ -6091,6 +6106,54 @@ function cmpRenderTable() {
       </tr>`;
     }).join('') || `<tr><td colspan="10" style="text-align:center; padding:20px; color:#64748b;">Aucun ouvrier pour ce filtre.</td></tr>`}
     </tbody></table>`;
+}
+
+// --- Récapitulatif fichier ↔ appli par entreprise et par spécialité ---
+const CMP_NONE = '(non renseignée)';
+function cmpFileCompanyKey(r) { return resolveCompany(r.fileCompany) || CMP_NONE; }
+function cmpAppCompanyKey(w) { return String(w.company || '').trim().toUpperCase() || CMP_NONE; }
+function cmpFileSpecKey(r) { return String(r.specialty || '').replace(/\s+/g, ' ').trim().toUpperCase() || CMP_NONE; }
+function cmpAppSpecKey(w) { return String(w.profession || '').replace(/\s+/g, ' ').trim().toUpperCase() || CMP_NONE; }
+
+// Par groupe : nb dans le fichier, nb dans l'appli, présents / absents (côté fichier), pas dans le fichier (côté appli),
+// et présents dont la valeur diffère dans l'appli. « Masquer les contrats terminés » s'applique au fichier.
+function cmpGroupStats(fileKey, appKey) {
+  const g = new Map();
+  const get = k => { if (!g.has(k)) g.set(k, { key: k, file: 0, app: 0, present: 0, absent: 0, extra: 0, diff: 0 }); return g.get(k); };
+  cmpAppWorkers().forEach(a => get(appKey(a.w)).app++);
+  cmpResult.res.forEach(x => {
+    if (cmpHideEnded && x.r.end.ended) return;
+    const k = fileKey(x.r), s = get(k);
+    s.file++;
+    if (x.status === 'absent') s.absent++;
+    else { s.present++; if (appKey(x.a.w) !== k) s.diff++; }
+  });
+  cmpResult.extra.forEach(a => get(appKey(a.w)).extra++);
+  return [...g.values()].sort((a, b) => (a.key === CMP_NONE) - (b.key === CMP_NONE) || Math.max(b.file, b.app) - Math.max(a.file, a.app) || a.key.localeCompare(b.key));
+}
+
+function cmpSummaryTable(title, groupLabel, list, note) {
+  const tot = list.reduce((t, s) => { ['file', 'app', 'present', 'absent', 'extra', 'diff'].forEach(f => t[f] += s[f]); return t; }, { file: 0, app: 0, present: 0, absent: 0, extra: 0, diff: 0 });
+  const gap = n => `<span class="${n > 0 ? 'cmp-gap-plus' : n < 0 ? 'cmp-gap-minus' : 'cmp-gap-zero'}">${n > 0 ? '+' : ''}${n}</span>`;
+  const row = (s, cls, label) => `<tr class="${cls}"><td><b>${escapeHtml(label)}</b></td><td class="num">${s.file}</td><td class="num">${s.app}</td><td class="num">${gap(s.file - s.app)}</td>
+    <td class="num">${s.present || ''}</td><td class="num">${s.absent || ''}</td><td class="num">${s.extra || ''}</td><td class="num">${s.diff || ''}</td></tr>`;
+  return `<div><h4>${title}</h4>${note || ''}<table class="cmp-table"><thead><tr><th>${groupLabel}</th><th class="num">📄 Fichier</th><th class="num">🏗️ Appli</th><th class="num" title="Fichier − Appli">Écart</th>
+      <th class="num" title="Ouvriers du fichier retrouvés dans l'appli (présents + à vérifier)">✅ Trouvés</th><th class="num" title="Ouvriers du fichier absents de l'appli">❌ Absents</th>
+      <th class="num" title="Ouvriers de l'appli qui ne sont pas dans le fichier">🔷 Pas dans fichier</th><th class="num" title="Ouvriers trouvés, mais classés autrement dans l'appli">🔀 Différent appli</th></tr></thead><tbody>
+    ${list.map(s => row(s, '', s.key)).join('') || `<tr><td colspan="8" style="text-align:center; padding:20px; color:#64748b;">Aucune donnée.</td></tr>`}
+    ${list.length ? row(tot, 'cmp-total', 'TOTAL') : ''}
+    </tbody></table></div>`;
+}
+
+function cmpSummaryHtml() {
+  const specNote = cmpFile.map.specialty < 0 ? `<div class="plan-help" style="margin:0 0 6px;">⚠️ Aucune colonne « Spécialité » choisie pour le fichier.</div>` : '';
+  return `<div class="cmp-sum">
+    ${cmpSummaryTable('🏢 Par entreprise', 'Entreprise', cmpGroupStats(cmpFileCompanyKey, cmpAppCompanyKey))}
+    ${cmpSummaryTable('🛠️ Par spécialité', 'Spécialité', cmpGroupStats(cmpFileSpecKey, cmpAppSpecKey), specNote)}
+  </div>
+  <div class="plan-help" style="margin:0 10px 10px;">Entreprise du fichier : colonne Agence si remplie, sinon Entreprise (même règle que l'import).
+    « 🔀 Différent appli » : ouvriers trouvés dont l'entreprise / la spécialité n'est pas la même dans l'appli (comptés sur la ligne du fichier).
+    ${cmpHideEnded ? '<b>Contrats terminés du fichier exclus.</b>' : ''}</div>`;
 }
 
 window.renderCompare = renderCompare;
@@ -6178,6 +6241,10 @@ window.cmpExport = function() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Fichier vs appli');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(extra.length ? extra : [{ 'ID appli': '' }]), 'Appli pas dans fichier');
+  const sum = (label, list) => list.map(s => ({ [label]: s.key, 'Fichier': s.file, 'Appli': s.app, 'Écart (fichier − appli)': s.file - s.app,
+    'Trouvés': s.present, 'Absents de l\'appli': s.absent, 'Appli pas dans fichier': s.extra, 'Différent dans l\'appli': s.diff }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sum('Entreprise', cmpGroupStats(cmpFileCompanyKey, cmpAppCompanyKey))), 'Par entreprise');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sum('Spécialité', cmpGroupStats(cmpFileSpecKey, cmpAppSpecKey))), 'Par spécialité');
   XLSX.writeFile(wb, `Comparaison_${String(cmpFile.fileName).replace(/\.[^.]+$/, '')}_${new Date().toISOString().split('T')[0]}.xlsx`);
 };
 </script>
