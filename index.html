@@ -242,6 +242,11 @@
   .plan-group .plan-daysum { font-size: 9px; color: #cbd5e1; font-weight: 600; }
   .plan-table .plan-total, .plan-table .plan-endcol { min-width: 74px; padding: 0 6px; font-weight: 700; white-space: nowrap; }
   .plan-endcol.past { color: #94a3b8; }
+  .plan-table .plan-ctcol { min-width: 74px; padding: 0 6px; font-weight: 700; white-space: nowrap; color: #7c3aed; }
+  .plan-ctcol.over { color: #dc2626; background: #fee2e2; }
+  .plan-ctcol.past { color: #94a3b8; }
+  .plan-cell.cend, .plan-pcell.cend { box-shadow: inset 0 -4px 0 #7c3aed; }
+  .plan-cell.end.cend { box-shadow: inset -3px 0 0 #dc2626, inset 0 -4px 0 #7c3aed; }
   .plan-table th, .plan-table td { box-sizing: border-box; }
   /* Colonne Ouvrier : largeur adaptée au plus long nom (les colonnes Scopes figées se décalent d'autant, --nw) */
   .plan-table .plan-name { min-width: 200px; max-width: none; overflow: visible; border-right: 1px solid #e2e8f0; }
@@ -5543,7 +5548,7 @@ function renderPlanning(force) {
   document.getElementById('plan-help').innerHTML = !edit
     ? `👁️ Consultation seule : votre profil ne permet pas de modifier le planning (voir l'Admin : ⚙️ → 👤 Profils & mots de passe).`
     : planMode === 'days'
-      ? `Entre les dates de début et de fin d'un <b>Scope</b>, chaque jour vaut 1 (vert clair). <b>Durée (j)</b> : début + durée → fin calculée, ou fin + durée → début calculé (<b>jours ouvrés</b> : 6 par semaine, lundi → samedi, hors jours fériés grecs en rouge ; un Scope ne met pas de 1 ces jours-là). Cliquer un <b>1</b> juste avant ou après un Scope l'agrandit (un 1 isolé crée le Scope 2 s'il est libre) ; un <b>0</b> sur son premier ou dernier jour le raccourcit. Pour corriger un jour, choisissez une valeur puis cliquez ou glissez (0 = absent) ; « Effacer » revient au Scope. Une date se copie-colle d'un ouvrier à l'autre avec <b>Ctrl+C / Ctrl+V</b> ; 📋 / 📥 copie tout le planning d'un ouvrier. <b>Fin estimée</b> = fin de Scope ou dernier jour saisi, le plus tardif (trait rouge). Modifier une date de Scope efface les 1 saisis à la main pour cet ouvrier (les 0 / 0.5 / 0.25 restent) ; 🧽 efface tous ses jours saisis.`
+      ? `Entre les dates de début et de fin d'un <b>Scope</b>, chaque jour vaut 1 (vert clair). <b>Durée (j)</b> : début + durée → fin calculée, ou fin + durée → début calculé (<b>jours ouvrés</b> : 6 par semaine, lundi → samedi, hors jours fériés grecs en rouge ; un Scope ne met pas de 1 ces jours-là). Cliquer un <b>1</b> juste avant ou après un Scope l'agrandit (un 1 isolé crée le Scope 2 s'il est libre) ; un <b>0</b> sur son premier ou dernier jour le raccourcit. Pour corriger un jour, choisissez une valeur puis cliquez ou glissez (0 = absent) ; « Effacer » revient au Scope. Une date se copie-colle d'un ouvrier à l'autre avec <b>Ctrl+C / Ctrl+V</b> ; 📋 / 📥 copie tout le planning d'un ouvrier. <b>Fin estimée</b> = fin de Scope ou dernier jour saisi, le plus tardif (trait rouge). <b>Fin contrat</b> : trait violet sous le jour, en rouge ⚠️ si la fin estimée la dépasse. Modifier une date de Scope efface les 1 saisis à la main pour cet ouvrier (les 0 / 0.5 / 0.25 restent) ; 🧽 efface tous ses jours saisis.`
       : `Chaque case = part ${planMode === 'weeks' ? 'de la semaine' : 'du mois'} travaillée (ex. ${planMode === 'weeks' ? 'fin le mercredi → 0.5' : 'fin le 15/09 → 0.5 en septembre'}). <b>Saisie rapide</b> : choisissez une valeur puis cliquez ou glissez sur les cases : tous les jours ${planMode === 'weeks' ? 'de la semaine' : 'du mois'} (dimanches compris) prennent cette valeur ; recliquer ou « Effacer » revient au Scope. Cliquez sur l'en-tête d'une colonne pour le détail jour par jour.`;
 
   const todayStr = planTodayIso();
@@ -5573,7 +5578,7 @@ function renderPlanning(force) {
     : planMode === 'weeks'
     ? cols.map(c => `<th class="plan-phead ${c.now ? 'today' : ''}" title="Du ${planDateFR(c.first)} au ${planDateFR(c.last)} — cliquez pour le détail jour par jour" onclick="openPlanMonth('${c.first.slice(0, 7)}')">S${c.week}<br>${planDateFR(c.first).slice(0, 5)}</th>`).join('')
     : cols.map(c => `<th class="plan-phead ${c.month === ymOf(new Date()) ? 'today' : ''}" title="Cliquez pour le détail jour par jour" onclick="openPlanMonth('${c.month}')">${PLAN_MONTHS_SHORT[Number(c.month.slice(5)) - 1]}<br>${c.month.slice(0, 4)}</th>`).join('');
-  const head = `<tr><th class="plan-name">Ouvrier</th>${scopeHead}${colHead}<th class="plan-total">${planMode === 'days' ? 'Total mois' : 'Total'}</th><th class="plan-endcol">Fin estimée</th></tr>`;
+  const head = `<tr><th class="plan-name">Ouvrier</th>${scopeHead}${colHead}<th class="plan-total">${planMode === 'days' ? 'Total mois' : 'Total'}</th><th class="plan-endcol">Fin estimée</th><th class="plan-ctcol" title="Fin de contrat de l'ouvrier (Base de données / fichier RH) ; trait violet sur le jour, la semaine ou le mois concerné">Fin contrat</th></tr>`;
 
   const groups = planGroups();
   planLastGroups = groups;
@@ -5683,20 +5688,39 @@ function planRowTail(r, cols) {
       const code = planGet(r.id, planMonth, c.d);
       const auto = code === '-' && planInScope(r.id, c.iso);
       const cls = code !== '-' ? 'v-' + code : (auto ? 'auto' : '');
-      return `<td class="plan-cell ${c.dow === 0 ? 'sun' : ''} ${planHoliday(c.iso) ? 'hol' : ''} ${cls} ${c.d === endDay ? 'end' : ''}" data-k="${k}" data-d="${c.d}">${code !== '-' ? PLAN_LABELS[code] : (auto ? '1' : '')}</td>`;
+      return `<td class="plan-cell ${c.dow === 0 ? 'sun' : ''} ${planHoliday(c.iso) ? 'hol' : ''} ${cls} ${c.d === endDay ? 'end' : ''} ${c.iso === r.contractEnd ? 'cend' : ''}" data-k="${k}" data-d="${c.d}">${code !== '-' ? PLAN_LABELS[code] : (auto ? '1' : '')}</td>`;
     }).join('');
   } else {
     cells = cols.map((c, ci) => planPCellHtml(r.id, c, ci, k)).join('');
   }
   const total = planMode === 'days' ? planMonthTotal(r.id, planMonth) : cols.reduce((t, c) => t + planColShare(r.id, c), 0);
   return `${cells}<td class="plan-total">${planFmt(total)}</td>
-    <td class="plan-endcol ${end && end < planTodayIso() ? 'past' : ''}">${end ? planDateFR(end) : '—'}</td>`;
+    <td class="plan-endcol ${end && end < planTodayIso() ? 'past' : ''}">${end ? planDateFR(end) : '—'}</td>
+    ${planContractCell(r, end)}`;
+}
+
+// Fin de contrat : en rouge si la fin estimée la dépasse, grisée si le contrat est déjà terminé
+function planContractCell(r, end) {
+  const ce = r.contractEnd;
+  if (!ce) return `<td class="plan-ctcol" style="color:#cbd5e1;" title="Fin de contrat non renseignée">—</td>`;
+  const over = end && end > ce;
+  const past = ce < planTodayIso();
+  const title = over ? `Dépasse son contrat : fin estimée le ${planDateFR(end)}, contrat jusqu'au ${planDateFR(ce)}`
+    : past ? `Contrat terminé le ${planDateFR(ce)}` : `Contrat jusqu'au ${planDateFR(ce)}`;
+  return `<td class="plan-ctcol ${over ? 'over' : past ? 'past' : ''}" title="${escapeHtml(title)}">${over ? '⚠️ ' : ''}${planDateFR(ce)}</td>`;
+}
+// Fin de contrat d'un ouvrier affiché (clé du planning)
+function planContractEnd(key) {
+  for (const g of planLastGroups) { const r = g.rows.find(x => x.key === key); if (r) return r.contractEnd || ''; }
+  return '';
 }
 
 // Case d'une période (semaine ou mois) : part travaillée ; cliquer / glisser remplit tous ses jours
 function planPCellHtml(id, c, ci, k) {
   const v = planColShare(id, c);
-  return `<td class="plan-mcell plan-pcell ${v >= 0.999 ? 'full' : (v > 0 ? 'part' : '')}" data-k="${k || escapeHtml(planKey(id))}" data-p="${ci}">${planFmt(v)}</td>`;
+  const ce = planContractEnd(planKey(id));
+  const cend = ce && planColDays(c).some(([mo, d]) => planIso(mo, d) === ce);
+  return `<td class="plan-mcell plan-pcell ${v >= 0.999 ? 'full' : (v > 0 ? 'part' : '')} ${cend ? 'cend' : ''}" data-k="${k || escapeHtml(planKey(id))}" data-p="${ci}">${planFmt(v)}</td>`;
 }
 
 // Totaux d'une Timesheet (par jour ou par mois) : après la case titre
@@ -5704,7 +5728,7 @@ function planGroupTail(g, cols) {
   const val = (r, c) => planMode === 'days' ? planDayValue(r.id, planMonth, c.d) : planColShare(r.id, c);
   const sums = cols.map(c => g.rows.reduce((t, r) => t + val(r, c), 0));
   return `${sums.map(v => `<td class="plan-daysum">${planFmt(v)}</td>`).join('')}
-    <td class="plan-total">${planFmt(sums.reduce((a, b) => a + b, 0))}</td><td></td>`;
+    <td class="plan-total">${planFmt(sums.reduce((a, b) => a + b, 0))}</td><td></td><td></td>`;
 }
 
 // Mise à jour immédiate d'un ouvrier (et des totaux de son équipe) sans redessiner le tableau :
@@ -6090,6 +6114,7 @@ function planExcelRows(groups, firstMonth) {
       "Scope 1": sc.s1n || '', "Scope 1 début": planDateFR(sc.s1a), "Scope 1 durée (j)": planScopeDuration(sc, 1), "Scope 1 fin": planDateFR(sc.s1b),
       "Scope 2": sc.s2n || '', "Scope 2 début": planDateFR(sc.s2a), "Scope 2 durée (j)": planScopeDuration(sc, 2), "Scope 2 fin": planDateFR(sc.s2b),
       "Fin estimée": planDateFR(end),
+      "Fin contrat": planDateFR(r.contractEnd),
       "Hypothèses TS": planningTsNotes[g.noteKey] || '',
       "Hypothèses ouvrier": sc.note || ''
     };
