@@ -4947,6 +4947,7 @@ let planTs = '';          // filtre Timesheet (ID de carte, '' = toutes)
 let planSkill = '';       // filtre compétence ('' = toutes)
 let planSpec = '';        // filtre spécialité ('' = toutes)
 let planSup = '';         // filtre superviseur des Timesheets ('' = tous)
+let planComp = '';        // filtre entreprise de l'ouvrier ('' = toutes)
 window.planPainting = false;
 let planPaintCode = null; // valeur réellement appliquée pendant un glisser
 let planPaintUndo = false; // effacement par re-clic : un 1 donné par un Scope devient 0
@@ -5393,6 +5394,7 @@ function planGroups() {
     if (q && ![row.name, k, row.profession, row.skills].some(v => String(v || '').toUpperCase().includes(q))) return;
     if (skillU && !skillList(row.skills).some(sk => sk.toUpperCase() === skillU)) return;
     if (planSpec && String(row.profession).toUpperCase() !== planSpec) return;
+    if (planComp && String(row.company || '').trim().toUpperCase() !== planComp) return;
     // Filtres domaine / Timesheet : l'ouvrier doit apparaître sur au moins une Timesheet correspondante
     // (ouvrier hors Timesheets actuelles : sa Timesheet de l'import)
     if (planCat || planTs || planSup) {
@@ -5451,7 +5453,10 @@ function planFiltersHtml() {
     .map(v => String(v || '').trim().toUpperCase()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   if (planSpec && !specs.includes(planSpec)) specs.push(planSpec);
   const tsLabel = c => [c.timesheetNo ? 'TS ' + c.timesheetNo : '', c.timesheetName || '', c.name ? '(' + c.name + ')' : ''].filter(Boolean).join(' ') || 'Sans N° TS';
-  const active = planCat || planTs || planSkill || planSpec || planSup;
+  const comps = [...new Set(siteCompanies.concat([...planLiveMap().values()].map(x => x.company), (planningRoster || []).map(r => r.company))
+    .map(v => String(v || '').trim().toUpperCase()).filter(Boolean))];
+  if (planComp && !comps.includes(planComp)) comps.push(planComp);
+  const active = planCat || planTs || planSkill || planSpec || planSup || planComp;
   return `<select class="plan-filter" title="Ne montrer que les ouvriers présents sur les Timesheets de ce domaine" onchange="setPlanFilter('cat', this.value)">
       ${opt('', '🗂️ Tous les domaines', planCat)}${CATEGORY_INFO.map(c => opt(c.id, c.name, planCat)).join('')}
     </select>
@@ -5460,6 +5465,9 @@ function planFiltersHtml() {
     </select>
     <select class="plan-filter" title="Ne montrer que les ouvriers présents sur cette Timesheet" onchange="setPlanFilter('ts', this.value)">
       ${opt('', '📋 Toutes les Timesheets', planTs)}${cards.map(c => opt(c.id, tsLabel(c), planTs)).join('')}
+    </select>
+    <select class="plan-filter" title="Ne montrer que les ouvriers de cette entreprise" onchange="setPlanFilter('comp', this.value)">
+      ${opt('', '🏢 Toutes entreprises', planComp)}${comps.map(c => opt(c, c, planComp)).join('')}
     </select>
     <select class="plan-filter" title="Ne montrer que les ouvriers de cette spécialité" onchange="setPlanFilter('spec', this.value)">
       ${opt('', '🛠️ Toutes spécialités', planSpec)}${specs.map(sp => opt(sp, sp, planSpec)).join('')}
@@ -5475,7 +5483,8 @@ window.setPlanFilter = function(kind, v) {
   else if (kind === 'skill') planSkill = v;
   else if (kind === 'spec') planSpec = v;
   else if (kind === 'sup') { planSup = v; planTs = ''; }
-  else { planCat = ''; planTs = ''; planSkill = ''; planSpec = ''; planSup = ''; }
+  else if (kind === 'comp') planComp = v;
+  else { planCat = ''; planTs = ''; planSkill = ''; planSpec = ''; planSup = ''; planComp = ''; }
   renderPlanning(true);
 };
 
@@ -5663,7 +5672,7 @@ function renderPlanning(force) {
       </tr>`;
     });
   });
-  if (!body) body = `<tr><td class="plan-name" colspan="${nameSpan}" style="padding:12px;">${planSearch || planCat || planTs || planSkill || planSpec || planSup ? 'Aucun ouvrier ne correspond à la recherche / aux filtres.' : 'Aucun ouvrier dans le planning.'}</td></tr>`;
+  if (!body) body = `<tr><td class="plan-name" colspan="${nameSpan}" style="padding:12px;">${planSearch || planCat || planTs || planSkill || planSpec || planSup || planComp ? 'Aucun ouvrier ne correspond à la recherche / aux filtres.' : 'Aucun ouvrier dans le planning.'}</td></tr>`;
 
   const wrap = document.getElementById('plan-table-wrap');
   const scroll = [wrap.scrollLeft, wrap.scrollTop];
@@ -6224,15 +6233,15 @@ window.exportPlanningExcel = exportPlanningExcel;
 window.exportPlanningVersion = async function(id) {
   try {
     const data = await planLoadVersion(id);
-    const saved = [planningRoster, workerPlanning, planningScopes, planSearch, planCat, planTs, planSkill, planSpec, planSup];
+    const saved = [planningRoster, workerPlanning, planningScopes, planSearch, planCat, planTs, planSkill, planSpec, planSup, planComp];
     try {
       planningRoster = Array.isArray(data.roster) ? data.roster : [];
       workerPlanning = data.planning || {};
       planningScopes = data.scopes || {};
-      planSearch = ''; planCat = ''; planTs = ''; planSkill = ''; planSpec = ''; planSup = '';
+      planSearch = ''; planCat = ''; planTs = ''; planSkill = ''; planSpec = ''; planSup = ''; planComp = '';
       planWriteExcel(planExcelRows(planGroups(), planMonth), `Planning_Version_${id.replace('plan_', '')}.xlsx`);
     } finally {
-      [planningRoster, workerPlanning, planningScopes, planSearch, planCat, planTs, planSkill, planSpec, planSup] = saved;
+      [planningRoster, workerPlanning, planningScopes, planSearch, planCat, planTs, planSkill, planSpec, planSup, planComp] = saved;
     }
   } catch (err) { alert(`❌ Export impossible : ${err.message}`); }
 };
