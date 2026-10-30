@@ -11,7 +11,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
 <!-- Librairies externes -->
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- xlsx-js-style : SheetJS 0.18.5 + mise en forme des cellules (bordures, couleurs) pour les exports -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 
 <!-- Firebase SDKs -->
@@ -6188,39 +6189,123 @@ window.deletePlanningVersion = async function(id) {
 };
 
 // --- Export Excel : Scopes, fin estimée et les 12 mois (part du mois) ---
+// Export Excel du planning : une ligne par ouvrier, avec la comparaison fin estimée / fin de contrat
 function planExcelRows(groups, firstMonth) {
+  const today = planTodayIso();
   const rows = [];
   groups.forEach(g => g.rows.forEach(r => {
     const sc = planScope(r.id);
-    const end = planEndDate(r.id);
-    const row = {
-      "Timesheet": g.title, "Superviseur": g.sup, "ID": r.id, "Nom": r.name, "Entreprise": r.company,
-      "Spécialité": r.profession || '', "Compétences": r.skills || '',
-      "Scope 1": sc.s1n || '', "Scope 1 début": planDateFR(sc.s1a), "Scope 1 durée (j)": planScopeDuration(sc, 1), "Scope 1 fin": planDateFR(sc.s1b),
-      "Scope 2": sc.s2n || '', "Scope 2 début": planDateFR(sc.s2a), "Scope 2 durée (j)": planScopeDuration(sc, 2), "Scope 2 fin": planDateFR(sc.s2b),
-      "Fin estimée": planDateFR(end),
-      "Fin contrat": planDateFR(r.contractEnd),
-      "Hypothèses TS": planningTsNotes[g.noteKey] || '',
-      "Hypothèses ouvrier": sc.note || ''
-    };
+    const end = planEndDate(r.id) || '';
+    const ce = r.contractEnd || '';
+    // Clash : mission planifiée au-delà de la fin de contrat
+    const over = !!(end && ce && end > ce);
+    const gap = end && ce ? Math.round((Date.parse(end) - Date.parse(ce)) / 86400000) : null;
+    const status = over ? `⚠️ Dépasse le contrat de ${gap} j`
+      : !ce ? 'Fin de contrat non renseignée'
+      : ce < today ? 'Contrat terminé' : end ? 'OK' : 'Rien de planifié';
+    const months = [];
     let total = 0;
     for (let i = 0; i < 12; i++) {
       const mo = planAddMonths(firstMonth, i);
       const v = Math.round(planMonthShare(r.id, mo) * 100) / 100;
-      row[`${PLAN_MONTHS_SHORT[Number(mo.slice(5)) - 1]} ${mo.slice(0, 4)}`] = v || '';
+      months.push({ mo, v });
       total += v;
     }
-    row["Total (mois)"] = Math.round(total * 100) / 100;
-    rows.push(row);
+    rows.push({ g, r, sc, end, ce, over, gap, status, months, total: Math.round(total * 100) / 100 });
   }));
   return rows;
 }
 
+// Date ISO → numéro de série Excel (affiché jj/mm/aaaa)
+function planExcelDate(iso) {
+  if (!iso) return null;
+  const [y, m, d] = iso.split('-').map(Number);
+  return { t: 'n', v: (Date.UTC(y, m - 1, d) - Date.UTC(1899, 11, 30)) / 86400000, z: 'dd/mm/yyyy' };
+}
+
+const PLAN_XL = {
+  border: c => ({ style: 'thin', color: { rgb: c || 'CBD5E1' } }),
+  head: { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { patternType: 'solid', fgColor: { rgb: '0F172A' } }, alignment: { vertical: 'center', horizontal: 'center', wrapText: true } },
+  clash: { fill: { patternType: 'solid', fgColor: { rgb: 'FEE2E2' } }, font: { bold: true, color: { rgb: 'B91C1C' } } },
+  month: { fill: { patternType: 'solid', fgColor: { rgb: 'FECACA' } }, font: { color: { rgb: 'B91C1C' } } },
+  warn: { fill: { patternType: 'solid', fgColor: { rgb: 'FEF3C7' } }, font: { color: { rgb: 'B45309' } } },
+  muted: { font: { italic: true, color: { rgb: '64748B' } } },
+  band: { fill: { patternType: 'solid', fgColor: { rgb: 'F8FAFC' } } }
+};
+
+// Feuille stylée : en-tête foncé, bordures fines, trait épais entre Timesheets, filtres automatiques
+// cols = [{ h: en-tête, w: largeur, v: row => valeur ou cellule, s: row => style propre à la cellule }]
+function planExcelSheet(cols, rows, groupOf) {
+  const ws = {};
+  const put = (R, C, cell, style) => { ws[XLSX.utils.encode_cell({ r: R, c: C })] = Object.assign(cell, { s: style }); };
+  const box = (top) => ({ top: top ? { style: 'medium', color: { rgb: '475569' } } : PLAN_XL.border(), bottom: PLAN_XL.border(), left: PLAN_XL.border(), right: PLAN_XL.border() });
+  cols.forEach((c, C) => put(0, C, { t: 's', v: c.h }, Object.assign({ border: box(false) }, PLAN_XL.head)));
+  let band = false, prev;
+  rows.forEach((row, i) => {
+    const R = i + 1, grp = groupOf ? groupOf(row) : null;
+    const first = groupOf && i > 0 && grp !== prev;
+    if (groupOf && grp !== prev) band = !band;
+    prev = grp;
+    cols.forEach((c, C) => {
+      let v = c.v(row);
+      const cell = v && typeof v === 'object' ? v : v === '' || v == null ? { t: 's', v: '' } : { t: typeof v === 'number' ? 'n' : 's', v };
+      const own = (c.s && c.s(row)) || {};
+      put(R, C, cell, Object.assign({ border: box(first), alignment: { vertical: 'center', horizontal: c.center ? 'center' : 'left', wrapText: !!c.wrap } },
+        band && !own.fill ? PLAN_XL.band : {}, own));
+    });
+  });
+  const ref = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(rows.length, 1), c: cols.length - 1 } });
+  ws['!ref'] = ref;
+  ws['!autofilter'] = { ref };
+  ws['!cols'] = cols.map(c => ({ wch: c.w || 12 }));
+  ws['!rows'] = [{ hpt: 30 }];
+  return ws;
+}
+
 function planWriteExcel(rows, fileName) {
   if (!rows.length) { alert("Aucun ouvrier à exporter."); return; }
-  const ws = XLSX.utils.json_to_sheet(rows);
+  const clashS = row => row.over ? PLAN_XL.clash : null;
+  const ident = [
+    { h: 'Timesheet', w: 28, v: x => x.g.title },
+    { h: 'Superviseur', w: 18, v: x => x.g.sup },
+    { h: 'ID', w: 10, v: x => x.r.id },
+    { h: 'Nom', w: 26, v: x => x.r.name, s: clashS },
+    { h: 'Entreprise', w: 18, v: x => x.r.company },
+    { h: 'Spécialité', w: 16, v: x => x.r.profession || '' }
+  ];
+  const ends = [
+    { h: 'Fin estimée', w: 12, center: true, v: x => planExcelDate(x.end), s: clashS },
+    { h: 'Fin contrat', w: 12, center: true, v: x => planExcelDate(x.ce), s: x => x.over ? PLAN_XL.clash : !x.ce ? PLAN_XL.warn : null },
+    { h: 'Écart fin − contrat (j)', w: 11, center: true, v: x => x.gap == null ? '' : x.gap, s: clashS },
+    { h: 'Alerte', w: 28, v: x => x.status, s: x => x.over ? PLAN_XL.clash : !x.ce ? PLAN_XL.warn : x.status === 'OK' ? null : PLAN_XL.muted }
+  ];
+  const scope = n => [
+    { h: `Scope ${n}`, w: 16, v: x => x.sc[`s${n}n`] || '' },
+    { h: `Scope ${n} début`, w: 12, center: true, v: x => planExcelDate(x.sc[`s${n}a`]) },
+    { h: `Scope ${n} durée (j)`, w: 9, center: true, v: x => planScopeDuration(x.sc, n) },
+    { h: `Scope ${n} fin`, w: 12, center: true, v: x => planExcelDate(x.sc[`s${n}b`]), s: x => x.over && x.sc[`s${n}b`] > x.ce ? PLAN_XL.clash : null }
+  ];
+  const months = rows[0].months.map((m, i) => ({
+    h: `${PLAN_MONTHS_SHORT[Number(m.mo.slice(5)) - 1]} ${m.mo.slice(0, 4)}`, w: 8, center: true,
+    v: x => x.months[i].v || '',
+    // Mois travaillés après la fin de contrat
+    s: x => x.over && x.months[i].v && m.mo >= x.ce.slice(0, 7) ? PLAN_XL.month : null
+  }));
+  const cols = ident.concat(ends, scope(1), scope(2), [
+    { h: 'Compétences', w: 22, wrap: true, v: x => x.r.skills || '' },
+    { h: 'Hypothèses TS', w: 28, wrap: true, v: x => planningTsNotes[x.g.noteKey] || '' },
+    { h: 'Hypothèses ouvrier', w: 28, wrap: true, v: x => x.sc.note || '' }
+  ], months, [{ h: 'Total (mois)', w: 9, center: true, v: x => x.total, s: () => ({ font: { bold: true } }) }]);
+
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Planning");
+  XLSX.utils.book_append_sheet(wb, planExcelSheet(cols, rows, x => x.g.gid), "Planning");
+  // Feuille des clashs : ouvriers dont la mission dépasse le contrat, du plus gros dépassement au plus petit
+  const clashes = rows.filter(x => x.over).sort((a, b) => b.gap - a.gap);
+  const clashCols = ident.concat(ends, [{ h: 'Mois au-delà du contrat', w: 30, wrap: true,
+    v: x => x.months.filter(m => m.v && m.mo >= x.ce.slice(0, 7)).map(m => `${PLAN_MONTHS_SHORT[Number(m.mo.slice(5)) - 1]} ${m.mo.slice(2, 4)} : ${m.v}`).join(' · ') }]);
+  const wsClash = clashes.length ? planExcelSheet(clashCols, clashes)
+    : planExcelSheet([{ h: 'Clashs fin de contrat / fin de mission', w: 50, v: x => x }], ['Aucun ouvrier planifié au-delà de sa fin de contrat.']);
+  XLSX.utils.book_append_sheet(wb, wsClash, `Clashs (${clashes.length})`);
   XLSX.writeFile(wb, fileName);
 }
 
