@@ -282,7 +282,10 @@
   .plan-grp-notetxt { font-size: 10px; font-weight: 400; font-style: italic; color: #fde68a; margin-left: 6px; }
   .plan-note { display: block; font-size: 9px; color: #7c2d12; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
   .plan-chart { margin-bottom: 8px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; }
-  .plan-chart > summary { cursor: pointer; padding: 6px 10px; font-size: 12px; font-weight: 800; color: #475569; }
+  .plan-chart-head { display: flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 12px; font-weight: 800; color: #475569; flex-wrap: wrap; }
+  .plan-chart-head .btn { padding: 2px 8px; font-size: 11px; }
+  .plan-chart-head .btn.active { background: #0f172a; color: #fff; }
+  .plan-chart-mini { font-weight: 600; color: #64748b; font-size: 11px; }
   .plan-chart-body { padding: 0 10px 10px; overflow-x: auto; }
   .plan-chart svg { width: 100%; min-width: 640px; height: auto; display: block; }
   .plan-chart-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; margin: 4px 0 6px; }
@@ -4939,6 +4942,7 @@ let planCat = '';         // filtre domaine des Timesheets ('' = tous)
 let planTs = '';          // filtre Timesheet (ID de carte, '' = toutes)
 let planSkill = '';       // filtre compétence ('' = toutes)
 let planSpec = '';        // filtre spécialité ('' = toutes)
+let planSup = '';         // filtre superviseur des Timesheets ('' = tous)
 window.planPainting = false;
 let planPaintCode = null; // valeur réellement appliquée pendant un glisser
 let planPaintUndo = false; // effacement par re-clic : un 1 donné par un Scope devient 0
@@ -4946,7 +4950,9 @@ let planRenderPending = false;
 let planVersionsIndex = {};
 let planShowScopes = true; // colonnes Scopes affichées (masquables pour voir plus de jours)
 let planClipboard = null;  // Scopes copiés (📋) prêts à être collés (📥)
-let planChartOpen = true;   // courbe de synthèse dépliée
+// Courbe de synthèse : 'open' (courbe + tableau), 'compact' (courbe basse, sans tableau) ou 'closed' ; mémorisé sur l'appareil
+let planChartMode = (() => { try { return localStorage.getItem('plan_chart_mode') || 'compact'; } catch (e) { return 'compact'; } })();
+if (!['open', 'compact', 'closed'].includes(planChartMode)) planChartMode = 'compact';
 const planChartHidden = new Set(); // domaines masqués sur la courbe (clic sur la légende)
 let planLastGroups = [];   // groupes du dernier affichage (pour « Coller à l'équipe »)
 let planLastCols = [];     // colonnes (jours ou mois) du dernier affichage
@@ -5383,9 +5389,9 @@ function planGroups() {
     if (planSpec && String(row.profession).toUpperCase() !== planSpec) return;
     // Filtres domaine / Timesheet : l'ouvrier doit apparaître sur au moins une Timesheet correspondante
     // (ouvrier hors Timesheets actuelles : sa Timesheet de l'import)
-    if (planCat || planTs) {
-      const where = cats.get(k) || (r.cardId || r.cat ? [{ id: r.cardId || '', cat: r.cat || (cardsData.find(c => c.id === r.cardId) || {}).category || '' }] : []);
-      if (!where.some(t => (!planCat || t.cat === planCat) && (!planTs || t.id === planTs))) return;
+    if (planCat || planTs || planSup) {
+      const where = cats.get(k) || (r.cardId || r.cat || r.sup ? [{ id: r.cardId || '', cat: r.cat || (cardsData.find(c => c.id === r.cardId) || {}).category || '', sup: planSupKey(r.sup) }] : []);
+      if (!where.some(t => (!planCat || t.cat === planCat) && (!planTs || t.id === planTs) && (!planSup || t.sup === planSup))) return;
     }
     const gid = x ? 'c:' + x.card.id : 'o:' + (r.cardId || r.tsNo || r.sup || '');
     if (!groups.has(gid)) {
@@ -5400,14 +5406,17 @@ function planGroups() {
   return list.sort((a, b) => a.rank - b.rank || a.tsNo.localeCompare(b.tsNo, undefined, { numeric: true }));
 }
 
-// Toutes les Timesheets où apparaît chaque ouvrier : clé → [{ id, cat }]
+// Nom de superviseur comparable (majuscules, espaces nettoyés)
+function planSupKey(v) { return String(v || '').trim().replace(/\s+/g, ' ').toUpperCase(); }
+
+// Toutes les Timesheets où apparaît chaque ouvrier : clé → [{ id, cat, sup }]
 function planWorkerTs() {
   const map = new Map();
   cardsData.forEach(card => (card.tasks || []).forEach(t => activeWorkers(t).forEach(w => {
     const k = planKey(w.id);
     if (!k) return;
     if (!map.has(k)) map.set(k, []);
-    map.get(k).push({ id: card.id, cat: card.category || '' });
+    map.get(k).push({ id: card.id, cat: card.category || '', sup: planSupKey(card.name) });
   })));
   return map;
 }
@@ -5425,7 +5434,10 @@ function planAllSkills() {
 // Listes déroulantes des filtres (domaine, Timesheet, compétence)
 function planFiltersHtml() {
   const opt = (v, label, cur) => `<option value="${escapeHtml(v)}" ${v === cur ? 'selected' : ''}>${escapeHtml(label)}</option>`;
-  const cards = sortCardsByTs(cardsData).filter(c => !planCat || c.category === planCat);
+  const sups = [...new Set(cardsData.map(c => planSupKey(c.name)).concat((planningRoster || []).map(r => planSupKey(r.sup))).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
+  if (planSup && !sups.includes(planSup)) sups.push(planSup);
+  const cards = sortCardsByTs(cardsData).filter(c => (!planCat || c.category === planCat) && (!planSup || planSupKey(c.name) === planSup));
   if (planTs && !cards.some(c => c.id === planTs)) planTs = '';
   const skills = planAllSkills();
   if (planSkill && !skills.some(sk => sk.toUpperCase() === planSkill.toUpperCase())) skills.push(planSkill);
@@ -5433,9 +5445,12 @@ function planFiltersHtml() {
     .map(v => String(v || '').trim().toUpperCase()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   if (planSpec && !specs.includes(planSpec)) specs.push(planSpec);
   const tsLabel = c => [c.timesheetNo ? 'TS ' + c.timesheetNo : '', c.timesheetName || '', c.name ? '(' + c.name + ')' : ''].filter(Boolean).join(' ') || 'Sans N° TS';
-  const active = planCat || planTs || planSkill || planSpec;
+  const active = planCat || planTs || planSkill || planSpec || planSup;
   return `<select class="plan-filter" title="Ne montrer que les ouvriers présents sur les Timesheets de ce domaine" onchange="setPlanFilter('cat', this.value)">
       ${opt('', '🗂️ Tous les domaines', planCat)}${CATEGORY_INFO.map(c => opt(c.id, c.name, planCat)).join('')}
+    </select>
+    <select class="plan-filter" title="Ne montrer que les Timesheets de ce superviseur" onchange="setPlanFilter('sup', this.value)">
+      ${opt('', '👷 Tous les superviseurs', planSup)}${sups.map(sp => opt(sp, sp, planSup)).join('')}
     </select>
     <select class="plan-filter" title="Ne montrer que les ouvriers présents sur cette Timesheet" onchange="setPlanFilter('ts', this.value)">
       ${opt('', '📋 Toutes les Timesheets', planTs)}${cards.map(c => opt(c.id, tsLabel(c), planTs)).join('')}
@@ -5453,7 +5468,8 @@ window.setPlanFilter = function(kind, v) {
   else if (kind === 'ts') planTs = v;
   else if (kind === 'skill') planSkill = v;
   else if (kind === 'spec') planSpec = v;
-  else { planCat = ''; planTs = ''; planSkill = ''; planSpec = ''; }
+  else if (kind === 'sup') { planSup = v; planTs = ''; }
+  else { planCat = ''; planTs = ''; planSkill = ''; planSpec = ''; planSup = ''; }
   renderPlanning(true);
 };
 
@@ -5541,10 +5557,13 @@ function renderPlanning(force) {
         <label for="plan-notes-input">📝 Hypothèses du planning</label>
         <textarea id="plan-notes-input" rows="2" maxlength="4000" placeholder="Ex. : livraison façade fin mars, 2 équipes en parallèle au R+5, pas de travail pendant le mois d'août…" onchange="setPlanningNotes(this.value)"></textarea>
       </div>
-      <details class="plan-chart" id="plan-chart" ${planChartOpen ? 'open' : ''} ontoggle="planChartOpen = this.open; if (this.open) renderPlanChart();">
-        <summary>📈 Courbe de synthèse : effectif par mois (total et par domaine)</summary>
+      <div class="plan-chart" id="plan-chart">
+        <div class="plan-chart-head">📈 Courbe de synthèse : effectif par mois
+          <span id="plan-chart-mini" class="plan-chart-mini"></span>
+          <span style="margin-left:auto; display:flex; gap:4px;" id="plan-chart-btns"></span>
+        </div>
         <div class="plan-chart-body" id="plan-chart-body"></div>
-      </details>
+      </div>
       <div id="plan-clip" style="margin-bottom:8px;"></div>
       <div class="plan-wrap" id="plan-table-wrap"></div>`;
   }
@@ -5638,7 +5657,7 @@ function renderPlanning(force) {
       </tr>`;
     });
   });
-  if (!body) body = `<tr><td class="plan-name" colspan="${nameSpan}" style="padding:12px;">${planSearch || planCat || planTs || planSkill || planSpec ? 'Aucun ouvrier ne correspond à la recherche / aux filtres.' : 'Aucun ouvrier dans le planning.'}</td></tr>`;
+  if (!body) body = `<tr><td class="plan-name" colspan="${nameSpan}" style="padding:12px;">${planSearch || planCat || planTs || planSkill || planSpec || planSup ? 'Aucun ouvrier ne correspond à la recherche / aux filtres.' : 'Aucun ouvrier dans le planning.'}</td></tr>`;
 
   const wrap = document.getElementById('plan-table-wrap');
   const scroll = [wrap.scrollLeft, wrap.scrollTop];
@@ -5675,24 +5694,40 @@ function planChartData() {
   return { months, series, total };
 }
 
+window.setPlanChartMode = function(mode) {
+  planChartMode = mode;
+  try { localStorage.setItem('plan_chart_mode', mode); } catch (e) {}
+  renderPlanChart();
+};
+
 function renderPlanChart() {
   const box = document.getElementById('plan-chart-body');
-  if (!box || !planChartOpen) return;
-  const { months, series, total } = planChartData();
+  if (!box) return;
+  const btn = (mode, label, title) => `<button class="btn btn-outline ${planChartMode === mode ? 'active' : ''}" title="${title}" onclick="setPlanChartMode('${mode}')">${label}</button>`;
+  document.getElementById('plan-chart-btns').innerHTML = btn('closed', '▲ Réduire', 'Masquer la courbe')
+    + btn('compact', '▬ Compacte', 'Courbe basse, sans le tableau des nombres') + btn('open', '▼ Complète', 'Courbe et tableau des nombres par domaine');
   const fmt = v => v ? String(Math.round(v * 10) / 10) : '0';
   const label = mo => `${PLAN_MONTHS_SHORT[Number(mo.slice(5)) - 1]} ${mo.slice(2, 4)}`;
+  const { months, series, total } = planChartData();
+  // Réduite : une ligne avec le total des prochains mois
+  document.getElementById('plan-chart-mini').innerText = planChartMode === 'closed'
+    ? '— ' + months.slice(0, 6).map((mo, i) => `${label(mo)} : ${fmt(total[i])}`).join(' · ') : '';
+  box.style.display = planChartMode === 'closed' ? 'none' : '';
+  if (planChartMode === 'closed') { box.innerHTML = ''; return; }
   if (!total.some(v => v > 0.001)) {
     box.innerHTML = `<div style="font-size:12px; color:#64748b; padding:6px 0;">Aucun jour planifié sur ${label(months[0])} → ${label(months[11])} pour les ouvriers affichés.</div>`;
     return;
   }
   const shown = series.filter(sr => !planChartHidden.has(sr.id));
-  const W = 960, H = 280, L = 44, R = 16, T = 22, B = 30;
+  const compact = planChartMode === 'compact';
+  const W = compact ? 1500 : 960, H = compact ? 160 : 280, L = 44, R = 16, T = 22, B = 30;
   const max = Math.max(1, ...total) * 1.1;
   const step = max > 200 ? 50 : max > 100 ? 20 : max > 40 ? 10 : max > 16 ? 5 : max > 6 ? 2 : 1;
   const x = i => L + (W - L - R) * (i + 0.5) / months.length;
   const y = v => T + (H - T - B) * (1 - v / max);
   let grid = '';
-  for (let v = 0; v <= max; v += step) grid += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#e2e8f0"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="#64748b">${v}</text>`;
+  const gstep = compact ? step * Math.max(1, Math.ceil(max / step / 4)) : step; // moins de lignes de grille en compact
+  for (let v = 0; v <= max; v += gstep) grid += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#e2e8f0"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="#64748b">${v}</text>`;
   const xLabels = months.map((mo, i) => `<text x="${x(i)}" y="${H - 10}" text-anchor="middle" font-size="11" fill="${mo === ymOf(new Date()) ? '#0f172a' : '#64748b'}" font-weight="${mo === ymOf(new Date()) ? 700 : 400}">${label(mo)}</text>`).join('');
   const line = (vals, color, w, name) => `<polyline fill="none" stroke="${color}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round" points="${vals.map((v, i) => `${x(i)},${y(v)}`).join(' ')}"/>`
     + vals.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="${w > 3 ? 4 : 3}" fill="${color}"><title>${escapeHtml(name)} — ${label(months[i])} : ${fmt(v)}</title></circle>`).join('');
@@ -5704,7 +5739,7 @@ function renderPlanChart() {
   box.innerHTML = `<div class="plan-chart-legend">${legend}</div>
     <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Effectif par mois">${grid}${xLabels}
       ${shown.map(sr => line(sr.vals, sr.color, 2, sr.name)).join('')}${line(total, '#0f172a', 4, 'TOTAL')}${totalLabels}</svg>
-    <table class="plan-chart-table"><thead>${head}</thead><tbody>${rows}<tr class="tot"><td>TOTAL</td>${total.map(v => `<td>${fmt(v)}</td>`).join('')}</tr></tbody></table>
+    ${compact ? '' : `<table class="plan-chart-table"><thead>${head}</thead><tbody>${rows}<tr class="tot"><td>TOTAL</td>${total.map(v => `<td>${fmt(v)}</td>`).join('')}</tr></tbody></table>`}
     <div style="font-size:11px; color:#64748b; margin-top:4px;">Nombre d'ouvriers par mois en équivalent temps plein (1 = présent tous les jours ouvrés du mois), sur 12 mois à partir de ${label(months[0])}. Domaine = celui de la Timesheet de l'ouvrier ; les filtres et la recherche s'appliquent.</div>`;
 }
 window.togglePlanChartCat = function(id) {
@@ -6183,15 +6218,15 @@ window.exportPlanningExcel = exportPlanningExcel;
 window.exportPlanningVersion = async function(id) {
   try {
     const data = await planLoadVersion(id);
-    const saved = [planningRoster, workerPlanning, planningScopes, planSearch, planCat, planTs, planSkill, planSpec];
+    const saved = [planningRoster, workerPlanning, planningScopes, planSearch, planCat, planTs, planSkill, planSpec, planSup];
     try {
       planningRoster = Array.isArray(data.roster) ? data.roster : [];
       workerPlanning = data.planning || {};
       planningScopes = data.scopes || {};
-      planSearch = ''; planCat = ''; planTs = ''; planSkill = ''; planSpec = '';
+      planSearch = ''; planCat = ''; planTs = ''; planSkill = ''; planSpec = ''; planSup = '';
       planWriteExcel(planExcelRows(planGroups(), planMonth), `Planning_Version_${id.replace('plan_', '')}.xlsx`);
     } finally {
-      [planningRoster, workerPlanning, planningScopes, planSearch, planCat, planTs, planSkill, planSpec] = saved;
+      [planningRoster, workerPlanning, planningScopes, planSearch, planCat, planTs, planSkill, planSpec, planSup] = saved;
     }
   } catch (err) { alert(`❌ Export impossible : ${err.message}`); }
 };
