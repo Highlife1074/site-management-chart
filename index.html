@@ -3419,7 +3419,11 @@ const EXCEL_MONTHS = { JAN: 1, FEB: 2, FEV: 2, FÉV: 2, MAR: 3, APR: 4, AVR: 4, 
 function excelDateISO(v) {
   if (v === null || v === undefined || v === '') return '';
   let y, mo, d;
-  if (v instanceof Date) { if (isNaN(v)) return ''; y = v.getFullYear(); mo = v.getMonth() + 1; d = v.getDate(); }
+  if (v instanceof Date) {
+    if (isNaN(v)) return '';
+    const dt = v.getHours() === 23 && v.getMinutes() >= 58 ? new Date(v.getTime() + 3 * 60000) : v; // arrondi Excel (23:59:xx)
+    y = dt.getFullYear(); mo = dt.getMonth() + 1; d = dt.getDate();
+  }
   else if (typeof v === 'number') {
     if (!(v > 20000 && v < 80000)) return '';
     const u = new Date(Math.round((v - 25569) * 86400000));
@@ -5376,13 +5380,15 @@ function planGroups() {
   const groups = new Map();
   const order = sortCardsByTs(cardsData).map(c => c.id);
   const cats = planWorkerTs();
+  // Ouvriers hors Timesheets : fin de contrat actuelle de la Base (Non assignés), sinon celle figée à l'import
+  const baseEnd = new Map(unassignedWorkers.filter(w => w.contractEnd).map(w => [planKey(w.id), w.contractEnd]));
   roster.forEach(r => {
     const k = planKey(r.id);
     if (!k) return;
     const x = live.get(k);
     const row = { key: k, id: x ? x.w.id : r.id, name: x ? x.w.name : r.name, company: x ? x.company : r.company, onTs: !!x,
       profession: (x ? x.w.profession : r.profession) || '', skills: (x ? x.w.skills : r.skills) || '',
-      contractEnd: (x ? x.w.contractEnd : r.contractEnd) || '', card: x ? x.card : null,
+      contractEnd: (x ? x.w.contractEnd : baseEnd.get(k) || r.contractEnd) || '', card: x ? x.card : null,
       cat: x ? x.card.category || '' : r.cat || (cardsData.find(c => c.id === r.cardId) || {}).category || '' };
     if (q && ![row.name, k, row.profession, row.skills].some(v => String(v || '').toUpperCase().includes(q))) return;
     if (skillU && !skillList(row.skills).some(sk => sk.toUpperCase() === skillU)) return;
@@ -6477,21 +6483,11 @@ function cmpNameClose(a, b) {
 
 // Date Excel (Date, nombre de série, ou texte) → { txt, ended }
 function cmpDate(v) {
-  if (v === null || v === undefined || v === '') return { txt: '', ended: false };
-  let d = null;
-  if (v instanceof Date) d = v;
-  else if (typeof v === 'number' && v > 20000 && v < 80000) d = new Date(Math.round((v - 25569) * 86400000));
-  else {
-    const m = String(v).trim().match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
-    if (m) d = new Date(+(m[3].length === 2 ? '20' + m[3] : m[3]), +m[2] - 1, +m[1]);
-  }
-  if (d && !isNaN(d)) {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const txt = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
-    return { txt, ended: d < today };
-  }
+  if (v === null || v === undefined || v === '') return { txt: '', ended: false, iso: '' };
+  const iso = excelDateISO(v);
+  if (iso) return { txt: fmtDateFR(iso), ended: iso < localISODate(new Date()), iso };
   const txt = String(v).trim();
-  return { txt, ended: txt.toUpperCase() === 'X' };
+  return { txt, ended: txt.toUpperCase() === 'X', iso: '' };
 }
 
 // --- Lecture du fichier ---
@@ -6650,7 +6646,8 @@ function renderCompare(rebuild) {
           <b>${cmpFile ? '📄 ' + escapeHtml(cmpFile.fileName) : 'Aucun fichier chargé'}</b>
           ${cmpFile && cmpFile.sheets.length > 1 ? `<label>Feuille<select onchange="cmpSetSheet(this.value)">${cmpFile.sheets.map((sh, i) => `<option value="${i}" ${i === cmpFile.sheetIdx ? 'selected' : ''}>${escapeHtml(sh.name)}</option>`).join('')}</select></label>` : ''}
           ${cmpFile ? `<button class="btn btn-outline" onclick="cmpExport()">💾 Exporter la comparaison (Excel)</button>` : ''}
-          ${cmpFile && canEdit() ? `<button class="btn btn-outline" onclick="cmpUpdateSpecialties()" title="Recopie la colonne Spécialité du fichier sur les ouvriers reconnus (statut « présent »)">🛠️ Mettre à jour les spécialités</button>` : ''}
+          ${cmpFile && canEdit() ? `<button class="btn btn-outline" onclick="cmpUpdateSpecialties()" title="Recopie la colonne Spécialité du fichier sur les ouvriers reconnus (statut « présent »)">🛠️ Mettre à jour les spécialités</button>
+          <button class="btn btn-outline" onclick="cmpUpdateContractEnds()" title="Recopie la colonne Fin contrat du fichier sur les ouvriers reconnus (statut « présent »)">📄 Mettre à jour les fins de contrat</button>` : ''}
         </div>
         <div class="plan-help" style="margin:8px 0 0;">Compare un fichier d'ouvriers avec la base de l'application (ouvriers affectés + non assignés).
           Rapprochement par <b>ID COMET</b> (« RT-BIK 469 » = « 469 ») avec un nom proche, sinon par le <b>nom</b> (ordre des mots et accents ignorés).
@@ -6857,6 +6854,19 @@ window.cmpUpdateSpecialties = function() {
   alert(`✅ ${changes.length} spécialité(s) mise(s) à jour.`);
 };
 
+// Fins de contrat du fichier → ouvriers reconnus (statut « présent » uniquement). Rien d'autre n'est modifié.
+window.cmpUpdateContractEnds = function() {
+  if (!canEdit() || !cmpFile) return;
+  if (cmpFile.map.end < 0) { alert("Choisissez d'abord la colonne « Fin contrat » du fichier."); return; }
+  const changes = cmpCompute().res.filter(x => x.status === 'present' && x.r.end.iso && x.r.end.iso !== x.a.w.contractEnd);
+  if (!changes.length) { alert("👌 Toutes les fins de contrat sont déjà à jour (ou aucune date lisible dans la colonne choisie)."); return; }
+  if (!confirm(`Mettre à jour la fin de contrat de ${changes.length} ouvrier(s) ?\n\n` + changes.slice(0, 15).map(x => `• ${x.a.w.name} : ${fmtDateFR(x.a.w.contractEnd) || '—'} → ${x.r.end.txt}`).join('\n') + (changes.length > 15 ? `\n… et ${changes.length - 15} autre(s)` : ''))) return;
+  changes.forEach(x => { x.a.w.contractEnd = x.r.end.iso; });
+  refreshAllViews();
+  syncToFirebase();
+  alert(`✅ ${changes.length} fin(s) de contrat mise(s) à jour.`);
+};
+
 window.cmpAddSelected = function() {
   const idxs = [...cmpSelected];
   if (!idxs.length) return;
@@ -6885,6 +6895,7 @@ window.cmpAddRows = function(idxs, forcedCompany) {
     if (dup) { skipped.push(`${r.id} - ${r.name} → déjà présent : ${dup.w.id} - ${dup.w.name} (${dup.place})`); return; }
     const w = { id: k ? r.id : uid('W'), name: r.name.toUpperCase(), company: forcedCompany || cmpCompanyChoice[i] || cmpGuessCompany(r) };
     if (r.specialty) w.profession = r.specialty.toUpperCase();
+    if (r.end.iso) w.contractEnd = r.end.iso;
     unassignedWorkers.push(w);
     const a = { w, place: 'Base non assignée' };
     if (k) ids.set(k, a);
