@@ -556,7 +556,7 @@
     
     <div class="modal-actions" style="margin-top:16px;">
       <button class="btn btn-outline" onclick="cancelImport()">Annuler l'import (aucun changement)</button>
-      <button class="btn btn-outline" id="btn-import-spec" onclick="confirmImportSpecialtiesOnly()" title="Met à jour uniquement la spécialité des ouvriers reconnus : aucun ajout, aucun changement d'ID, de nom ou d'entreprise">🛠️ Importer seulement les spécialités</button>
+      <button class="btn btn-outline" id="btn-import-spec" onclick="confirmImportSpecialtiesOnly()" title="Met à jour uniquement la spécialité et la fin de contrat des ouvriers reconnus : aucun ajout, aucun changement d'ID, de nom ou d'entreprise">🛠️ Importer seulement spécialités + fins de contrat</button>
       <button class="btn btn-success" id="btn-import-apply" onclick="confirmImport()">✅ Appliquer</button>
     </div>
   </div>
@@ -3411,20 +3411,41 @@ function fmtDateFR(iso) {
 
 // Date de fin de contrat lue dans une cellule Excel (Date, nombre de série, JJ/MM/AAAA ou AAAA-MM-JJ)
 // → AAAA-MM-JJ, ou '' si la cellule n'est pas une date
+// Années acceptées : 1990 → 2100 (une année incomplète, ex. « 0002 » pendant la frappe, est refusée)
+const EXCEL_MONTHS = { JAN: 1, FEB: 2, FEV: 2, FÉV: 2, MAR: 3, APR: 4, AVR: 4, MAY: 5, MAI: 5, JUN: 6, JUIN: 6, JUL: 7, JUIL: 7, AUG: 8, AOU: 8, AOÛ: 8, SEP: 9, OCT: 10, NOV: 11, DEC: 12, DÉC: 12 };
 function excelDateISO(v) {
   if (v === null || v === undefined || v === '') return '';
-  let d = null;
-  if (v instanceof Date) d = v;
-  else if (typeof v === 'number' && v > 20000 && v < 80000) {
+  let y, mo, d;
+  if (v instanceof Date) { if (isNaN(v)) return ''; y = v.getFullYear(); mo = v.getMonth() + 1; d = v.getDate(); }
+  else if (typeof v === 'number') {
+    if (!(v > 20000 && v < 80000)) return '';
     const u = new Date(Math.round((v - 25569) * 86400000));
-    d = new Date(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate());
+    y = u.getUTCFullYear(); mo = u.getUTCMonth() + 1; d = u.getUTCDate();
   } else {
-    const t = String(v).trim();
-    let m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if (m) d = new Date(+m[1], +m[2] - 1, +m[3]);
-    else if ((m = t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/))) d = new Date(+(m[3].length === 2 ? '20' + m[3] : m[3]), +m[2] - 1, +m[1]);
+    const t = String(v).trim().toUpperCase().replace(/\s+\d{1,2}:\d{2}(:\d{2})?.*$/, ''); // heure ignorée
+    let m;
+    if (/^\d{5}(\.\d+)?$/.test(t)) return excelDateISO(Number(t)); // nombre de série Excel écrit en texte
+    if ((m = t.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/))) { y = +m[1]; mo = +m[2]; d = +m[3]; }
+    else if ((m = t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2}|\d{4})$/))) {
+      d = +m[1]; mo = +m[2]; y = +(m[3].length === 2 ? '20' + m[3] : m[3]);
+      if (mo > 12 && d <= 12) [d, mo] = [mo, d]; // format américain MM/JJ/AAAA
+    } else if ((m = t.match(/^(\d{1,2})[\s.\/-]*([A-ZÉÛ]{3,})\.?[\s.\/-]*(\d{2}|\d{4})$/))) {
+      d = +m[1]; mo = EXCEL_MONTHS[m[2].slice(0, 4)] || EXCEL_MONTHS[m[2].slice(0, 3)]; y = +(m[3].length === 2 ? '20' + m[3] : m[3]);
+    } else return '';
   }
-  return d && !isNaN(d) ? localISODate(d) : '';
+  if (!(y >= 1990 && y <= 2100 && mo >= 1 && mo <= 12 && d >= 1 && d <= new Date(y, mo, 0).getDate())) return '';
+  return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+// Colonnes « fin de contrat » d'une ligne d'en-têtes (en majuscules), la plus à jour d'abord ;
+// « END DATE » seul seulement si rien d'autre
+function contractEndCols(head) {
+  const ends = [];
+  const addEnds = keys => keys.forEach(k => head.forEach((c, i) => { if (c.includes(k) && !ends.includes(i) && !c.includes('SCOPE')) ends.push(i); }));
+  addEnds(['ESTIMATED END DATE CONTRACT', 'NEW CONTRACT END', 'CONTRACT END', 'END OF CONTRACT', 'CONTRACT EXPIR', 'CONTRACT UNTIL', 'CONTRACT VALID',
+    'DATE FIN', 'DATE DE FIN', 'FIN CONTRAT', 'FIN DE CONTRAT', 'EXPIRY', 'EXPIRATION', 'VALID UNTIL', 'ΛΗΞΗ']);
+  if (!ends.length) addEnds(['END DATE']);
+  return ends;
 }
 
 // Alerte « ! » de fin de contrat d'un ouvrier → null ou { level: 'red' | 'orange', text }
@@ -4223,6 +4244,8 @@ function editWorker(context, cIdx, tIdx, wIdx, field, newVal) {
 
   // Profession, compétences et fin de contrat : facultatives (vide = retirée)
   if (field === 'profession' || field === 'skills' || field === 'contractEnd') {
+    // Date en cours de frappe (année incomplète, ex. 0002) : rien n'est enregistré, la case n'est pas redessinée
+    if (field === 'contractEnd' && val && !excelDateISO(val)) return;
     val = field === 'skills' ? cleanSkills(val) : field === 'contractEnd' ? excelDateISO(val) : val.toUpperCase();
     if (val) w[field] = val; else delete w[field];
     if (document.getElementById('db-modal').style.display === 'flex') renderDBTable();
@@ -4437,10 +4460,11 @@ function resolveCompany(company, agency) {
 
 // Lecture des lignes du fichier selon son type → [{ id, name, company }]
 // profCol : colonne Spécialité choisie à la main (index), -1 = aucune, undefined = repérée d'après les en-têtes
-function parseImportRows(sheets, type, profCol) {
+// endCol : colonne Fin de contrat choisie à la main (index), -1 = aucune, undefined = repérée d'après les en-têtes
+function parseImportRows(sheets, type, profCol, endCol) {
   const rows = [];
   let ignored = 0;
-  let profColUsed = -1;
+  let profColUsed = -1, endColUsed = -1;
   const seenIds = new Set();
   const seenNoId = new Set();
 
@@ -4458,13 +4482,10 @@ function parseImportRows(sheets, type, profCol) {
     let dynIdCol = -1, dynCompCol = -1, dynAgencyCol = -1, dynProfCol = -1, dynWorkerCols = [];
     // Fin de contrat (facultative) : la colonne la plus à jour d'abord, « END DATE » seul en dernier recours
     // (mêmes en-têtes que « Comparer Import »)
-    const endCols = [];
-    {
-      const head = (rawRows[headerRowIdx] || []).map(c => String(c || '').trim().toUpperCase());
-      const addEnds = keys => keys.forEach(k => head.forEach((c, i) => { if (c.includes(k) && !endCols.includes(i) && !c.includes('SCOPE')) endCols.push(i); }));
-      addEnds(['ESTIMATED END DATE CONTRACT', 'NEW CONTRACT END', 'CONTRACT END', 'DATE FIN', 'FIN CONTRAT', 'FIN DE CONTRAT']);
-      if (!endCols.length) addEnds(['END DATE']);
-    }
+    const endCols = endCol !== undefined && endCol !== null
+      ? (endCol >= 0 ? [endCol] : [])
+      : contractEndCols((rawRows[headerRowIdx] || []).map(c => String(c || '').trim().toUpperCase()));
+    if (endColUsed === -1 && endCols.length) endColUsed = endCols[0];
     // Spécialité : repérée d'après les en-têtes, quel que soit le type de fichier
     // (SPECIALITY / SPECIALTY d'abord, sinon PROFESSION, MÉTIER, TRADE, JOB TITLE, POSITION…)
     {
@@ -4540,7 +4561,7 @@ function parseImportRows(sheets, type, profCol) {
       rows.push(out);
     }
   });
-  return { rows, ignored, profColUsed };
+  return { rows, ignored, profColUsed, endColUsed };
 }
 
 // Analyse (ne modifie RIEN) : qui est reconnu, qui est nouveau, qui est absent, quoi mettre à jour
@@ -4697,6 +4718,8 @@ function renderImportPreview() {
       <select class="modal-select" style="width:auto;" onchange="changeImportType(this.value)">${typeOpts}</select>
       <span>🛠️ Colonne Spécialité :</span>
       <select class="modal-select" style="width:auto; max-width:280px;" onchange="changeImportProfCol(this.value)">${importProfColOpts(p)}</select>
+      <span>📄 Colonne Fin contrat :</span>
+      <select class="modal-select" style="width:auto; max-width:280px;" onchange="changeImportEndCol(this.value)">${importColOpts(p, p.endCol, p.endColUsed)}</select>
     </div>`;
 
   if (plan.rows.length === 0) {
@@ -4714,7 +4737,7 @@ function renderImportPreview() {
     const nEnd = plan.rows.filter(r => r.contractEnd).length;
     html += line(nEnd
       ? `📄 ${nEnd} date(s) de fin de contrat lue(s) → enregistrées sur les ouvriers (un « ! » signale ceux dont la fin prévue dépasse ou précède leur contrat)`
-      : `📄 <span style="color:#64748b;">Aucune date de fin de contrat dans ce fichier.</span>`);
+      : `📄 <span style="color:#b45309;">Aucune date de fin de contrat lue : choisissez la colonne « Fin contrat » ci-dessus.</span>`);
     if (autoCount) html += line(`🔄 ${autoCount} mise(s) à jour automatique(s) d'ouvriers non assignés (ID / entreprise)`);
     if (plan.newCompanies.length) html += line(`🆕 Nouvelle(s) entreprise(s) : <b>${escapeHtml(plan.newCompanies.join(', '))}</b>`);
     if (plan.missing.length) {
@@ -4756,25 +4779,26 @@ window.toggleAllImportUpdates = function(checked) {
   document.querySelectorAll('.import-update-cb').forEach(cb => cb.checked = checked);
 };
 
-// Colonnes de la ligne d'en-têtes (1re feuille) proposées pour la Spécialité
-function importProfColOpts(p) {
+// Colonnes de la ligne d'en-têtes (1re feuille) proposées pour la Spécialité ou la Fin de contrat
+function importProfColOpts(p) { return importColOpts(p, p.profCol, p.profColUsed); }
+function importColOpts(p, chosen, cur) {
   const sheet = p.sheets[0] || [];
   let h = sheet.findIndex(r => Array.isArray(r) && /NAME|SURNAME|NOM/.test(r.map(c => String(c || '').toUpperCase()).join(' ')));
   if (h < 0) h = 0;
   const head = sheet[h] || [];
   const n = Math.max(head.length, ...sheet.slice(h, h + 20).map(r => (r || []).length));
-  const cur = p.profColUsed;
-  let o = `<option value="auto">Automatique (d'après le titre)${p.profCol === undefined && cur >= 0 ? ' → ' + XLSX.utils.encode_col(cur) : ''}</option>`;
-  o += `<option value="-1" ${p.profCol === -1 ? 'selected' : ''}>— aucune —</option>`;
-  for (let i = 0; i < n; i++) o += `<option value="${i}" ${p.profCol === i ? 'selected' : ''}>${XLSX.utils.encode_col(i)} · ${escapeHtml(String(head[i] || '').slice(0, 30))}</option>`;
+  let o = `<option value="auto">Automatique (d'après le titre)${chosen === undefined ? (cur >= 0 ? ' → ' + XLSX.utils.encode_col(cur) : ' → aucune trouvée') : ''}</option>`;
+  o += `<option value="-1" ${chosen === -1 ? 'selected' : ''}>— aucune —</option>`;
+  for (let i = 0; i < n; i++) o += `<option value="${i}" ${chosen === i ? 'selected' : ''}>${XLSX.utils.encode_col(i)} · ${escapeHtml(String(head[i] || '').slice(0, 30))}</option>`;
   return o;
 }
 function reparseImport() {
   const p = pendingImport;
-  const parsed = parseImportRows(p.sheets, p.type, p.profCol);
+  const parsed = parseImportRows(p.sheets, p.type, p.profCol, p.endCol);
   p.rows = parsed.rows;
   p.ignored = parsed.ignored;
   p.profColUsed = parsed.profColUsed;
+  p.endColUsed = parsed.endColUsed;
   p.plan = buildImportPlan(parsed.rows, p.type);
   renderImportPreview();
 }
@@ -4784,10 +4808,17 @@ window.changeImportProfCol = function(v) {
   reparseImport();
 };
 
+window.changeImportEndCol = function(v) {
+  if (!pendingImport) return;
+  pendingImport.endCol = v === 'auto' ? undefined : Number(v);
+  reparseImport();
+};
+
 window.changeImportType = function(type) {
   if (!pendingImport || !IMPORT_TYPES[type]) return;
-  const parsed = parseImportRows(pendingImport.sheets, type, pendingImport.profCol);
+  const parsed = parseImportRows(pendingImport.sheets, type, pendingImport.profCol, pendingImport.endCol);
   pendingImport.profColUsed = parsed.profColUsed;
+  pendingImport.endColUsed = parsed.endColUsed;
   pendingImport.type = type;
   pendingImport.rows = parsed.rows;
   pendingImport.ignored = parsed.ignored;
@@ -4825,18 +4856,22 @@ window.confirmImport = function() {
 window.confirmImportSpecialtiesOnly = function() {
   if (!canEdit() || !pendingImport) return;
   const plan = buildImportPlan(pendingImport.rows, pendingImport.type);
-  const changes = plan.matches.filter(m => !m.conflict).map(m => ({ w: m.a.w, v: plan.rows[m.rowIdx].profession }))
-    .filter(x => x.v && x.v !== x.w.profession);
-  if (!changes.length) { alert("👌 Aucune spécialité à mettre à jour (déjà à jour, ou aucun ouvrier reconnu avec une spécialité)."); return; }
-  if (!confirm(`Mettre à jour la spécialité de ${changes.length} ouvrier(s) ?\n\n` +
-    changes.slice(0, 15).map(x => `• ${x.w.name} : ${x.w.profession || '—'} → ${x.v}`).join('\n') + (changes.length > 15 ? `\n… et ${changes.length - 15} autre(s)` : '') +
+  const changes = [];
+  plan.matches.filter(m => !m.conflict).forEach(m => {
+    const r = plan.rows[m.rowIdx], w = m.a.w;
+    if (r.profession && r.profession !== w.profession) changes.push({ w, f: 'profession', v: r.profession, txt: `${w.name} : ${w.profession || '—'} → ${r.profession}` });
+    if (r.contractEnd && r.contractEnd !== w.contractEnd) changes.push({ w, f: 'contractEnd', v: r.contractEnd, txt: `${w.name} : fin de contrat ${fmtDateFR(w.contractEnd) || '—'} → ${fmtDateFR(r.contractEnd)}` });
+  });
+  if (!changes.length) { alert("👌 Aucune spécialité ni fin de contrat à mettre à jour (déjà à jour, ou aucun ouvrier reconnu)."); return; }
+  if (!confirm(`Mettre à jour ${changes.length} spécialité(s) / fin(s) de contrat ?\n\n` +
+    changes.slice(0, 15).map(x => '• ' + x.txt).join('\n') + (changes.length > 15 ? `\n… et ${changes.length - 15} autre(s)` : '') +
     `\n\nAucune autre modification (ni ajout, ni ID, ni nom, ni entreprise).`)) return;
-  changes.forEach(x => { x.w.profession = x.v; });
+  changes.forEach(x => { x.w[x.f] = x.v; });
   pendingImport = null;
   document.getElementById('import-validation-modal').style.display = 'none';
   refreshAllViews();
   syncToFirebase();
-  alert(`✅ ${changes.length} spécialité(s) mise(s) à jour.`);
+  alert(`✅ ${changes.length} spécialité(s) / fin(s) de contrat mise(s) à jour.`);
 };
 
 // --- Lecture du fichier Excel → écran de vérification (aucune modification à ce stade) ---
@@ -4860,7 +4895,7 @@ function importExcelFile(event) {
 
       const type = guessImportType(file.name);
       const parsed = parseImportRows(sheets, type);
-      pendingImport = { fileName: file.name, sheets, type, rows: parsed.rows, ignored: parsed.ignored, profColUsed: parsed.profColUsed,
+      pendingImport = { fileName: file.name, sheets, type, rows: parsed.rows, ignored: parsed.ignored, profColUsed: parsed.profColUsed, endColUsed: parsed.endColUsed,
                         plan: buildImportPlan(parsed.rows, type) };
       renderImportPreview();
       document.getElementById('import-validation-modal').style.display = 'flex';
@@ -6466,10 +6501,7 @@ function cmpDetectColumns() {
   let id = find(c => c.includes('COMET') || c.includes('NEOAXESS'));
   if (id < 0) id = find(c => c === 'ID' || c === 'NO.' || c === 'N°' || c.includes('EMPLOYEE ID'));
   // Fin de contrat : la colonne la plus à jour d'abord ; « END DATE » seul seulement si rien d'autre
-  const ends = [];
-  const addEnds = keys => keys.forEach(k => head.forEach((c, i) => { if (c.includes(k) && !ends.includes(i) && !c.includes('SCOPE')) ends.push(i); }));
-  addEnds(['ESTIMATED END DATE CONTRACT', 'NEW CONTRACT END', 'CONTRACT END', 'DATE FIN', 'FIN CONTRAT', 'FIN DE CONTRAT']);
-  if (!ends.length) addEnds(['END DATE']);
+  const ends = contractEndCols(head);
   cmpFile.map = {
     id,
     name1: surname >= 0 ? surname : anyName,
