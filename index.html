@@ -302,6 +302,15 @@
   .plan-notes textarea:disabled { background: #f8fafc; color: #0f172a; }
   .plan-skill { display: inline-block; font-size: 9px; background: #fef3c7; color: #92400e; border-radius: 4px; padding: 0 4px; margin-left: 3px; font-weight: 600; }
   .plan-filter { font-size: 12px; padding: 5px 6px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; max-width: 190px; }
+  .plan-ms { position: relative; font-size: 12px; }
+  .plan-ms > summary { list-style: none; cursor: pointer; padding: 5px 22px 5px 6px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; max-width: 190px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; user-select: none; }
+  .plan-ms > summary::-webkit-details-marker { display: none; }
+  .plan-ms > summary::after { content: '▾'; position: absolute; right: 7px; top: 4px; color: #64748b; }
+  .plan-ms.on > summary { border-color: #2563eb; background: #eff6ff; color: #1d4ed8; font-weight: 700; }
+  .plan-ms-list { position: absolute; z-index: 60; top: calc(100% + 3px); left: 0; min-width: 220px; max-width: 320px; max-height: 320px; overflow-y: auto; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 8px 22px rgba(15,23,42,0.18); padding: 4px; }
+  .plan-ms-list label { display: flex; gap: 6px; align-items: center; padding: 4px 6px; border-radius: 5px; cursor: pointer; white-space: nowrap; }
+  .plan-ms-list label:hover { background: #f1f5f9; }
+  .plan-ms-list .plan-ms-all { border-bottom: 1px solid #e2e8f0; margin-bottom: 3px; font-weight: 700; color: #475569; }
   .worker-tip { position: fixed; z-index: 9999; background: #0f172a; color: #fff; font-size: 12px; line-height: 1.45; padding: 8px 10px; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.25); pointer-events: none; max-width: 280px; display: none; }
   .worker-tip b { color: #fde68a; }
   .worker-tip .tip-name { font-weight: 800; margin-bottom: 3px; }
@@ -4942,12 +4951,13 @@ let planMode = 'days';    // 'days' (un mois, jour par jour), 'weeks' (13 semain
 const PLAN_WEEKS = 13;
 let planBrush = '1';      // valeur appliquée au clic : '1', 'h', 'q', 'z' ou '-' (effacer)
 let planSearch = '';
-let planCat = '';         // filtre domaine des Timesheets ('' = tous)
+let planCat = [];         // filtre domaines des Timesheets (choix multiple, [] = tous)
 let planTs = '';          // filtre Timesheet (ID de carte, '' = toutes)
 let planSkill = '';       // filtre compétence ('' = toutes)
-let planSpec = '';        // filtre spécialité ('' = toutes)
-let planSup = '';         // filtre superviseur des Timesheets ('' = tous)
-let planComp = '';        // filtre entreprise de l'ouvrier ('' = toutes)
+let planSpec = [];        // filtre spécialités (choix multiple, [] = toutes)
+let planSup = [];         // filtre superviseurs des Timesheets (choix multiple, [] = tous)
+let planMsOpen = '';      // liste à choix multiple restée ouverte entre deux rendus
+let planComp = [];        // filtre entreprises de l'ouvrier (choix multiple, [] = toutes)
 window.planPainting = false;
 let planPaintCode = null; // valeur réellement appliquée pendant un glisser
 let planPaintUndo = false; // effacement par re-clic : un 1 donné par un Scope devient 0
@@ -5393,13 +5403,13 @@ function planGroups() {
       cat: x ? x.card.category || '' : r.cat || (cardsData.find(c => c.id === r.cardId) || {}).category || '' };
     if (q && ![row.name, k, row.profession, row.skills].some(v => String(v || '').toUpperCase().includes(q))) return;
     if (skillU && !skillList(row.skills).some(sk => sk.toUpperCase() === skillU)) return;
-    if (planSpec && String(row.profession).toUpperCase() !== planSpec) return;
-    if (planComp && String(row.company || '').trim().toUpperCase() !== planComp) return;
+    if (planSpec.length && !planSpec.includes(String(row.profession).trim().toUpperCase())) return;
+    if (planComp.length && !planComp.includes(String(row.company || '').trim().toUpperCase())) return;
     // Filtres domaine / Timesheet : l'ouvrier doit apparaître sur au moins une Timesheet correspondante
     // (ouvrier hors Timesheets actuelles : sa Timesheet de l'import)
-    if (planCat || planTs || planSup) {
+    if (planCat.length || planTs || planSup.length) {
       const where = cats.get(k) || (r.cardId || r.cat || r.sup ? [{ id: r.cardId || '', cat: r.cat || (cardsData.find(c => c.id === r.cardId) || {}).category || '', sup: planSupKey(r.sup) }] : []);
-      if (!where.some(t => (!planCat || t.cat === planCat) && (!planTs || t.id === planTs) && (!planSup || t.sup === planSup))) return;
+      if (!where.some(t => (!planCat.length || planCat.includes(t.cat)) && (!planTs || t.id === planTs) && (!planSup.length || planSup.includes(t.sup)))) return;
     }
     const gid = x ? 'c:' + x.card.id : 'o:' + (r.cardId || r.tsNo || r.sup || '');
     if (!groups.has(gid)) {
@@ -5444,34 +5454,39 @@ function planFiltersHtml() {
   const opt = (v, label, cur) => `<option value="${escapeHtml(v)}" ${v === cur ? 'selected' : ''}>${escapeHtml(label)}</option>`;
   const sups = [...new Set(cardsData.map(c => planSupKey(c.name)).concat((planningRoster || []).map(r => planSupKey(r.sup))).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b));
-  if (planSup && !sups.includes(planSup)) sups.push(planSup);
-  const cards = sortCardsByTs(cardsData).filter(c => (!planCat || c.category === planCat) && (!planSup || planSupKey(c.name) === planSup));
+  planSup.forEach(v => { if (!sups.includes(v)) sups.push(v); });
+  const cards = sortCardsByTs(cardsData).filter(c => (!planCat.length || planCat.includes(c.category)) && (!planSup.length || planSup.includes(planSupKey(c.name))));
   if (planTs && !cards.some(c => c.id === planTs)) planTs = '';
   const skills = planAllSkills();
   if (planSkill && !skills.some(sk => sk.toUpperCase() === planSkill.toUpperCase())) skills.push(planSkill);
   const specs = [...new Set([...planLiveMap().values()].map(x => x.w.profession).concat((planningRoster || []).map(r => r.profession))
     .map(v => String(v || '').trim().toUpperCase()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  if (planSpec && !specs.includes(planSpec)) specs.push(planSpec);
+  planSpec.forEach(v => { if (!specs.includes(v)) specs.push(v); });
   const tsLabel = c => [c.timesheetNo ? 'TS ' + c.timesheetNo : '', c.timesheetName || '', c.name ? '(' + c.name + ')' : ''].filter(Boolean).join(' ') || 'Sans N° TS';
   const comps = [...new Set(siteCompanies.concat([...planLiveMap().values()].map(x => x.company), (planningRoster || []).map(r => r.company))
     .map(v => String(v || '').trim().toUpperCase()).filter(Boolean))];
-  if (planComp && !comps.includes(planComp)) comps.push(planComp);
-  const active = planCat || planTs || planSkill || planSpec || planSup || planComp;
-  return `<select class="plan-filter" title="Ne montrer que les ouvriers présents sur les Timesheets de ce domaine" onchange="setPlanFilter('cat', this.value)">
-      ${opt('', '🗂️ Tous les domaines', planCat)}${CATEGORY_INFO.map(c => opt(c.id, c.name, planCat)).join('')}
-    </select>
-    <select class="plan-filter" title="Ne montrer que les Timesheets de ce superviseur" onchange="setPlanFilter('sup', this.value)">
-      ${opt('', '👷 Tous les superviseurs', planSup)}${sups.map(sp => opt(sp, sp, planSup)).join('')}
-    </select>
+  planComp.forEach(v => { if (!comps.includes(v)) comps.push(v); });
+  const active = planCat.length || planTs || planSkill || planSpec.length || planSup.length || planComp.length;
+  // Liste déroulante à cases à cocher (plusieurs valeurs à la fois)
+  const multi = (kind, sel, items, allLabel, icon, title) => {
+    const names = items.filter(it => sel.includes(it.v)).map(it => it.label);
+    const sum = !names.length ? allLabel : names.length === 1 ? icon + ' ' + names[0] : `${icon} ${names.length} sélectionnés`;
+    return `<details class="plan-ms${names.length ? ' on' : ''}" data-ms="${kind}" ${planMsOpen === kind ? 'open' : ''} ontoggle="planMsToggle(this)">
+      <summary title="${escapeHtml(title + (names.length ? ' — ' + names.join(', ') : ''))}">${escapeHtml(sum)}</summary>
+      <div class="plan-ms-list">
+        <label class="plan-ms-all"><input type="checkbox" ${!sel.length ? 'checked' : ''} onchange="setPlanFilter('${kind}', [])"> ${escapeHtml(allLabel)}</label>
+        ${items.map(it => `<label><input type="checkbox" value="${escapeHtml(it.v)}" ${sel.includes(it.v) ? 'checked' : ''} onchange="togglePlanFilter('${kind}', this.value, this.checked)"> ${escapeHtml(it.label)}</label>`).join('')}
+      </div>
+    </details>`;
+  };
+  const asItems = arr => arr.map(v => ({ v, label: v }));
+  return `${multi('cat', planCat, CATEGORY_INFO.map(c => ({ v: c.id, label: c.name })), '🗂️ Tous les domaines', '🗂️', 'Ne montrer que les ouvriers présents sur les Timesheets de ces domaines')}
+    ${multi('sup', planSup, asItems(sups), '👷 Tous les superviseurs', '👷', 'Ne montrer que les Timesheets de ces superviseurs')}
     <select class="plan-filter" title="Ne montrer que les ouvriers présents sur cette Timesheet" onchange="setPlanFilter('ts', this.value)">
       ${opt('', '📋 Toutes les Timesheets', planTs)}${cards.map(c => opt(c.id, tsLabel(c), planTs)).join('')}
     </select>
-    <select class="plan-filter" title="Ne montrer que les ouvriers de cette entreprise" onchange="setPlanFilter('comp', this.value)">
-      ${opt('', '🏢 Toutes entreprises', planComp)}${comps.map(c => opt(c, c, planComp)).join('')}
-    </select>
-    <select class="plan-filter" title="Ne montrer que les ouvriers de cette spécialité" onchange="setPlanFilter('spec', this.value)">
-      ${opt('', '🛠️ Toutes spécialités', planSpec)}${specs.map(sp => opt(sp, sp, planSpec)).join('')}
-    </select>
+    ${multi('comp', planComp, asItems(comps), '🏢 Toutes entreprises', '🏢', 'Ne montrer que les ouvriers de ces entreprises')}
+    ${multi('spec', planSpec, asItems(specs), '🛠️ Toutes spécialités', '🛠️', 'Ne montrer que les ouvriers de ces spécialités')}
     <select class="plan-filter" title="Ne montrer que les ouvriers ayant cette compétence" onchange="setPlanFilter('skill', this.value)">
       ${opt('', '🎓 Toutes compétences', planSkill)}${skills.map(sk => opt(sk, sk, planSkill)).join('')}
     </select>
@@ -5484,9 +5499,28 @@ window.setPlanFilter = function(kind, v) {
   else if (kind === 'spec') planSpec = v;
   else if (kind === 'sup') { planSup = v; planTs = ''; }
   else if (kind === 'comp') planComp = v;
-  else { planCat = ''; planTs = ''; planSkill = ''; planSpec = ''; planSup = ''; planComp = ''; }
+  else { planCat = []; planTs = ''; planSkill = ''; planSpec = []; planSup = []; planComp = []; planMsOpen = ''; }
   renderPlanning(true);
 };
+// Coche / décoche une valeur d'un filtre à choix multiple (domaines, superviseurs, entreprises, spécialités)
+window.togglePlanFilter = function(kind, v, on) {
+  const cur = { cat: planCat, sup: planSup, comp: planComp, spec: planSpec }[kind] || [];
+  const next = cur.filter(x => x !== v).concat(on ? [v] : []);
+  planMsOpen = kind;
+  setPlanFilter(kind, next);
+};
+// Une seule liste ouverte à la fois ; l'état ouvert survit au re-rendu
+window.planMsToggle = function(el) {
+  if (el.open) {
+    planMsOpen = el.dataset.ms;
+    document.querySelectorAll('details.plan-ms[open]').forEach(d => { if (d !== el) d.open = false; });
+  } else if (planMsOpen === el.dataset.ms) planMsOpen = '';
+};
+document.addEventListener('click', e => {
+  if (e.target.closest && e.target.closest('details.plan-ms')) return;
+  document.querySelectorAll('details.plan-ms[open]').forEach(d => { d.open = false; });
+  planMsOpen = '';
+});
 
 // Compétences d'un ouvrier modifiées depuis le planning (toutes ses fiches + la liste figée)
 // Hypothèses : générales (case en haut du Planning fin) et par ouvrier (💬)
@@ -5672,7 +5706,7 @@ function renderPlanning(force) {
       </tr>`;
     });
   });
-  if (!body) body = `<tr><td class="plan-name" colspan="${nameSpan}" style="padding:12px;">${planSearch || planCat || planTs || planSkill || planSpec || planSup || planComp ? 'Aucun ouvrier ne correspond à la recherche / aux filtres.' : 'Aucun ouvrier dans le planning.'}</td></tr>`;
+  if (!body) body = `<tr><td class="plan-name" colspan="${nameSpan}" style="padding:12px;">${planSearch || planCat.length || planTs || planSkill || planSpec.length || planSup.length || planComp.length ? 'Aucun ouvrier ne correspond à la recherche / aux filtres.' : 'Aucun ouvrier dans le planning.'}</td></tr>`;
 
   const wrap = document.getElementById('plan-table-wrap');
   const scroll = [wrap.scrollLeft, wrap.scrollTop];
@@ -6238,7 +6272,7 @@ window.exportPlanningVersion = async function(id) {
       planningRoster = Array.isArray(data.roster) ? data.roster : [];
       workerPlanning = data.planning || {};
       planningScopes = data.scopes || {};
-      planSearch = ''; planCat = ''; planTs = ''; planSkill = ''; planSpec = ''; planSup = ''; planComp = '';
+      planSearch = ''; planCat = []; planTs = ''; planSkill = ''; planSpec = []; planSup = []; planComp = [];
       planWriteExcel(planExcelRows(planGroups(), planMonth), `Planning_Version_${id.replace('plan_', '')}.xlsx`);
     } finally {
       [planningRoster, workerPlanning, planningScopes, planSearch, planCat, planTs, planSkill, planSpec, planSup, planComp] = saved;
