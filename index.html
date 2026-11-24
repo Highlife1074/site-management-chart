@@ -2976,9 +2976,14 @@ window.renderTreeOrgChart = function() {
   };
   const COMPANY_ORDER = ['skybuilding-branch', 'skybuilding-greece', 'dss', 'euroasia', 'bik', 'other'];
 
+  // Timesheets dont le manager est la personne du haut de l'arbre (ex. DENIS NETO, DENIS NETO GOMES) :
+  // rattachées directement à la case du haut, pas affichées comme un 2e manager du même nom
+  const topKey = String(treeData.name).trim().replace(/\s+/g, ' ').toUpperCase();
+  const isTop = (m) => m === topKey || m.startsWith(topKey + ' ');
   ensureCardIds();
   cardsData.forEach(c => {
-    let mgr = String(c.manager || '').trim().toUpperCase() || 'NO MANAGER';
+    let mgr = String(c.manager || '').trim().replace(/\s+/g, ' ').toUpperCase() || 'NO MANAGER';
+    if (isTop(mgr)) mgr = topKey; // DENIS NETO / DENIS NETO GOMES = une seule équipe directe
     if(!treeData.children[mgr]) treeData.children[mgr] = { name: mgr, children: [], totalWorkers: 0 };
     const cTotal = cardCount(c).total;
     treeData.children[mgr].children.push(c);
@@ -2988,9 +2993,11 @@ window.renderTreeOrgChart = function() {
     treeData.total += cTotal;
   });
   const printing = !!window._treePrinting;
-  const mgrNames = Object.keys(treeData.children).sort();
+  const mgrNames = Object.keys(treeData.children).sort((a, b) => (isTop(b) - isTop(a)) || a.localeCompare(b));
   const shownMgrs = printing ? mgrNames.filter(m => !treeHidden.mgrs.has(m)) : mgrNames;
   window._treeMgrNames = mgrNames;
+  const directWkrs = shownMgrs.filter(m => isTop(m) && !treeHidden.mgrs.has(m)).reduce((n, m) => n + treeData.children[m].totalWorkers, 0);
+  const hasDirect = shownMgrs.some(isTop);
   const mgrEye = (name) => treeEyeBtn('mgr', mgrNames.indexOf(name), treeHidden.mgrs.has(name), 'ce manager et son équipe');
   const cardEye = (c) => treeEyeBtn('card', c.id, treeHidden.cards.has(c.id), 'cette Timesheet');
 
@@ -3017,10 +3024,11 @@ window.renderTreeOrgChart = function() {
         <div class="node-title">${formatName(treeData.name)}</div>
         <div class="node-sub">${escapeHtml(treeData.role)}</div>
         <div style="margin-top:6px; font-size:11px; font-weight:800; color:#0369a1; background:#e0f2fe; border-radius:12px; padding:2px 8px;">${treeData.total} Worker(s)</div>
+        ${hasDirect ? `<div style="margin-top:4px; font-size:10px; color:#0369a1;">dont ${directWkrs} en direct (See Details ⬇)</div>` : ''}
      </div>
      <ul>`;
      
-  shownMgrs.forEach(mgrName => {
+  shownMgrs.filter(m => !isTop(m)).forEach(mgrName => {
      let mgrNode = treeData.children[mgrName];
      html += `<li class="${treeHidden.mgrs.has(mgrName) ? 'tree-hidden' : ''}"><div class="tree-node mgr-node">${mgrEye(mgrName)}
         <div class="node-title">${formatName(mgrNode.name)}</div>
@@ -3037,15 +3045,16 @@ window.renderTreeOrgChart = function() {
   shownMgrs.forEach(mgrName => {
     let mgrNode = treeData.children[mgrName];
     const mgrHidden = treeHidden.mgrs.has(mgrName);
+    const top = isTop(mgrName);
     
     html += `<div class="${mgrHidden ? 'tree-hidden-section' : ''}" style="width:100%; border-top: 2px dashed #cbd5e1; position:relative; margin-top:20px; padding-top:20px;">
-                <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#f8fafc; padding:0 10px; color:#94a3b8; font-weight:800; font-size:14px; text-transform:uppercase;">⬇ TEAM DETAILS : ${escapeHtml(mgrNode.name)} ⬇</div>
+                <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#f8fafc; padding:0 10px; color:#94a3b8; font-weight:800; font-size:14px; text-transform:uppercase;">⬇ TEAM DETAILS : ${escapeHtml(top ? treeData.name + ' (direct)' : mgrNode.name)} ⬇</div>
              `;
 
     html += `<div class="tree"><ul><li>
-      <div class="tree-node mgr-node">${mgrEye(mgrName)}
-        <div class="node-title">${formatName(mgrNode.name)}</div>
-        <div class="node-sub">Manager</div>
+      <div class="tree-node ${top ? 'top-node' : 'mgr-node'}">${mgrEye(mgrName)}
+        <div class="node-title">${formatName(top ? treeData.name : mgrNode.name)}</div>
+        <div class="node-sub">${top ? escapeHtml(treeData.role) : 'Manager'}</div>
         <div style="margin-top:6px; font-size:11px; font-weight:800; color:#0284c7; background:#bae6fd; border-radius:12px; padding:2px 8px;">${mgrNode.totalWorkers} Wkrs</div>
       </div>
       <ul>`;
