@@ -348,6 +348,13 @@
   .tree-node.sup-node { background: #ffffff; border-color: #94a3b8; border-top: 3px solid #2563eb; }
   .tree-node.f-node { background: #f8fafc; border-style: dashed; }
   .tree-node.w-summary-node { background: white; border-radius: 12px; border-color: #e2e8f0; min-width: auto; }
+  /* Filtre de l'arbre : bouton œil + éléments masqués (grisés à l'écran, absents à l'impression) */
+  .tree-eye { position: absolute; top: -9px; right: -9px; width: 22px; height: 22px; border-radius: 50%; border: 1px solid #cbd5e1; background: white; cursor: pointer; font-size: 12px; line-height: 20px; padding: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.12); z-index: 2; }
+  .tree-eye:hover { background: #eff6ff; border-color: #2563eb; }
+  .tree-eye.off { background: #fee2e2; border-color: #f87171; }
+  .tree-hidden .tree-node, .tree-hidden-section .tree-node { background: #f1f5f9 !important; border-style: dashed !important; box-shadow: none; }
+  .tree-hidden .tree-node > :not(.tree-eye), .tree-hidden-section .tree-node > :not(.tree-eye) { opacity: 0.35; filter: grayscale(1); }
+  .tree-filter-note { font-size: 11px; font-weight: 700; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; border-radius: 6px; padding: 4px 10px; }
 
   .source-select { appearance: none; background: #e0f2fe; color: #0284c7; font-size: 10px; font-weight: 800; border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer; outline: none; }
   .source-select.dss { background: #fef3c7; color: #d97706; }
@@ -520,6 +527,7 @@
     body.print-mode-tree .top-bar, body.print-mode-tree #planning-view, body.print-mode-tree #compare-view, body.print-mode-tree .dashboard-container, body.print-mode-tree #orgchart-view, body.print-mode-tree #workers-drawer, body.print-mode-tree .modal-overlay, body.print-mode-tree #fab-move, body.print-mode-tree #fab-drawer { display: none !important; }
     body.print-mode-tree #tree-view { display: block !important; width: 100%; overflow: visible !important; background: white; }
     body.print-mode-tree .btn-print-tree { display: none !important; }
+    body.print-mode-tree .tree-eye, body.print-mode-tree .tree-hidden, body.print-mode-tree .tree-hidden-section, body.print-mode-tree .tree-screen-only { display: none !important; }
   }
 
 </style>
@@ -2838,9 +2846,42 @@ function printTimesheetCards(cardsToPrint, dateInput) {
    ========================================================== */
 
 window.printTree = function() {
+  // Rendu sans les managers / Timesheets masqués (œil), pour garder des traits d'arbre propres
+  window._treePrinting = true;
+  renderTreeOrgChart();
   document.body.classList.add('print-mode-tree');
   window.print();
-  setTimeout(() => { document.body.classList.remove('print-mode-tree'); }, 500);
+  setTimeout(() => {
+    document.body.classList.remove('print-mode-tree');
+    window._treePrinting = false;
+    renderTreeOrgChart();
+  }, 500);
+};
+
+// FILTRE DE L'ARBRE (œil) : managers / Timesheets masqués, mémorisés sur ce poste.
+// Masqués = grisés à l'écran (pour pouvoir les réafficher), absents de l'impression et des totaux.
+const treeHidden = (() => {
+  try {
+    const v = JSON.parse(localStorage.getItem('tree_hidden') || 'null') || {};
+    return { mgrs: new Set(v.mgrs || []), cards: new Set(v.cards || []) };
+  } catch (e) { return { mgrs: new Set(), cards: new Set() }; }
+})();
+function saveTreeHidden() {
+  try { localStorage.setItem('tree_hidden', JSON.stringify({ mgrs: [...treeHidden.mgrs], cards: [...treeHidden.cards] })); } catch (e) {}
+}
+window.toggleTreeMgr = function(i) {
+  const name = (window._treeMgrNames || [])[i];
+  if (name === undefined) return;
+  treeHidden.mgrs.has(name) ? treeHidden.mgrs.delete(name) : treeHidden.mgrs.add(name);
+  saveTreeHidden(); renderTreeOrgChart();
+};
+window.toggleTreeCard = function(id) {
+  treeHidden.cards.has(id) ? treeHidden.cards.delete(id) : treeHidden.cards.add(id);
+  saveTreeHidden(); renderTreeOrgChart();
+};
+window.showAllTree = function() {
+  treeHidden.mgrs.clear(); treeHidden.cards.clear();
+  saveTreeHidden(); renderTreeOrgChart();
 };
 
 // ARBRE HIERARCHIQUE
@@ -2855,14 +2896,30 @@ window.renderTreeOrgChart = function() {
   };
   const COMPANY_ORDER = ['skybuilding-branch', 'skybuilding-greece', 'dss', 'euroasia', 'bik', 'other'];
 
+  ensureCardIds();
   cardsData.forEach(c => {
     let mgr = String(c.manager || '').trim().toUpperCase() || 'NO MANAGER';
     if(!treeData.children[mgr]) treeData.children[mgr] = { name: mgr, children: [], totalWorkers: 0 };
     const cTotal = cardCount(c).total;
     treeData.children[mgr].children.push(c);
+    // Totaux = équipes visibles uniquement (ce qui sera imprimé)
+    if (treeHidden.mgrs.has(mgr) || treeHidden.cards.has(c.id)) return;
     treeData.children[mgr].totalWorkers += cTotal;
     treeData.total += cTotal;
   });
+  const printing = !!window._treePrinting;
+  const mgrNames = Object.keys(treeData.children).sort();
+  const shownMgrs = printing ? mgrNames.filter(m => !treeHidden.mgrs.has(m)) : mgrNames;
+  window._treeMgrNames = mgrNames;
+  const mgrEye = (name) => {
+    const hidden = treeHidden.mgrs.has(name);
+    return `<button class="tree-eye${hidden ? ' off' : ''}" onclick="toggleTreeMgr(${mgrNames.indexOf(name)})" title="${hidden ? 'Réafficher ce manager et son équipe' : 'Masquer ce manager et son équipe (impression)'}">${hidden ? '🙈' : '👁'}</button>`;
+  };
+  const cardEye = (c) => {
+    const hidden = treeHidden.cards.has(c.id);
+    return `<button class="tree-eye${hidden ? ' off' : ''}" onclick="toggleTreeCard('${escapeHtml(c.id)}')" title="${hidden ? 'Réafficher cette Timesheet' : 'Masquer cette Timesheet (impression)'}">${hidden ? '🙈' : '👁'}</button>`;
+  };
+  const nbHidden = treeHidden.mgrs.size + cardsData.filter(c => treeHidden.cards.has(c.id) && !treeHidden.mgrs.has(String(c.manager || '').trim().toUpperCase() || 'NO MANAGER')).length;
 
   let html = `
     <div style="display:flex; justify-content:center; align-items:center; gap:16px; margin-bottom: 30px; padding: 10px 20px; background: white; border: 1px solid #cbd5e1; border-radius: 8px; display: inline-flex; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
@@ -2877,6 +2934,8 @@ window.renderTreeOrgChart = function() {
         </div>
         <div style="width:1px; height:20px; background:#e2e8f0; margin:0 8px;"></div>
         <button class="btn btn-black btn-print-tree" onclick="printTree()">🖨️ Print Tree</button>
+        ${nbHidden > 0 ? `<span class="tree-filter-note tree-screen-only">🙈 ${nbHidden} élément(s) masqué(s) à l'impression</span>
+        <button class="btn btn-outline tree-screen-only" onclick="showAllTree()">👁 Tout afficher</button>` : `<span class="tree-screen-only" style="font-size:11px; color:#64748b;">👁 = masquer un manager / une Timesheet</span>`}
     </div>
   `;
 
@@ -2889,9 +2948,9 @@ window.renderTreeOrgChart = function() {
      </div>
      <ul>`;
      
-  Object.keys(treeData.children).sort().forEach(mgrName => {
+  shownMgrs.forEach(mgrName => {
      let mgrNode = treeData.children[mgrName];
-     html += `<li><div class="tree-node mgr-node">
+     html += `<li class="${treeHidden.mgrs.has(mgrName) ? 'tree-hidden' : ''}"><div class="tree-node mgr-node">${mgrEye(mgrName)}
         <div class="node-title">${formatName(mgrNode.name)}</div>
         <div class="node-sub">Manager</div>
         <div style="margin-top:6px; font-size:11px; font-weight:800; color:#0284c7; background:#bae6fd; border-radius:12px; padding:2px 8px;">${mgrNode.totalWorkers} Wkrs</div>
@@ -2903,28 +2962,29 @@ window.renderTreeOrgChart = function() {
   // 2. SOUS-ARBRES DES MANAGERS EMPILÉS VERTICALEMENT
   html += `<div style="display:flex; flex-direction:column; gap: 40px; align-items:center; width:100%;">`;
   
-  Object.keys(treeData.children).sort().forEach(mgrName => {
+  shownMgrs.forEach(mgrName => {
     let mgrNode = treeData.children[mgrName];
+    const mgrHidden = treeHidden.mgrs.has(mgrName);
     
-    html += `<div style="width:100%; border-top: 2px dashed #cbd5e1; position:relative; margin-top:20px; padding-top:20px;">
+    html += `<div class="${mgrHidden ? 'tree-hidden-section' : ''}" style="width:100%; border-top: 2px dashed #cbd5e1; position:relative; margin-top:20px; padding-top:20px;">
                 <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#f8fafc; padding:0 10px; color:#94a3b8; font-weight:800; font-size:14px; text-transform:uppercase;">⬇ TEAM DETAILS : ${escapeHtml(mgrNode.name)} ⬇</div>
              `;
 
     html += `<div class="tree"><ul><li>
-      <div class="tree-node mgr-node">
+      <div class="tree-node mgr-node">${mgrEye(mgrName)}
         <div class="node-title">${formatName(mgrNode.name)}</div>
         <div class="node-sub">Manager</div>
         <div style="margin-top:6px; font-size:11px; font-weight:800; color:#0284c7; background:#bae6fd; border-radius:12px; padding:2px 8px;">${mgrNode.totalWorkers} Wkrs</div>
       </div>
       <ul>`;
 
-    mgrNode.children.forEach(sup => {
+    mgrNode.children.filter(sup => !printing || !treeHidden.cards.has(sup.id)).forEach(sup => {
       const supDisplayName = String(sup.name || 'Unknown');
       const supRole = String(sup.supervisorRole || 'SUPERVISOR').toUpperCase();
       const tsSub = [sup.timesheetNo, sup.timesheetName].map(x => String(x || '').trim()).filter(x => x !== '').join(' - ');
       const displaySub = `<span style="color:#64748b;">${escapeHtml(supRole)}</span>` + (tsSub ? `<br><span style="color:#2563eb;">${escapeHtml(tsSub)}</span>` : '');
 
-      html += `<li><div class="tree-node sup-node">
+      html += `<li class="${!mgrHidden && treeHidden.cards.has(sup.id) ? 'tree-hidden' : ''}"><div class="tree-node sup-node">${mgrHidden ? '' : cardEye(sup)}
          <div class="node-title">${formatName(supDisplayName)}</div>
          <div class="node-sub">${displaySub}</div>
       </div><ul>`;
