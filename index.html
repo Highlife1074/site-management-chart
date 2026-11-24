@@ -794,6 +794,16 @@
        </div>
     </div>
     <div id="supervisors-list" style="margin-top:12px; display:flex; flex-direction:column; gap:8px; max-height:200px; overflow-y:auto;"></div>
+    <div style="border-top:1px solid #e2e8f0; padding-top:12px; display:flex; flex-direction:column; gap:8px;">
+      <div style="font-size:13px; font-weight:800; color:#0f172a;">🔀 Fusionner deux noms</div>
+      <p style="font-size:11px; color:#64748b; margin:0; line-height:1.4;">Même personne écrite de deux façons (ex. DENIS NETO / DENIS NETO GOMES) : le premier nom est remplacé par le second partout, comme superviseur et comme manager.</p>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <select id="merge-from" class="modal-select" style="padding:6px 8px; font-size:12px;"></select>
+        <span style="font-weight:800; color:#64748b;">→</span>
+        <select id="merge-to" class="modal-select" style="padding:6px 8px; font-size:12px;"></select>
+      </div>
+      <button class="btn btn-black" onclick="mergeNamesFromModal()">🔀 Fusionner</button>
+    </div>
     <div class="modal-actions" style="margin-top:16px;">
       <button class="btn btn-outline" onclick="closeSupervisorsModal()">Fermer</button>
     </div>
@@ -2966,9 +2976,14 @@ window.renderTreeOrgChart = function() {
   };
   const COMPANY_ORDER = ['skybuilding-branch', 'skybuilding-greece', 'dss', 'euroasia', 'bik', 'other'];
 
+  // Timesheets dont le manager est la personne du haut de l'arbre (ex. DENIS NETO, DENIS NETO GOMES) :
+  // rattachées directement à la case du haut, pas affichées comme un 2e manager du même nom
+  const topKey = String(treeData.name).trim().replace(/\s+/g, ' ').toUpperCase();
+  const isTop = (m) => m === topKey || m.startsWith(topKey + ' ');
   ensureCardIds();
   cardsData.forEach(c => {
-    let mgr = String(c.manager || '').trim().toUpperCase() || 'NO MANAGER';
+    let mgr = String(c.manager || '').trim().replace(/\s+/g, ' ').toUpperCase() || 'NO MANAGER';
+    if (isTop(mgr)) mgr = topKey; // DENIS NETO / DENIS NETO GOMES = une seule équipe directe
     if(!treeData.children[mgr]) treeData.children[mgr] = { name: mgr, children: [], totalWorkers: 0 };
     const cTotal = cardCount(c).total;
     treeData.children[mgr].children.push(c);
@@ -2978,9 +2993,11 @@ window.renderTreeOrgChart = function() {
     treeData.total += cTotal;
   });
   const printing = !!window._treePrinting;
-  const mgrNames = Object.keys(treeData.children).sort();
+  const mgrNames = Object.keys(treeData.children).sort((a, b) => (isTop(b) - isTop(a)) || a.localeCompare(b));
   const shownMgrs = printing ? mgrNames.filter(m => !treeHidden.mgrs.has(m)) : mgrNames;
   window._treeMgrNames = mgrNames;
+  const directWkrs = shownMgrs.filter(m => isTop(m) && !treeHidden.mgrs.has(m)).reduce((n, m) => n + treeData.children[m].totalWorkers, 0);
+  const hasDirect = shownMgrs.some(isTop);
   const mgrEye = (name) => treeEyeBtn('mgr', mgrNames.indexOf(name), treeHidden.mgrs.has(name), 'ce manager et son équipe');
   const cardEye = (c) => treeEyeBtn('card', c.id, treeHidden.cards.has(c.id), 'cette Timesheet');
 
@@ -3007,10 +3024,11 @@ window.renderTreeOrgChart = function() {
         <div class="node-title">${formatName(treeData.name)}</div>
         <div class="node-sub">${escapeHtml(treeData.role)}</div>
         <div style="margin-top:6px; font-size:11px; font-weight:800; color:#0369a1; background:#e0f2fe; border-radius:12px; padding:2px 8px;">${treeData.total} Worker(s)</div>
+        ${hasDirect ? `<div style="margin-top:4px; font-size:10px; color:#0369a1;">dont ${directWkrs} en direct (See Details ⬇)</div>` : ''}
      </div>
      <ul>`;
      
-  shownMgrs.forEach(mgrName => {
+  shownMgrs.filter(m => !isTop(m)).forEach(mgrName => {
      let mgrNode = treeData.children[mgrName];
      html += `<li class="${treeHidden.mgrs.has(mgrName) ? 'tree-hidden' : ''}"><div class="tree-node mgr-node">${mgrEye(mgrName)}
         <div class="node-title">${formatName(mgrNode.name)}</div>
@@ -3027,15 +3045,16 @@ window.renderTreeOrgChart = function() {
   shownMgrs.forEach(mgrName => {
     let mgrNode = treeData.children[mgrName];
     const mgrHidden = treeHidden.mgrs.has(mgrName);
+    const top = isTop(mgrName);
     
     html += `<div class="${mgrHidden ? 'tree-hidden-section' : ''}" style="width:100%; border-top: 2px dashed #cbd5e1; position:relative; margin-top:20px; padding-top:20px;">
-                <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#f8fafc; padding:0 10px; color:#94a3b8; font-weight:800; font-size:14px; text-transform:uppercase;">⬇ TEAM DETAILS : ${escapeHtml(mgrNode.name)} ⬇</div>
+                <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#f8fafc; padding:0 10px; color:#94a3b8; font-weight:800; font-size:14px; text-transform:uppercase;">⬇ TEAM DETAILS : ${escapeHtml(top ? treeData.name + ' (direct)' : mgrNode.name)} ⬇</div>
              `;
 
     html += `<div class="tree"><ul><li>
-      <div class="tree-node mgr-node">${mgrEye(mgrName)}
-        <div class="node-title">${formatName(mgrNode.name)}</div>
-        <div class="node-sub">Manager</div>
+      <div class="tree-node ${top ? 'top-node' : 'mgr-node'}">${mgrEye(mgrName)}
+        <div class="node-title">${formatName(top ? treeData.name : mgrNode.name)}</div>
+        <div class="node-sub">${top ? escapeHtml(treeData.role) : 'Manager'}</div>
         <div style="margin-top:6px; font-size:11px; font-weight:800; color:#0284c7; background:#bae6fd; border-radius:12px; padding:2px 8px;">${mgrNode.totalWorkers} Wkrs</div>
       </div>
       <ul>`;
@@ -3197,10 +3216,67 @@ window.renderSupervisorsList = function() {
     </div>
   `).join('');
   
+  populateMergeSelects();
   list.querySelectorAll('input').forEach(inp => {
       inp.addEventListener('focus', function() { this.style.borderColor = '#2563eb'; this.style.background = 'white'; });
       inp.addEventListener('blur', function() { this.style.borderColor = 'transparent'; this.style.background = 'transparent'; });
   });
+};
+
+// --- FUSION DE DEUX NOMS (même personne écrite de deux façons) ---
+const normName = (v) => String(v ?? '').trim().replace(/\s+/g, ' ').toUpperCase();
+
+// Tous les noms connus : liste des superviseurs, superviseurs et managers des Timesheets
+function allPeopleNames() {
+  const set = new Set();
+  siteSupervisors.forEach(sp => { const n = normName(sp.name); if (n) set.add(n); });
+  cardsData.forEach(c => {
+    const n = normName(c.name); if (n && n !== 'NEW TIMESHEET') set.add(n);
+    const m = normName(c.manager); if (m) set.add(m);
+  });
+  return [...set].sort((a, b) => a.localeCompare(b));
+}
+
+function populateMergeSelects() {
+  const names = allPeopleNames();
+  const opts = '<option value="">— choisir —</option>' + names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+  ['merge-from', 'merge-to'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = opts; });
+}
+
+// Remplace le nom « from » par « to » partout (superviseur des Timesheets, manager, liste des superviseurs)
+function mergePeopleNames(from, to) {
+  if (!canEdit()) return false;
+  from = normName(from); to = normName(to);
+  if (!from || !to || from === to) return false;
+  const supCards = cardsData.filter(c => normName(c.name) === from);
+  const mgrCards = cardsData.filter(c => normName(c.manager) === from);
+  if (!confirm(`Fusionner « ${from} » dans « ${to} » ?\n\n` +
+      `• ${supCards.length} Timesheet(s) où il est superviseur\n` +
+      `• ${mgrCards.length} Timesheet(s) où il est manager\n\n` +
+      `« ${from} » sera remplacé par « ${to} » et retiré de la liste des superviseurs.`)) return false;
+
+  supCards.forEach(c => { c.name = to; });
+  mgrCards.forEach(c => { c.manager = to; });
+  const fromSup = siteSupervisors.find(sp => normName(sp.name) === from);
+  siteSupervisors = siteSupervisors.filter(sp => normName(sp.name) !== from);
+  if (fromSup && !siteSupervisors.find(sp => normName(sp.name) === to)) siteSupervisors.push({ name: to, role: fromSup.role || 'SUPERVISOR' });
+  siteSupervisors.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+  // Filtre œil de l'arbre : un manager masqué reste masqué sous son nouveau nom
+  if (typeof treeHidden !== 'undefined' && treeHidden.mgrs.has(from)) { treeHidden.mgrs.delete(from); treeHidden.mgrs.add(to); saveTreeHidden(); }
+
+  renderSupervisorsList();
+  renderCards();
+  refreshOrgViews();
+  syncToFirebase();
+  return true;
+}
+
+window.mergeNamesFromModal = function() {
+  const from = document.getElementById('merge-from').value;
+  const to = document.getElementById('merge-to').value;
+  if (!from || !to) { alert('Choisissez les deux noms.'); return; }
+  if (from === to) { alert('Choisissez deux noms différents.'); return; }
+  mergePeopleNames(from, to);
 };
 
 window.updateSupervisorInDB = function(idx, field, newVal) {
@@ -3213,13 +3289,13 @@ window.updateSupervisorInDB = function(idx, field, newVal) {
   }
   
   if (field === 'name') {
-     if (siteSupervisors.find((s, i) => i !== idx && s.name === val)) {
-        alert("Ce nom de superviseur existe déjà.");
-        renderSupervisorsList();
+     if (siteSupervisors.find((s, i) => i !== idx && normName(s.name) === val)) {
+        // Nom déjà existant : proposer de fusionner les deux
+        if (!mergePeopleNames(oldName, val)) renderSupervisorsList();
         return;
      }
      siteSupervisors[idx].name = val;
-     cardsData.forEach(c => { if (c.name === oldName) c.name = val; });
+     cardsData.forEach(c => { if (normName(c.name) === normName(oldName)) c.name = val; });
   } else if (field === 'role') {
      siteSupervisors[idx].role = val;
      cardsData.forEach(c => { if (c.name === oldName) c.supervisorRole = val; });
