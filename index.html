@@ -354,6 +354,10 @@
   .tree-eye.off { background: #fee2e2; border-color: #f87171; }
   .tree-hidden .tree-node, .tree-hidden-section .tree-node { background: #f1f5f9 !important; border-style: dashed !important; box-shadow: none; }
   .tree-hidden .tree-node > :not(.tree-eye), .tree-hidden-section .tree-node > :not(.tree-eye) { opacity: 0.35; filter: grayscale(1); }
+  .org-sup-card { position: relative; }
+  .org-hidden { background: #f1f5f9 !important; border-style: dashed !important; box-shadow: none !important; }
+  .org-hidden > :not(.tree-eye) { opacity: 0.35; filter: grayscale(1); }
+  .org-toolbar { display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 auto 24px; }
   .tree-filter-note { font-size: 11px; font-weight: 700; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; border-radius: 6px; padding: 4px 10px; }
 
   .source-select { appearance: none; background: #e0f2fe; color: #0284c7; font-size: 10px; font-weight: 800; border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer; outline: none; }
@@ -527,6 +531,8 @@
     body.print-mode-tree .top-bar, body.print-mode-tree #planning-view, body.print-mode-tree #compare-view, body.print-mode-tree .dashboard-container, body.print-mode-tree #orgchart-view, body.print-mode-tree #workers-drawer, body.print-mode-tree .modal-overlay, body.print-mode-tree #fab-move, body.print-mode-tree #fab-drawer { display: none !important; }
     body.print-mode-tree #tree-view { display: block !important; width: 100%; overflow: visible !important; background: white; }
     body.print-mode-tree .btn-print-tree { display: none !important; }
+    body.print-mode-org .top-bar, body.print-mode-org #error-banner, body.print-mode-org #dashboard-view, body.print-mode-org #planning-view, body.print-mode-org #compare-view, body.print-mode-org #tree-view, body.print-mode-org #workers-drawer, body.print-mode-org .modal-overlay, body.print-mode-org #fab-move, body.print-mode-org #fab-drawer { display: none !important; }
+    .tree-eye, .org-hidden, .tree-screen-only, .org-toolbar { display: none !important; }
     body.print-mode-tree .tree-eye, body.print-mode-tree .tree-hidden, body.print-mode-tree .tree-hidden-section, body.print-mode-tree .tree-screen-only { display: none !important; }
   }
 
@@ -2873,15 +2879,39 @@ window.toggleTreeMgr = function(i) {
   const name = (window._treeMgrNames || [])[i];
   if (name === undefined) return;
   treeHidden.mgrs.has(name) ? treeHidden.mgrs.delete(name) : treeHidden.mgrs.add(name);
-  saveTreeHidden(); renderTreeOrgChart();
+  saveTreeHidden(); refreshTeamViews();
 };
 window.toggleTreeCard = function(id) {
   treeHidden.cards.has(id) ? treeHidden.cards.delete(id) : treeHidden.cards.add(id);
-  saveTreeHidden(); renderTreeOrgChart();
+  saveTreeHidden(); refreshTeamViews();
 };
 window.showAllTree = function() {
   treeHidden.mgrs.clear(); treeHidden.cards.clear();
-  saveTreeHidden(); renderTreeOrgChart();
+  saveTreeHidden(); refreshTeamViews();
+};
+// Le filtre (œil) est commun à l'Arbre hiérarchique et à la Vue Équipes
+function refreshTeamViews() {
+  if (currentView === 'orgchart') renderOrgChart(); else renderTreeOrgChart();
+}
+const mgrKey = (c) => String(c.manager || '').trim().toUpperCase() || 'NO MANAGER';
+function treeEyeBtn(kind, key, hidden, what) {
+  const call = kind === 'mgr' ? `toggleTreeMgr(${key})` : `toggleTreeCard('${escapeHtml(key)}')`;
+  return `<button class="tree-eye${hidden ? ' off' : ''}" onclick="${call}" title="${hidden ? 'Réafficher ' + what : 'Masquer ' + what + ' (impression)'}">${hidden ? '🙈' : '👁'}</button>`;
+}
+function treeHiddenCount() {
+  return treeHidden.mgrs.size + cardsData.filter(c => treeHidden.cards.has(c.id) && !treeHidden.mgrs.has(mgrKey(c))).length;
+}
+function treeFilterBar() {
+  const n = treeHiddenCount();
+  return n > 0
+    ? `<span class="tree-filter-note tree-screen-only">🙈 ${n} élément(s) masqué(s) à l'impression</span>
+       <button class="btn btn-outline tree-screen-only" onclick="showAllTree()">👁 Tout afficher</button>`
+    : `<span class="tree-screen-only" style="font-size:11px; color:#64748b;">👁 = masquer un manager / une Timesheet</span>`;
+}
+window.printOrgChart = function() {
+  document.body.classList.add('print-mode-org');
+  window.print();
+  setTimeout(() => { document.body.classList.remove('print-mode-org'); }, 500);
 };
 
 // ARBRE HIERARCHIQUE
@@ -2911,15 +2941,8 @@ window.renderTreeOrgChart = function() {
   const mgrNames = Object.keys(treeData.children).sort();
   const shownMgrs = printing ? mgrNames.filter(m => !treeHidden.mgrs.has(m)) : mgrNames;
   window._treeMgrNames = mgrNames;
-  const mgrEye = (name) => {
-    const hidden = treeHidden.mgrs.has(name);
-    return `<button class="tree-eye${hidden ? ' off' : ''}" onclick="toggleTreeMgr(${mgrNames.indexOf(name)})" title="${hidden ? 'Réafficher ce manager et son équipe' : 'Masquer ce manager et son équipe (impression)'}">${hidden ? '🙈' : '👁'}</button>`;
-  };
-  const cardEye = (c) => {
-    const hidden = treeHidden.cards.has(c.id);
-    return `<button class="tree-eye${hidden ? ' off' : ''}" onclick="toggleTreeCard('${escapeHtml(c.id)}')" title="${hidden ? 'Réafficher cette Timesheet' : 'Masquer cette Timesheet (impression)'}">${hidden ? '🙈' : '👁'}</button>`;
-  };
-  const nbHidden = treeHidden.mgrs.size + cardsData.filter(c => treeHidden.cards.has(c.id) && !treeHidden.mgrs.has(String(c.manager || '').trim().toUpperCase() || 'NO MANAGER')).length;
+  const mgrEye = (name) => treeEyeBtn('mgr', mgrNames.indexOf(name), treeHidden.mgrs.has(name), 'ce manager et son équipe');
+  const cardEye = (c) => treeEyeBtn('card', c.id, treeHidden.cards.has(c.id), 'cette Timesheet');
 
   let html = `
     <div style="display:flex; justify-content:center; align-items:center; gap:16px; margin-bottom: 30px; padding: 10px 20px; background: white; border: 1px solid #cbd5e1; border-radius: 8px; display: inline-flex; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
@@ -2934,8 +2957,7 @@ window.renderTreeOrgChart = function() {
         </div>
         <div style="width:1px; height:20px; background:#e2e8f0; margin:0 8px;"></div>
         <button class="btn btn-black btn-print-tree" onclick="printTree()">🖨️ Print Tree</button>
-        ${nbHidden > 0 ? `<span class="tree-filter-note tree-screen-only">🙈 ${nbHidden} élément(s) masqué(s) à l'impression</span>
-        <button class="btn btn-outline tree-screen-only" onclick="showAllTree()">👁 Tout afficher</button>` : `<span class="tree-screen-only" style="font-size:11px; color:#64748b;">👁 = masquer un manager / une Timesheet</span>`}
+        ${treeFilterBar()}
     </div>
   `;
 
@@ -3027,21 +3049,30 @@ window.renderTreeOrgChart = function() {
 function renderOrgChart() {
   const container = document.getElementById('orgchart-view');
   const groups = {};
+  ensureCardIds();
   
   cardsData.forEach(c => {
-     let mgr = String(c.manager || '').trim().toUpperCase();
-     if (!mgr) mgr = 'NO MANAGER';
+     const mgr = mgrKey(c);
      if(!groups[mgr]) groups[mgr] = [];
      groups[mgr].push(c);
   });
+  const mgrNames = Object.keys(groups).sort();
+  window._treeMgrNames = mgrNames;
   
-  let html = `<div class="org-level-top"><span>RIVIERA TOWER SITE</span></div><div class="org-managers-grid">`;
+  let html = `<div class="org-toolbar">
+       <button class="btn btn-black" onclick="printOrgChart()">🖨️ Imprimer</button>
+       ${treeFilterBar()}
+     </div>
+     <div class="org-level-top"><span>RIVIERA TOWER SITE</span></div><div class="org-managers-grid">`;
   
-  Object.keys(groups).sort().forEach(mgr => {
+  mgrNames.forEach(mgr => {
+     const mgrHidden = treeHidden.mgrs.has(mgr);
      let mgrTotalWorkers = 0;
      let supsHtml = '';
      
      groups[mgr].forEach(sup => {
+        const supHidden = !mgrHidden && treeHidden.cards.has(sup.id);
+        const countIt = !mgrHidden && !supHidden; // totaux = équipes imprimées
         let supWorkers = 0;
         let foremenGroups = {};
         let directWkrs = 0;
@@ -3049,7 +3080,7 @@ function renderOrgChart() {
         (sup.tasks || []).forEach(t => { 
           let w = taskCount(t).total;
           supWorkers += w; 
-          mgrTotalWorkers += w;
+          if (countIt) mgrTotalWorkers += w;
           
           let fName = String(t.foreman || '').trim().toUpperCase();
           if (fName) {
@@ -3074,7 +3105,8 @@ function renderOrgChart() {
             ? `<div style="font-size:10px; font-weight:800; color:#2563eb; background:#eff6ff; padding:3px 6px; border-radius:4px; display:inline-block; margin-top:2px; border:1px solid #bfdbfe; margin-bottom:4px;">📄 TS: ${escapeHtml(fullTsName)}</div>` 
             : '';
 
-        supsHtml += `<div class="org-sup-card" style="border-left-color: ${catColor}">
+        supsHtml += `<div class="org-sup-card${supHidden ? ' org-hidden' : ''}" style="border-left-color: ${catColor}">
+            ${mgrHidden ? '' : treeEyeBtn('card', sup.id, supHidden, 'cette Timesheet')}
             <div class="org-sup-name" style="margin-bottom:2px;">${escapeHtml(sup.name)}</div>
             ${tsNameDisplay}
             <div class="org-sup-meta"><span>${escapeHtml(catName)}</span><span style="font-weight:800; color:#0f172a;">${supWorkers} wkrs</span></div>
@@ -3082,7 +3114,8 @@ function renderOrgChart() {
           </div>`;
      });
 
-     html += `<div class="org-manager-col">
+     html += `<div class="org-manager-col${mgrHidden ? ' org-hidden' : ''}">
+        ${treeEyeBtn('mgr', mgrNames.indexOf(mgr), mgrHidden, 'ce manager et son équipe')}
         <div class="org-manager-name">${mgr === 'NO MANAGER' ? '⚠️ NO MANAGER' : '👔 ' + escapeHtml(mgr)}</div>
         <div class="org-manager-total">${mgrTotalWorkers} Supervised worker(s)</div>
         <div class="org-sups-list">${supsHtml}</div>
