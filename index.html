@@ -494,7 +494,23 @@
     body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .task-desc { border: none; padding: 0; }
     body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .task-foreman span { border: none; }
     body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) #orgchart-view { display: block !important; padding: 0; overflow: visible; }
-    body:not(.print-mode-ts):not(.print-mode-db):not(.print-mode-tree) .org-manager-col { break-inside: avoid; border: 1px solid #94a3b8; }
+    /* VUE ÉQUIPES (impression paysage) : un manager par bandeau pleine largeur, ses Timesheets en grille
+       de 4 colonnes ; seule une Timesheet n'est jamais coupée, le bandeau peut continuer sur la page suivante */
+    #orgchart-view .org-level-top { margin-bottom: 10px; }
+    #orgchart-view .org-level-top span { padding: 6px 16px; font-size: 14px; box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    #orgchart-view .org-managers-grid { display: block; }
+    #orgchart-view .org-manager-col { display: block; width: auto; min-width: 0; margin: 0 0 10px; padding: 8px 10px; border: 1px solid #94a3b8; border-radius: 8px; box-shadow: none; break-inside: auto; }
+    #orgchart-view .org-manager-name { display: inline-block; font-size: 13px; margin: 0 10px 0 0; break-after: avoid; }
+    #orgchart-view .org-manager-total { display: inline-block; margin: 0; }
+    #orgchart-view .org-sups-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 6px; padding-top: 6px; border-top: 1px solid #cbd5e1; }
+    #orgchart-view .org-sup-card { display: block; padding: 6px 8px; box-shadow: none; break-inside: avoid; page-break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    #orgchart-view .org-sup-name { font-size: 11px; }
+    #orgchart-view .org-sup-card > div[style*="TS"], #orgchart-view .org-sup-card div[style*="#eff6ff"] { font-size: 9px !important; padding: 1px 4px !important; }
+    #orgchart-view .org-sup-meta { font-size: 9px; }
+    #orgchart-view .org-foremen-list { gap: 3px; margin-top: 4px; padding-top: 4px; padding-left: 8px; }
+    #orgchart-view .org-foreman-card { padding: 2px 6px; }
+    #orgchart-view .org-foreman-name { font-size: 9px; }
+    #orgchart-view .org-foreman-meta { font-size: 9px; padding: 1px 6px; }
     
     /* PRINT TS */
     body.print-mode-ts .top-bar, body.print-mode-ts #error-banner, body.print-mode-ts #planning-view, body.print-mode-ts #compare-view, body.print-mode-ts .dashboard-container, body.print-mode-ts #orgchart-view, body.print-mode-ts #tree-view, body.print-mode-ts #workers-drawer, body.print-mode-ts .modal-overlay, body.print-mode-ts #fab-move, body.print-mode-ts #fab-drawer { display: none !important; }
