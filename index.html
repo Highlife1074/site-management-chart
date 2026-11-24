@@ -355,6 +355,12 @@
   .tree-hidden .tree-node, .tree-hidden-section .tree-node { background: #f1f5f9 !important; border-style: dashed !important; box-shadow: none; }
   .tree-hidden .tree-node > :not(.tree-eye), .tree-hidden-section .tree-node > :not(.tree-eye) { opacity: 0.35; filter: grayscale(1); }
   .org-sup-card { position: relative; }
+  /* Badge de shift (Arbre & Vue Équipes) : distingue les équipes d'un même superviseur */
+  .shift-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 10px; border: 1px solid; white-space: nowrap; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .shift-badge.s1 { background: #fef9c3; color: #854d0e; border-color: #fde047; }
+  .shift-badge.s2 { background: #ffedd5; color: #9a3412; border-color: #fdba74; }
+  .shift-badge.night { background: #e0e7ff; color: #3730a3; border-color: #a5b4fc; }
+  .shift-badge.other { background: #f1f5f9; color: #334155; border-color: #cbd5e1; }
   .org-hidden { background: #f1f5f9 !important; border-style: dashed !important; box-shadow: none !important; }
   .org-hidden > :not(.tree-eye) { opacity: 0.35; filter: grayscale(1); }
   .org-toolbar { display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 auto 24px; }
@@ -511,6 +517,7 @@
     #orgchart-view .org-sup-name { font-size: 11px; }
     #orgchart-view .org-sup-card > div[style*="TS"], #orgchart-view .org-sup-card div[style*="#eff6ff"] { font-size: 9px !important; padding: 1px 4px !important; }
     #orgchart-view .org-sup-meta { font-size: 9px; }
+    .shift-badge { font-size: 9px; padding: 1px 5px; }
     #orgchart-view .org-foremen-list { gap: 3px; margin-top: 4px; padding-top: 4px; padding-left: 8px; }
     #orgchart-view .org-foreman-card { padding: 2px 6px; }
     #orgchart-view .org-foreman-name { font-size: 9px; }
@@ -2918,6 +2925,19 @@ function treeEyeBtn(kind, key, hidden, what) {
   const call = kind === 'mgr' ? `toggleTreeMgr(${key})` : `toggleTreeCard('${escapeHtml(key)}')`;
   return `<button class="tree-eye${hidden ? ' off' : ''}" onclick="${call}" title="${hidden ? 'Réafficher ' + what : 'Masquer ' + what + ' (impression)'}">${hidden ? '🙈' : '👁'}</button>`;
 }
+function shiftBadge(card) {
+  const t = String(card.shiftType || 'Shift 1').trim();
+  const h = String(card.shiftHours || '').trim();
+  const k = t.toLowerCase();
+  const cls = k === 'shift 1' ? 's1' : k === 'shift 2' ? 's2' : k === 'night' ? 'night' : 'other';
+  const icon = cls === 'night' ? '🌙' : cls === 's2' ? '🌇' : '☀️';
+  return `<span class="shift-badge ${cls}" title="Shift de la Timesheet">${icon} ${escapeHtml(t.toUpperCase())}${h ? ' · ' + escapeHtml(h) : ''}</span>`;
+}
+// Ordre d'affichage : même superviseur regroupé, puis par shift (Shift 1, Shift 2, Night)
+function sortByNameShift(cards) {
+  const rank = c => ({ 'shift 1': 1, 'shift 2': 2, 'night': 3 }[String(c.shiftType || 'Shift 1').trim().toLowerCase()] || 4);
+  return [...cards].sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')) || rank(a) - rank(b) || String(a.shiftHours || '').localeCompare(String(b.shiftHours || '')));
+}
 function treeHiddenCount() {
   return treeHidden.mgrs.size + cardsData.filter(c => treeHidden.cards.has(c.id) && !treeHidden.mgrs.has(mgrKey(c))).length;
 }
@@ -3020,7 +3040,7 @@ window.renderTreeOrgChart = function() {
       </div>
       <ul>`;
 
-    mgrNode.children.filter(sup => !printing || !treeHidden.cards.has(sup.id)).forEach(sup => {
+    sortByNameShift(mgrNode.children).filter(sup => !printing || !treeHidden.cards.has(sup.id)).forEach(sup => {
       const supDisplayName = String(sup.name || 'Unknown');
       const supRole = String(sup.supervisorRole || 'SUPERVISOR').toUpperCase();
       const tsSub = [sup.timesheetNo, sup.timesheetName].map(x => String(x || '').trim()).filter(x => x !== '').join(' - ');
@@ -3028,6 +3048,7 @@ window.renderTreeOrgChart = function() {
 
       html += `<li class="${!mgrHidden && treeHidden.cards.has(sup.id) ? 'tree-hidden' : ''}"><div class="tree-node sup-node">${mgrHidden ? '' : cardEye(sup)}
          <div class="node-title">${formatName(supDisplayName)}</div>
+         <div style="margin:5px 0 2px;">${shiftBadge(sup)}</div>
          <div class="node-sub">${displaySub}</div>
       </div><ul>`;
 
@@ -3090,7 +3111,7 @@ function renderOrgChart() {
      let mgrTotalWorkers = 0;
      let supsHtml = '';
      
-     groups[mgr].forEach(sup => {
+     sortByNameShift(groups[mgr]).forEach(sup => {
         const supHidden = !mgrHidden && treeHidden.cards.has(sup.id);
         const countIt = !mgrHidden && !supHidden; // totaux = équipes imprimées
         let supWorkers = 0;
@@ -3128,6 +3149,7 @@ function renderOrgChart() {
         supsHtml += `<div class="org-sup-card${supHidden ? ' org-hidden' : ''}" style="border-left-color: ${catColor}">
             ${mgrHidden ? '' : treeEyeBtn('card', sup.id, supHidden, 'cette Timesheet')}
             <div class="org-sup-name" style="margin-bottom:2px;">${escapeHtml(sup.name)}</div>
+            <div style="margin-bottom:3px;">${shiftBadge(sup)}</div>
             ${tsNameDisplay}
             <div class="org-sup-meta"><span>${escapeHtml(catName)}</span><span style="font-weight:800; color:#0f172a;">${supWorkers} wkrs</span></div>
             ${foremenHtml ? `<div class="org-foremen-list">${foremenHtml}</div>` : ''}
