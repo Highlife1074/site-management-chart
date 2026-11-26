@@ -960,7 +960,7 @@
 
     <div class="summaries-row">
       <div class="summary-box">
-        <div class="summary-title">Effectifs : Pointage (TS) vs Payroll HR</div>
+        <div class="summary-title">Effectifs : Pointage (TS) vs Payroll HR <span id="payroll-filter-note" class="tree-filter-note" style="display:none; margin-left:6px; text-transform:none; cursor:help;"></span></div>
         <table class="payroll-table">
           <tbody id="payroll-table-body">
             <!-- Rendu dynamiquement -->
@@ -1318,6 +1318,20 @@ function cardCount(card) {
 // Catégorie valide d'une carte (même règle pour l'affichage et les totaux)
 function cardCategory(card) {
   return CATEGORY_INFO.some(c => c.id === card.category) ? card.category : 'trades';
+}
+
+// Filtres du tableau de bord (Lot + Managers + Superviseurs) : la carte est-elle affichée ?
+function cardPassesFilters(card) {
+  const mgrName = String(card.manager || '').trim() || 'NO MANAGER';
+  const supName = String(card.name || '').trim() || 'Unknown';
+  if (selectedManagersFilter.length > 0 && !selectedManagersFilter.includes(mgrName)) return false;
+  if (selectedSupervisorsFilter.length > 0 && !selectedSupervisorsFilter.includes(supName)) return false;
+  if (currentFilter !== 'all' && currentFilter !== 'alpha' && cardCategory(card) !== currentFilter) return false;
+  return true;
+}
+function dashboardFiltersActive() {
+  return selectedManagersFilter.length > 0 || selectedSupervisorsFilter.length > 0
+    || (currentFilter !== 'all' && currentFilter !== 'alpha');
 }
 
 // cards : Timesheets à compter (par défaut celles du tableau de bord ; une archive passe les siennes)
@@ -1866,10 +1880,28 @@ function recalculateTotals() {
      else rawDbCounts['OTHER'] = (rawDbCounts['OTHER'] || 0) + 1;
   });
 
-  let sumTs = 0, sumPr = 0, sumRaw = 0;
+  // Tableau par entreprise : suit les filtres sélectionnés (Lot / Managers / Superviseurs)
+  const filtered = dashboardFiltersActive();
+  const TF = filtered ? computeTotals(cardsData.filter(cardPassesFilters)) : T;
+  const note = document.getElementById('payroll-filter-note');
+  if (note) {
+    const parts = [];
+    if (currentFilter !== 'all' && currentFilter !== 'alpha') {
+      const cat = CATEGORY_INFO.find(c => c.id === currentFilter);
+      parts.push(`Lot : ${cat ? cat.name : currentFilter}`);
+    }
+    if (selectedManagersFilter.length) parts.push(`${selectedManagersFilter.length} manager(s)`);
+    if (selectedSupervisorsFilter.length) parts.push(`${selectedSupervisorsFilter.length} superviseur(s)`);
+    note.style.display = filtered ? 'inline-block' : 'none';
+    note.innerText = `🔍 Filtré — ${parts.join(' · ')}`;
+    note.title = 'La colonne « TS Pointage » ne compte que les Timesheets affichées. Payroll et Base importée restent les chiffres du chantier entier : l\'écart n\'est donc pas calculé.';
+  }
+
+  let sumTs = 0, sumPr = 0, sumRaw = 0, sumTsAll = 0;
   siteCompanies.forEach(comp => {
      const compId = comp.toLowerCase().replace(/[^a-z0-9]/g, '');
-     const tsTotal = T.byCompany[comp] || 0;
+     sumTsAll += T.byCompany[comp] || 0;
+     const tsTotal = TF.byCompany[comp] || 0;
      const prTotal = payrollCounts[comp] || 0;
      sumTs += tsTotal; sumPr += prTotal; sumRaw += rawDbCounts[comp] || 0;
 
@@ -1882,8 +1914,8 @@ function recalculateTotals() {
      const diff = tsTotal - prTotal;
      const elDiff = document.getElementById(`diff-${compId}`);
      if (elDiff) {
-        elDiff.innerText = diff > 0 ? `+${diff}` : diff;
-        elDiff.className = `diff-badge ${diff === 0 ? 'diff-ok' : 'diff-warn'}`;
+        elDiff.innerText = filtered ? '—' : (diff > 0 ? `+${diff}` : diff);
+        elDiff.className = `diff-badge ${filtered ? '' : (diff === 0 ? 'diff-ok' : 'diff-warn')}`;
      }
   });
 
@@ -1893,8 +1925,8 @@ function recalculateTotals() {
   const diffAll = sumTs - sumPr;
   const elDiffAll = document.getElementById('diff-all');
   if (elDiffAll) {
-    elDiffAll.innerText = diffAll > 0 ? `+${diffAll}` : diffAll;
-    elDiffAll.className = `diff-badge ${diffAll === 0 ? 'diff-ok' : 'diff-warn'}`;
+    elDiffAll.innerText = filtered ? '—' : (diffAll > 0 ? `+${diffAll}` : diffAll);
+    elDiffAll.className = `diff-badge ${filtered ? '' : (diffAll === 0 ? 'diff-ok' : 'diff-warn')}`;
   }
 
   // Ouvriers présents à plusieurs endroits : encadrés en rouge (contrôle, ne change pas les totaux)
@@ -1907,13 +1939,13 @@ function recalculateTotals() {
   // Contrôle de cohérence : les 4 façons de sommer doivent donner le même total
   const sumCats = Object.values(T.byCategory).reduce((a, b) => a + b, 0);
   const sumCards = T.byCard.reduce((a, c) => a + c.total, 0);
-  const coherent = (sumTs === T.grand && sumCats === T.grand && sumCards === T.grand);
+  const coherent = (sumTsAll === T.grand && sumCats === T.grand && sumCards === T.grand);
   const badge = document.getElementById('coherence-badge');
   if (badge) {
     if (!coherent) {
       badge.className = 'diff-badge diff-warn';
       badge.innerText = '⚠️ Totaux incohérents';
-      badge.title = `Chantier ${T.grand} / Lots ${sumCats} / Entreprises ${sumTs} / Cartes ${sumCards}`;
+      badge.title = `Chantier ${T.grand} / Lots ${sumCats} / Entreprises ${sumTsAll} / Cartes ${sumCards}`;
     } else if (multi.length > 0) {
       badge.className = 'diff-badge diff-warn';
       badge.innerText = `⚠️ ${multi.length} ouvrier(s) en double`;
@@ -2247,12 +2279,7 @@ function renderCards() {
       const catId = cardCategory(card);
       const idArg = jsArg(card.id); // les champs texte retrouvent la carte par son ID
 
-      const mgrName = String(card.manager || '').trim() || 'NO MANAGER';
-      const supName = String(card.name || '').trim() || 'Unknown';
-      
-      const hideByMgr = selectedManagersFilter.length > 0 && !selectedManagersFilter.includes(mgrName);
-      const hideBySup = selectedSupervisorsFilter.length > 0 && !selectedSupervisorsFilter.includes(supName);
-      const isHidden = hideByMgr || hideBySup;
+      const isHidden = !cardPassesFilters(card);
       
       let targetGrid;
       if (currentFilter === 'alpha') {
