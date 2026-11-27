@@ -1462,6 +1462,7 @@ let planningRoster = null; // Planning fin : liste figée des ouvriers (null = p
 let planningScopeNames = []; // Planning fin : liste des noms de Scopes (proposés en liste déroulante)
 let planningNotes = ''; // Planning fin : hypothèses générales du planning (texte libre)
 let planningTsNotes = {}; // Planning fin : hypothèses par Timesheet { ID de Timesheet (ou N° TS) : texte }
+let planningBaseline = null; // Planning fin : référence figée { id (version), label, savedAt, by, count, locked } — locked = lecture seule
 let db = null, docRef = null, isSaving = false, currentFilter = 'all';
 let selectedManagersFilter = [];
 let selectedSupervisorsFilter = [];
@@ -1494,6 +1495,7 @@ try {
       if (Array.isArray(parsed.planningScopeNames)) planningScopeNames = parsed.planningScopeNames;
       if (typeof parsed.planningNotes === 'string') planningNotes = parsed.planningNotes;
       if (parsed.planningTsNotes && typeof parsed.planningTsNotes === 'object') planningTsNotes = parsed.planningTsNotes;
+      if (parsed.planningBaseline !== undefined) planningBaseline = parsed.planningBaseline;
     } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
   } else { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 } catch(e) { cardsData = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
@@ -1514,9 +1516,13 @@ siteSupervisors.sort((a, b) => String(a.name || '').localeCompare(String(b.name 
    ========================================================== */
 
 // Le profil actif peut-il modifier le Planning fin ?
-function canEditPlanning() {
+function planEditorRight() {
   const c = appProfiles.custom.find(x => x.id === currentProfile);
   return c ? !!c.planning : canEdit();
+}
+// … et pas pendant que le planning est bloqué (référence figée)
+function canEditPlanning() {
+  return planEditorRight() && !(planningBaseline && planningBaseline.locked);
 }
 
 function profileLabel(id) {
@@ -1667,6 +1673,7 @@ function startFirebase() {
         if (Array.isArray(data.planningScopeNames)) planningScopeNames = data.planningScopeNames;
         if (typeof data.planningNotes === 'string') planningNotes = data.planningNotes;
         if (data.planningTsNotes && typeof data.planningTsNotes === 'object') planningTsNotes = data.planningTsNotes;
+        planningBaseline = data.planningBaseline || null;
         window._planDataReady = true;
         if (data.supervisors) siteSupervisors = data.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
         if (data.companies) {
@@ -1719,16 +1726,16 @@ function startFirebase() {
 
 // --- 3. FONCTIONS CLÉS & SYNCHRONISATION ---
 function syncToFirebase() {
-  if (currentRole === 'viewer' && !canEditPlanning() && !canManageComet() && !canSetValidator()) return; // Le CFO doit pouvoir enregistrer le Payroll
+  if (currentRole === 'viewer' && !planEditorRight() && !canManageComet() && !canSetValidator()) return; // Le CFO doit pouvoir enregistrer le Payroll
   if (_syncTimer) { clearTimeout(_syncTimer); _syncTimer = null; }
-  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, validators: siteValidators, cometTasks, customCategories, planning: workerPlanning, planningScopes, planningRoster, planningScopeNames, planningNotes, planningTsNotes})); } catch(e){}
+  try { localStorage.setItem("site_chart_backup", JSON.stringify({cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, validators: siteValidators, cometTasks, customCategories, planning: workerPlanning, planningScopes, planningRoster, planningScopeNames, planningNotes, planningTsNotes, planningBaseline})); } catch(e){}
   if (!docRef) return;
   isSaving = true;
   document.getElementById("sync-text").innerText = "Enregistrement...";
 
   const payload = {
     cardsData, payrollCounts, unassignedWorkers, companies: siteCompanies, rawImportedDB: window.rawImportedDB, supervisors: siteSupervisors, validators: siteValidators, cometTasks, customCategories,
-    planning: workerPlanning, planningScopes, planningScopeNames, planningNotes, planningTsNotes,
+    planning: workerPlanning, planningScopes, planningScopeNames, planningNotes, planningTsNotes, planningBaseline,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
   if (Array.isArray(planningRoster)) payload.planningRoster = planningRoster;
@@ -1813,6 +1820,7 @@ function importBackup(event) {
       if (Array.isArray(data.planningScopeNames)) planningScopeNames = data.planningScopeNames;
       if (typeof data.planningNotes === 'string') planningNotes = data.planningNotes;
       if (data.planningTsNotes && typeof data.planningTsNotes === 'object') planningTsNotes = data.planningTsNotes;
+      if (data.planningBaseline !== undefined) planningBaseline = data.planningBaseline || null;
       if (Array.isArray(data.supervisors)) siteSupervisors = data.supervisors.filter(s => s && s.name && String(s.name).toUpperCase() !== 'UNDEFINED');
       if (Array.isArray(data.validators)) siteValidators = data.validators;
       selectedForPrint.clear();
@@ -5836,6 +5844,8 @@ function renderPlanning(force) {
         <span style="margin-left:auto; display:flex; gap:6px; flex-wrap:wrap;">
           <button class="btn btn-outline" id="plan-import-btn" onclick="importPlanningNames()"></button>
           <button class="btn btn-outline" id="plan-save-btn" onclick="savePlanningVersion()" title="Enregistre une copie figée du planning">💾 Sauvegarder une version</button>
+          <button class="btn btn-outline" id="plan-lock-btn"></button>
+          <button class="btn btn-outline" onclick="openPlanCompare()" title="Chaque semaine : effectif réel des Timesheets comparé à la projection du planning figé">📊 Réel vs Projection</button>
           <button class="btn btn-outline" onclick="openPlanScopeNames()">🏷️ Noms de Scopes</button>
           <button class="btn btn-outline" onclick="openPlanningVersions()">🗂️ Versions</button>
           <button class="btn btn-outline" onclick="exportPlanningExcel()">📤 Excel</button>
@@ -5888,7 +5898,23 @@ function renderPlanning(force) {
   imp.innerHTML = `📥 Importer les nouveaux noms${nNew ? ` <b style="background:#dc2626; color:#fff; border-radius:9px; padding:0 6px; margin-left:4px;">${nNew}</b>` : ''}`;
   imp.style.display = edit ? '' : 'none';
   document.getElementById('plan-save-btn').style.display = edit ? '' : 'none';
-  document.getElementById('plan-help').innerHTML = !edit
+  const lockBtn = document.getElementById('plan-lock-btn');
+  if (planIsLocked()) {
+    lockBtn.innerHTML = '🔓 Débloquer';
+    lockBtn.onclick = unlockPlanning;
+    lockBtn.title = currentRole === 'admin' ? 'Rendre le planning à nouveau modifiable (la référence garde ses chiffres)' : 'Seul l\'Admin peut débloquer le planning';
+    lockBtn.disabled = currentRole !== 'admin';
+    lockBtn.style.display = '';
+  } else {
+    lockBtn.innerHTML = '🔒 Bloquer le planning';
+    lockBtn.onclick = lockPlanning;
+    lockBtn.title = 'Fige les chiffres actuels comme référence (suivi Réel vs Projection) et passe le planning en lecture seule';
+    lockBtn.disabled = false;
+    lockBtn.style.display = planEditorRight() ? '' : 'none';
+  }
+  document.getElementById('plan-help').innerHTML = planIsLocked()
+    ? `🔒 <b>Planning bloqué</b> — référence « ${escapeHtml(planningBaseline.label)} » figée le ${escapeHtml(new Date(planningBaseline.savedAt).toLocaleString('fr-FR'))}. Lecture seule pour tous${currentRole === 'admin' ? ' (🔓 Débloquer pour modifier)' : ' ; seul l\'Admin peut débloquer'}. Suivi hebdomadaire : <b>📊 Réel vs Projection</b>.`
+    : !edit
     ? `👁️ Consultation seule : votre profil ne permet pas de modifier le planning (voir l'Admin : ⚙️ → 👤 Profils & mots de passe).`
     : planMode === 'days'
       ? `Entre les dates de début et de fin d'un <b>Scope</b>, chaque jour vaut 1 (vert clair). <b>Durée (j)</b> : début + durée → fin calculée, ou fin + durée → début calculé (<b>jours ouvrés</b> : 6 par semaine, lundi → samedi, hors jours fériés grecs en rouge ; un Scope ne met pas de 1 ces jours-là). Cliquer un <b>1</b> juste avant ou après un Scope l'agrandit (un 1 isolé crée le Scope 2 s'il est libre) ; un <b>0</b> sur son premier ou dernier jour le raccourcit. Pour corriger un jour, choisissez une valeur puis cliquez ou glissez (0 = absent) ; « Effacer » revient au Scope. Une date se copie-colle d'un ouvrier à l'autre avec <b>Ctrl+C / Ctrl+V</b> ; 📋 / 📥 copie tout le planning d'un ouvrier. <b>Fin estimée</b> = fin de Scope ou dernier jour saisi, le plus tardif (trait rouge). <b>Fin contrat</b> : trait violet sous le jour, en rouge ⚠️ si la fin estimée la dépasse. Modifier une date de Scope efface les 1 saisis à la main pour cet ouvrier (les 0 / 0.5 / 0.25 restent) ; 🧽 efface tous ses jours saisis.`
@@ -6413,7 +6439,7 @@ window.openPlanningVersions = async function() {
     const v = planVersionsIndex[id] || {};
     const when = v.savedAt ? new Date(v.savedAt).toLocaleString('fr-FR') : id;
     return `<div style="display:flex; align-items:center; gap:8px; padding:8px 10px; border-bottom:1px solid #e2e8f0;">
-      <div style="flex:1;"><b>${escapeHtml(v.label || id)}</b><div style="font-size:11px; color:#64748b;">${escapeHtml(when)} · ${v.count ?? '?'} ouvrier(s)</div></div>
+      <div style="flex:1;"><b>${escapeHtml(v.label || id)}</b>${planningBaseline && planningBaseline.id === id ? ' <span class="diff-badge diff-ok" style="font-size:10px;">🔒 Référence</span>' : ''}<div style="font-size:11px; color:#64748b;">${escapeHtml(when)} · ${v.count ?? '?'} ouvrier(s)</div></div>
       <button class="btn btn-outline" onclick="exportPlanningVersion('${escapeHtml(id)}')">📤 Excel</button>
       ${canEditPlanning() ? `<button class="btn btn-outline" onclick="restorePlanningVersion('${escapeHtml(id)}')">♻️ Restaurer</button>` : ''}
       ${currentRole === 'admin' ? `<button class="btn btn-outline" style="color:#dc2626;" onclick="deletePlanningVersion('${escapeHtml(id)}')">🗑️</button>` : ''}
@@ -6449,6 +6475,7 @@ window.restorePlanningVersion = async function(id) {
 
 window.deletePlanningVersion = async function(id) {
   if (currentRole !== 'admin') return;
+  if (planningBaseline && planningBaseline.id === id) { alert("Cette version est la référence du suivi Réel vs Projection : elle ne peut pas être supprimée.\n\nBloquez d'abord le planning avec une nouvelle référence."); return; }
   const v = planVersionsIndex[id] || {};
   if (!confirm(`Supprimer définitivement la version « ${v.label || id} » ?`)) return;
   const refs = archiveRefs();
@@ -6459,6 +6486,299 @@ window.deletePlanningVersion = async function(id) {
     await batch.commit();
     openPlanningVersions();
   } catch (err) { alert(`❌ Suppression impossible : ${err.message}`); }
+};
+
+/* ==========================================================
+   PLANNING FIGÉ (RÉFÉRENCE) & SUIVI HEBDO « RÉEL vs PROJECTION »
+   - 🔒 Bloquer : enregistre une version de référence (copie figée) et passe
+     le planning en lecture seule pour tous ; seul l'Admin peut débloquer.
+   - 📊 Réel vs Projection : chaque semaine, effectif réel des Timesheets
+     (clôtures 🗂️ pour les semaines passées, Timesheets actuelles pour la
+     semaine en cours) comparé à la projection de la référence.
+     Projection = somme des parts de semaine travaillées (ETP).
+   ========================================================== */
+let planBaselineCache = null;      // { id, data } : version de référence chargée
+const planArchiveDocCache = new Map(); // clôtures déjà lues : id → données
+let planCmpState = null;           // dernier calcul affiché (semaines, détail…)
+let planCmpWeek = '';              // semaine sélectionnée (lundi AAAA-MM-JJ)
+
+function planIsLocked() { return !!(planningBaseline && planningBaseline.locked); }
+
+function planVersionId(now, suffix) {
+  const p = (n) => String(n).padStart(2, '0');
+  return `plan_${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}_${p(now.getHours())}${p(now.getMinutes())}${p(now.getSeconds())}${suffix || ''}`;
+}
+
+window.lockPlanning = async function() {
+  if (!planEditorRight()) return;
+  const refs = archiveRefs();
+  if (!refs) { alert("Pas de connexion à Firebase : impossible de bloquer le planning pour le moment."); return; }
+  const now = new Date();
+  const replace = planningBaseline
+    ? `\n\n⚠️ Cette nouvelle référence remplace « ${planningBaseline.label} » pour le suivi Réel vs Projection (l'ancienne reste dans 🗂️ Versions).`
+    : '';
+  const label = prompt(
+    `🔒 Bloquer le planning fin\n\nLes chiffres actuels sont enregistrés comme RÉFÉRENCE (copie figée) : ` +
+    `chaque semaine, l'effectif réel des Timesheets sera comparé à cette projection.\n` +
+    `Le planning passe en lecture seule pour tous ; seul l'Admin peut le débloquer.${replace}\n\nNom de la référence :`,
+    `Référence du ${now.toLocaleDateString('fr-FR')}`);
+  if (label === null) return;
+  const id = planVersionId(now, '_ref');
+  const data = planVersionPayload();
+  const summary = { label: label.trim() || id, savedAt: now.toISOString(), count: data.roster.length, by: currentRole, baseline: true };
+  try {
+    const batch = db.batch();
+    batch.set(refs.col.doc(id), JSON.parse(JSON.stringify({ type: 'planning', ...summary, ...data })));
+    batch.set(refs.index, { planVersions: { [id]: summary } }, { merge: true });
+    await batch.commit();
+  } catch (err) { alert(`❌ Blocage impossible : ${err.message}`); return; }
+  planningBaseline = { id, label: summary.label, savedAt: summary.savedAt, by: currentRole, count: summary.count, locked: true };
+  planBaselineCache = { id, data: JSON.parse(JSON.stringify(data)) };
+  syncToFirebase();
+  renderPlanning(true);
+  alert(`🔒 Planning bloqué : « ${summary.label} » (${summary.count} ouvrier(s)).\n\nSuivez l'écart chaque semaine avec 📊 Réel vs Projection.`);
+};
+
+window.unlockPlanning = function() {
+  if (currentRole !== 'admin' || !planIsLocked()) return;
+  if (!confirm(`Débloquer le planning ?\n\nIl redevient modifiable. La référence « ${planningBaseline.label} » est conservée : le suivi Réel vs Projection garde ses chiffres.`)) return;
+  planningBaseline = { ...planningBaseline, locked: false };
+  syncToFirebase();
+  renderPlanning(true);
+};
+
+async function planBaselineData() {
+  if (!planningBaseline || !planningBaseline.id) return null;
+  if (planBaselineCache && planBaselineCache.id === planningBaseline.id) return planBaselineCache.data;
+  const data = await planLoadVersion(planningBaseline.id);
+  planBaselineCache = { id: planningBaseline.id, data };
+  return data;
+}
+
+// Exécute fn avec les données d'une version à la place du planning actuel
+function planWithData(data, fn) {
+  const saved = [planningRoster, workerPlanning, planningScopes];
+  try {
+    planningRoster = Array.isArray(data.roster) ? data.roster : [];
+    workerPlanning = data.planning || {};
+    planningScopes = data.scopes || {};
+    return fn();
+  } finally { [planningRoster, workerPlanning, planningScopes] = saved; }
+}
+
+function planMondayOf(d) { const m = new Date(d.getFullYear(), d.getMonth(), d.getDate()); m.setDate(m.getDate() - (m.getDay() + 6) % 7); return m; }
+function planWeekCol(monday) {
+  const days = [];
+  for (let j = 0; j < 7; j++) { const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + j); days.push([ymOf(d), d.getDate()]); }
+  const isos = days.map(([mo, d]) => planIso(mo, d));
+  return { days, first: isos[0], last: isos[6], week: planIsoWeek(monday), year: new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 3).getFullYear() };
+}
+
+// Projection d'une semaine : ETP total, par entreprise, par lot, et ouvriers prévus
+function planProjectWeek(data, col) {
+  const P = { total: 0, byCompany: {}, byCat: {}, keys: new Map() };
+  planWithData(data, () => (data.roster || []).forEach(r => {
+    const k = planKey(r.id);
+    if (!k || P.keys.has(k)) return;
+    const s = planColShare(k, col);
+    if (!(s > 0)) return;
+    const comp = r.company || 'OTHER', cat = cardCategory({ category: r.cat });
+    P.total += s;
+    P.byCompany[comp] = (P.byCompany[comp] || 0) + s;
+    P.byCat[cat] = (P.byCat[cat] || 0) + s;
+    P.keys.set(k, { r, share: s });
+  }));
+  return P;
+}
+
+// Réel d'un jeu de Timesheets : effectif total, par entreprise, par lot, et ouvriers présents
+function planRealFromCards(cards) {
+  const T = computeTotals(cards);
+  const keys = new Map();
+  sortCardsByTs(cards).forEach(card => (card.tasks || []).forEach(t => activeWorkers(t).forEach(w => {
+    const k = planKey(w.id);
+    if (k && !keys.has(k)) keys.set(k, { w, company: w.company || t.source || '', card });
+  })));
+  return { total: T.grand, byCompany: T.byCompany, byCat: T.byCategory, keys };
+}
+
+const planR1 = (n) => Math.round((n || 0) * 10) / 10;
+function planEcartHtml(real, proj) {
+  if (real === null || real === undefined) return '<span style="color:#94a3b8;">—</span>';
+  const d = planR1(real - proj);
+  const cls = Math.abs(d) < 0.5 ? 'diff-ok' : 'diff-warn';
+  const pct = proj > 0 ? ` <span style="font-size:10px; opacity:.8;">(${d > 0 ? '+' : ''}${Math.round(d / proj * 100)}%)</span>` : '';
+  return `<span class="diff-badge ${cls}">${d > 0 ? '+' : ''}${d}${pct}</span>`;
+}
+
+function planEnsureCmpModal() {
+  if (document.getElementById('plan-cmp-modal')) return;
+  const div = document.createElement('div');
+  div.id = 'plan-cmp-modal';
+  div.className = 'modal-overlay';
+  div.innerHTML = `
+    <div class="modal-box xl" style="width:1100px; max-width:96vw;">
+      <div class="modal-title" style="display:flex; align-items:center; gap:8px;">📊 Réel (Timesheets) vs Projection (planning figé)
+        <span style="margin-left:auto; display:flex; gap:6px;">
+          <button class="btn btn-outline" onclick="exportPlanCompareExcel()">📤 Excel</button>
+          <button class="btn btn-outline" onclick="document.getElementById('plan-cmp-modal').style.display='none'">Fermer</button>
+        </span>
+      </div>
+      <div id="plan-cmp-body" style="font-size:12px;"></div>
+    </div>`;
+  document.body.appendChild(div);
+}
+
+window.openPlanCompare = async function() {
+  planEnsureCmpModal();
+  document.getElementById('plan-cmp-modal').style.display = 'flex';
+  const body = document.getElementById('plan-cmp-body');
+  if (!planningBaseline) {
+    body.innerHTML = `<div style="padding:12px;">Aucun planning de référence.<br><br>Cliquez sur <b>🔒 Bloquer le planning</b> pour figer les chiffres actuels : ils serviront de projection pour le suivi hebdomadaire.</div>`;
+    return;
+  }
+  const refs = archiveRefs();
+  if (!refs) { body.innerHTML = `<div style="padding:12px;">Pas de connexion à Firebase.</div>`; return; }
+  body.innerHTML = `<div style="padding:12px;">Chargement…</div>`;
+  try {
+    const data = await planBaselineData();
+    const idx = await refs.index.get();
+    const weeksIdx = (idx.exists && idx.data() && idx.data().weeks) || {};
+
+    const today = new Date();
+    const curMon = planMondayOf(today);
+    let mon = planMondayOf(new Date(planningBaseline.savedAt || today));
+    const endMon = new Date(curMon.getFullYear(), curMon.getMonth(), curMon.getDate() + 7 * 4);
+    const weeks = [];
+    while (mon <= endMon && weeks.length < 104) {
+      weeks.push(planWeekCol(mon));
+      mon = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 7);
+    }
+    const curKey = localISODate(curMon);
+    // Clôture retenue pour une semaine passée : la plus récente dont la date tombe dans la semaine
+    const archIds = Object.keys(weeksIdx).sort();
+    weeks.forEach(w => {
+      w.key = w.first;
+      w.status = w.first === curKey ? 'now' : (w.first < curKey ? 'past' : 'future');
+      if (w.status === 'past') w.archId = archIds.filter(id => id >= w.first && id <= w.last).pop() || null;
+    });
+    const toLoad = weeks.map(w => w.archId).filter(id => id && !planArchiveDocCache.has(id));
+    const docs = await Promise.all(toLoad.map(id => refs.col.doc(id).get()));
+    docs.forEach((d, i) => planArchiveDocCache.set(toLoad[i], d.exists ? d.data() : null));
+
+    weeks.forEach(w => {
+      w.proj = planProjectWeek(data, w);
+      if (w.status === 'now') { w.real = planRealFromCards(cardsData); w.src = 'Timesheets actuelles'; }
+      else if (w.archId && planArchiveDocCache.get(w.archId)) {
+        const a = planArchiveDocCache.get(w.archId);
+        w.real = planRealFromCards(Array.isArray(a.cardsData) ? a.cardsData : []);
+        w.src = `🗂️ ${a.label || weeksIdx[w.archId]?.label || fmtDateFR(w.archId)}`;
+      } else { w.real = null; w.src = w.status === 'past' ? 'Pas de clôture cette semaine' : 'À venir'; }
+    });
+    planCmpState = { weeks, data };
+    if (!weeks.some(w => w.key === planCmpWeek)) planCmpWeek = curKey;
+    renderPlanCompare();
+  } catch (err) {
+    body.innerHTML = `<div style="padding:12px; color:#dc2626;">Erreur : ${escapeHtml(err.message)}</div>`;
+  }
+};
+
+window.selectPlanCmpWeek = function(key) { planCmpWeek = key; renderPlanCompare(); };
+
+function renderPlanCompare() {
+  const body = document.getElementById('plan-cmp-body');
+  if (!body || !planCmpState) return;
+  const { weeks } = planCmpState;
+  const b = planningBaseline;
+  const head = `<div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; margin-bottom:10px;">
+      ${b.locked ? '🔒' : '🔓'} Référence : <b>${escapeHtml(b.label)}</b> — figée le ${escapeHtml(new Date(b.savedAt).toLocaleString('fr-FR'))} (${b.count ?? '?'} ouvrier(s))${b.locked ? '' : ' · <span style="color:#b45309;">planning débloqué depuis : la référence garde ses chiffres</span>'}
+      <div style="color:#64748b; margin-top:4px;"><b>Projection</b> = ouvriers prévus dans la référence, en équivalent temps plein (un ouvrier prévu 3 jours sur 6 compte 0.5). <b>Réel</b> = ouvriers sur les Timesheets : clôture 🗂️ de la semaine pour les semaines passées, Timesheets actuelles pour la semaine en cours. Cliquez une semaine pour le détail.</div>
+    </div>`;
+  const rows = weeks.map(w => {
+    const sel = w.key === planCmpWeek;
+    const bg = sel ? 'background:#eff6ff;' : (w.status === 'future' ? 'color:#94a3b8;' : '');
+    return `<tr style="cursor:pointer; ${bg}" onclick="selectPlanCmpWeek('${w.key}')">
+      <td style="padding:4px 6px;"><b>S${w.week}</b> ${w.year}${w.status === 'now' ? ' <span class="diff-badge diff-ok" style="font-size:10px;">en cours</span>' : ''}</td>
+      <td style="padding:4px 6px;">${planDateFR(w.first).slice(0, 5)} → ${planDateFR(w.last).slice(0, 5)}</td>
+      <td style="text-align:center; font-weight:700;">${planR1(w.proj.total)}</td>
+      <td style="text-align:center; font-weight:800;">${w.real ? w.real.total : '—'}</td>
+      <td style="text-align:center;">${planEcartHtml(w.real ? w.real.total : null, w.proj.total)}</td>
+      <td style="padding:4px 6px; color:#64748b; font-size:11px;">${escapeHtml(w.src)}</td>
+    </tr>`;
+  }).join('');
+  const table = `<div style="max-height:32vh; overflow-y:auto; border:1px solid #cbd5e1; border-radius:8px;">
+    <table class="payroll-table" style="width:100%;"><thead><tr style="position:sticky; top:0; background:#fff;">
+      <th style="padding:4px 6px;">Semaine</th><th>Dates</th><th style="text-align:center;">Projection (ETP)</th><th style="text-align:center;">Réel (TS)</th><th style="text-align:center;">Écart réel − projection</th><th>Source du réel</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>`;
+
+  const w = weeks.find(x => x.key === planCmpWeek) || weeks[0];
+  body.innerHTML = head + table + (w ? planCmpDetailHtml(w) : '');
+  const selRow = body.querySelector('tr[style*="eff6ff"]');
+  if (selRow) selRow.scrollIntoView({ block: 'nearest' });
+}
+
+function planCmpDetailHtml(w) {
+  const P = w.proj, R = w.real;
+  const line = (label, p, r) => `<tr><td style="padding:3px 6px;">${label}</td><td style="text-align:center;">${planR1(p)}</td><td style="text-align:center; font-weight:700;">${R ? (r || 0) : '—'}</td><td style="text-align:center;">${planEcartHtml(R ? (r || 0) : null, p || 0)}</td></tr>`;
+  const th = (t) => `<thead><tr><th style="padding:3px 6px;">${t}</th><th style="text-align:center;">Projection</th><th style="text-align:center;">Réel</th><th style="text-align:center;">Écart</th></tr></thead>`;
+  const comps = [...new Set([...siteCompanies, ...Object.keys(P.byCompany), ...(R ? Object.keys(R.byCompany) : [])])]
+    .filter(c => (P.byCompany[c] || 0) > 0 || (R && (R.byCompany[c] || 0) > 0));
+  const byComp = comps.map(c => line(escapeHtml(c), P.byCompany[c], R && R.byCompany[c])).join('') || '<tr><td colspan="4" style="padding:6px; color:#94a3b8;">Aucun ouvrier</td></tr>';
+  const cats = CATEGORY_INFO.filter(c => (P.byCat[c.id] || 0) > 0 || (R && (R.byCat[c.id] || 0) > 0));
+  const byCat = cats.map(c => line(`<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${c.color}; margin-right:4px;"></span>${escapeHtml(c.name)}`, P.byCat[c.id], R && R.byCat[c.id])).join('') || '<tr><td colspan="4" style="padding:6px; color:#94a3b8;">Aucun ouvrier</td></tr>';
+  const tot = line('<b>TOTAL</b>', P.total, R && R.total);
+
+  let lists = '';
+  if (R) {
+    const missing = [...P.keys.entries()].filter(([k]) => !R.keys.has(k))
+      .map(([, x]) => ({ name: x.r.name, id: x.r.id, company: x.r.company, ts: [x.r.tsNo, x.r.tsName].filter(Boolean).join(' - ') || x.r.sup || '', share: x.share }))
+      .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    const extra = [...R.keys.entries()].filter(([k]) => !P.keys.has(k))
+      .map(([, x]) => ({ name: x.w.name, id: x.w.id, company: x.company, ts: [x.card.timesheetNo, x.card.timesheetName].filter(Boolean).join(' - ') || x.card.name || '' }))
+      .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    const li = (x, withShare) => `<div style="padding:2px 0; border-bottom:1px solid #f1f5f9;"><b>${escapeHtml(x.name || '')}</b> <span style="color:#64748b;">${escapeHtml(x.id || '')} · ${escapeHtml(x.company || '')}${x.ts ? ' · ' + escapeHtml(x.ts) : ''}</span>${withShare ? ` <span style="color:#2563eb;">(prévu ${planR1(x.share)})</span>` : ''}</div>`;
+    const box = (title, color, arr, withShare, hint) => `<div style="flex:1; min-width:280px;">
+        <div style="font-weight:800; color:${color}; margin-bottom:4px;">${title} (${arr.length})</div>
+        <div style="font-size:11px; color:#64748b; margin-bottom:4px;">${hint}</div>
+        <div style="max-height:22vh; overflow-y:auto; border:1px solid #e2e8f0; border-radius:6px; padding:4px 8px;">${arr.length ? arr.map(x => li(x, withShare)).join('') : '<span style="color:#94a3b8;">Aucun</span>'}</div>
+      </div>`;
+    lists = `<div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:10px;">
+      ${box('⬇️ Prévus mais absents des Timesheets', '#dc2626', missing, true, 'Dans la référence pour cette semaine, mais sur aucune Timesheet (départ anticipé, absence, changement d\'ID…).')}
+      ${box('⬆️ Sur les Timesheets mais non prévus', '#d97706', extra, false, 'Présents sur les Timesheets alors que la référence ne les prévoit pas cette semaine (prolongation, renfort, arrivée…).')}
+    </div>`;
+  } else {
+    lists = `<div style="margin-top:10px; color:#64748b;">${w.status === 'future' ? 'Semaine à venir : seule la projection est connue.' : 'Aucune clôture 🗂️ cette semaine : clôturez la semaine depuis le tableau de bord pour garder le réel.'}</div>`;
+  }
+  return `<div style="margin-top:12px; font-weight:800; font-size:13px;">Détail S${w.week} ${w.year} (${planDateFR(w.first)} → ${planDateFR(w.last)})</div>
+    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:6px;">
+      <div style="flex:1; min-width:280px;"><table class="payroll-table" style="width:100%;">${th('Entreprise')}<tbody>${byComp}${tot}</tbody></table></div>
+      <div style="flex:1; min-width:280px;"><table class="payroll-table" style="width:100%;">${th('Lot de travaux')}<tbody>${byCat}${tot}</tbody></table></div>
+    </div>${lists}`;
+}
+
+window.exportPlanCompareExcel = function() {
+  if (!planCmpState) return;
+  const { weeks } = planCmpState;
+  const r1 = planR1;
+  const sem = weeks.map(w => ({
+    'Semaine': `S${w.week} ${w.year}`, 'Du': planDateFR(w.first), 'Au': planDateFR(w.last),
+    'Projection (ETP)': r1(w.proj.total), 'Réel (TS)': w.real ? w.real.total : '',
+    'Écart': w.real ? r1(w.real.total - w.proj.total) : '', 'Source du réel': w.src
+  }));
+  const comp = [], lot = [];
+  weeks.forEach(w => {
+    const cs = [...new Set([...Object.keys(w.proj.byCompany), ...(w.real ? Object.keys(w.real.byCompany) : [])])];
+    cs.forEach(c => comp.push({ 'Semaine': `S${w.week} ${w.year}`, 'Entreprise': c, 'Projection': r1(w.proj.byCompany[c]), 'Réel': w.real ? (w.real.byCompany[c] || 0) : '', 'Écart': w.real ? r1((w.real.byCompany[c] || 0) - (w.proj.byCompany[c] || 0)) : '' }));
+    CATEGORY_INFO.forEach(c => {
+      const p = w.proj.byCat[c.id] || 0, r = w.real ? (w.real.byCat[c.id] || 0) : 0;
+      if (p || r) lot.push({ 'Semaine': `S${w.week} ${w.year}`, 'Lot': c.name, 'Projection': r1(p), 'Réel': w.real ? r : '', 'Écart': w.real ? r1(r - p) : '' });
+    });
+  });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sem), 'Semaines');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(comp.length ? comp : [{}]), 'Par entreprise');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lot.length ? lot : [{}]), 'Par lot');
+  XLSX.writeFile(wb, `Reel_vs_Projection_${localISODate(new Date())}.xlsx`);
 };
 
 // --- Export Excel : Scopes, fin estimée et les 12 mois (part du mois) ---
